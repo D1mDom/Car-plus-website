@@ -14,7 +14,7 @@ export default {
   	},
   	extend: {
 		fontFamily: {
-			sans: ['Battambang', 'Inter', 'sans-serif'],
+			sans: ['Koulen', 'Battambang', 'Inter', 'sans-serif'],
 			heading: ['Koulen', 'Battambang', 'cursive']
 		},
   		colors: {
