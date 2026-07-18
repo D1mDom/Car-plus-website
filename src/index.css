@@ -1,0 +1,253 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@layer base {
+  :root {
+    /* Ocean Breeze Theme - Clean & Fresh */
+    --background: 200 25% 98%;
+    --foreground: 200 50% 10%;
+
+    --card: 200 20% 96%;
+    --card-foreground: 200 50% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 50% 10%;
+
+    --primary: 200 80% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 200 15% 92%;
+    --secondary-foreground: 200 50% 15%;
+
+    --muted: 200 10% 94%;
+    --muted-foreground: 200 20% 45%;
+
+    --accent: 180 60% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 200 30% 85%;
+    --input: 200 20% 90%;
+    --ring: 200 80% 50%;
+
+    --radius: 0.5rem;
+
+    /* Ocean Custom tokens */
+    --ocean: 200 80% 50%;
+    --ocean-light: 200 70% 65%;
+    --ocean-dark: 200 85% 35%;
+    --teal: 180 60% 45%;
+    --teal-light: 180 50% 60%;
+    --surface: 200 20% 96%;
+    --surface-hover: 200 25% 92%;
+    --text-border: 200 60% 40%;
+    
+    /* Gradients */
+    --gradient-ocean: linear-gradient(135deg, hsl(200 80% 50%), hsl(180 60% 45%));
+    --gradient-light: linear-gradient(180deg, hsl(200 25% 98%), hsl(200 20% 94%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(200 20% 96%));
+    
+    /* Shadows */
+    --shadow-card: 0 4px 20px -4px hsl(200 50% 30% / 0.15);
+    --shadow-glow: 0 0 40px hsl(200 80% 50% / 0.2);
+    --shadow-button: 0 4px 14px -2px hsl(200 80% 50% / 0.35);
+
+    --sidebar-background: 200 20% 96%;
+    --sidebar-foreground: 200 50% 10%;
+    --sidebar-primary: 200 80% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 200 15% 92%;
+    --sidebar-accent-foreground: 200 50% 15%;
+    --sidebar-border: 200 30% 85%;
+    --sidebar-ring: 200 80% 50%;
+    --chart-1: 200 80% 50%;
+    --chart-2: 180 60% 45%;
+    --chart-3: 160 50% 45%;
+    --chart-4: 220 60% 55%;
+    --chart-5: 240 50% 60%;
+    --sidebar: 200 20% 96%;
+    --font-sans: 'Battambang', 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-heading: 'Bokor', 'Battambang', cursive;
+    --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --shadow-2xs: 0 1px 3px 0px hsl(200 50% 30% / 0.05);
+    --shadow-xs: 0 1px 3px 0px hsl(200 50% 30% / 0.08);
+    --shadow-sm: 0 1px 3px 0px hsl(200 50% 30% / 0.1), 0 1px 2px -1px hsl(200 50% 30% / 0.08);
+    --shadow: 0 1px 3px 0px hsl(200 50% 30% / 0.1), 0 1px 2px -1px hsl(200 50% 30% / 0.08);
+    --shadow-md: 0 4px 6px -1px hsl(200 50% 30% / 0.1), 0 2px 4px -1px hsl(200 50% 30% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(200 50% 30% / 0.1), 0 4px 6px -2px hsl(200 50% 30% / 0.05);
+    --shadow-xl: 0 20px 25px -5px hsl(200 50% 30% / 0.1), 0 10px 10px -5px hsl(200 50% 30% / 0.04);
+    --shadow-2xl: 0 25px 50px -12px hsl(200 50% 30% / 0.25);
+    --tracking-normal: 0em;
+    --spacing: 0.25rem;
+  }
+
+  .dark {
+    --background: 200 30% 8%;
+    --foreground: 200 10% 95%;
+    --card: 200 25% 12%;
+    --card-foreground: 200 10% 95%;
+    --popover: 200 25% 12%;
+    --popover-foreground: 200 10% 95%;
+    --primary: 200 80% 55%;
+    --primary-foreground: 200 30% 8%;
+    --secondary: 200 20% 18%;
+    --secondary-foreground: 200 10% 90%;
+    --muted: 200 20% 18%;
+    --muted-foreground: 200 15% 60%;
+    --accent: 180 55% 50%;
+    --accent-foreground: 200 30% 8%;
+    --destructive: 0 60% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 200 25% 22%;
+    --input: 200 25% 18%;
+    --ring: 200 80% 55%;
+    --chart-1: 200 80% 55%;
+    --chart-2: 180 55% 50%;
+    --chart-3: 160 45% 50%;
+    --chart-4: 220 55% 60%;
+    --chart-5: 240 45% 65%;
+    --sidebar: 200 25% 12%;
+    --sidebar-foreground: 200 10% 95%;
+    --sidebar-primary: 200 80% 55%;
+    --sidebar-primary-foreground: 200 30% 8%;
+    --sidebar-accent: 200 20% 18%;
+    --sidebar-accent-foreground: 200 10% 90%;
+    --sidebar-border: 200 25% 22%;
+    --sidebar-ring: 200 80% 55%;
+    --text-border: 200 60% 60%;
+    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.1);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.15);
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.2), 0 1px 2px -1px hsl(0 0% 0% / 0.15);
+    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.2), 0 1px 2px -1px hsl(0 0% 0% / 0.15);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.2), 0 2px 4px -1px hsl(0 0% 0% / 0.12);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.2), 0 4px 6px -2px hsl(0 0% 0% / 0.1);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.2), 0 10px 10px -5px hsl(0 0% 0% / 0.08);
+    --shadow-2xl: 0 25px 50px -12px hsl(0 0% 0% / 0.5);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+}
+
+@layer utilities {
+  /* Text with border effect - clean outline style */
+  .text-bordered {
+    -webkit-text-stroke: 1px hsl(var(--text-border));
+    paint-order: stroke fill;
+  }
+  
+  .text-bordered-primary {
+    -webkit-text-stroke: 1px hsl(var(--primary));
+    paint-order: stroke fill;
+  }
+  
+  .text-bordered-accent {
+    -webkit-text-stroke: 1px hsl(var(--accent));
+    paint-order: stroke fill;
+  }
+  
+  .text-bordered-light {
+    -webkit-text-stroke: 1px hsl(var(--border));
+    paint-order: stroke fill;
+  }
+
+  /* Hollow text - outline only */
+  .text-outline {
+    color: transparent;
+    -webkit-text-stroke: 2px hsl(var(--foreground));
+  }
+  
+  .text-outline-primary {
+    color: transparent;
+    -webkit-text-stroke: 2px hsl(var(--primary));
+  }
+
+  .text-gradient-ocean {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-ocean);
+  }
+  
+  .bg-gradient-ocean {
+    background-image: var(--gradient-ocean);
+  }
+  
+  .bg-gradient-light {
+    background-image: var(--gradient-light);
+  }
+  
+  .bg-gradient-card {
+    background-image: var(--gradient-card);
+  }
+  
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+  
+  .shadow-button {
+    box-shadow: var(--shadow-button);
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.6s ease-out forwards;
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.4s ease-out forwards;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
