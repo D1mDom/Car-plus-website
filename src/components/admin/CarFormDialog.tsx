@@ -31,6 +31,63 @@ import { useCreateCar, useUpdateCar, type Car, type CarStatus } from "@/hooks/us
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Upload, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+const CAR_IMAGES_BUCKET = "car-images";
+
+// Accept photos straight off a phone or DSLR, but never store them at that
+// size. Anything larger than MAX_IMAGE_DIMENSION is scaled down and re-encoded
+// to WebP, which typically turns a 50MB original into a few hundred KB with no
+// visible loss at the sizes this site displays.
+const MAX_IMAGE_DIMENSION = 1920;
+const WEBP_QUALITY = 0.85;
+
+const loadImage = (file: File): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read that image file"));
+    };
+    img.src = url;
+  });
+
+const compressImage = async (
+  file: File,
+): Promise<{ blob: Blob; extension: string }> => {
+  // GIFs would lose their animation on a canvas round-trip, so pass them through.
+  if (file.type === "image/gif") {
+    return { blob: file, extension: "gif" };
+  }
+
+  const img = await loadImage(file);
+  const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(img.width, img.height));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(img.width * scale);
+  canvas.height = Math.round(img.height * scale);
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return { blob: file, extension: file.name.split(".").pop() || "jpg" };
+
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/webp", WEBP_QUALITY),
+  );
+
+  // If WebP encoding isn't available, fall back to the original file rather
+  // than failing the upload.
+  if (!blob) return { blob: file, extension: file.name.split(".").pop() || "jpg" };
+
+  return { blob, extension: "webp" };
+};
 
 const formSchema = z.object({
   code: z.string().min(1, "Code is required"),
@@ -129,13 +186,21 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
     }
   }, [car, form]);
 
-  const convertFileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error("Failed to read file"));
-      reader.readAsDataURL(file);
-    });
+  // Uploads to the car-images bucket and returns its public URL. The image
+  // column stores that URL, not the file itself — embedding base64 here would
+  // put megabytes into every car row and re-download them on each page load.
+  const uploadImage = async (file: File): Promise<string> => {
+    const { blob, extension } = await compressImage(file);
+    const path = `${crypto.randomUUID()}.${extension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(CAR_IMAGES_BUCKET)
+      .upload(path, blob, { contentType: blob.type, upsert: false });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage.from(CAR_IMAGES_BUCKET).getPublicUrl(path);
+    return data.publicUrl;
   };
 
   const handleFileSelect = async (file: File) => {
@@ -143,22 +208,29 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
       toast.error("Please select an image file");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be less than 5MB");
+    if (file.size > MAX_UPLOAD_BYTES) {
+      toast.error("Image must be less than 50MB");
       return;
     }
 
+    // Show the local file immediately so the dialog isn't blank while a large
+    // upload runs; swapped for the storage URL once it lands.
+    const localPreview = URL.createObjectURL(file);
+    setImagePreview(localPreview);
     setIsUploading(true);
+
     try {
-      const base64Url = await convertFileToBase64(file);
-      setImagePreview(base64Url);
-      form.setValue("image", base64Url, { shouldValidate: true });
-      toast.success("Image added successfully");
+      const publicUrl = await uploadImage(file);
+      setImagePreview(publicUrl);
+      form.setValue("image", publicUrl, { shouldValidate: true });
+      toast.success("Image uploaded successfully");
     } catch (err) {
-      toast.error("Failed to process image");
+      const message = err instanceof Error ? err.message : "Failed to upload image";
+      toast.error(message);
       setImagePreview(null);
       form.setValue("image", "", { shouldValidate: true });
     } finally {
+      URL.revokeObjectURL(localPreview);
       setIsUploading(false);
     }
   };
