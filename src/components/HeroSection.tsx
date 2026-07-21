@@ -56,7 +56,7 @@ const HeroSection = ({
   const scrollNext = useCallback(() => api?.scrollNext(), [api]);
 
   return (
-    <section className="relative min-h-[60vh] md:min-h-[70vh] flex items-center justify-center overflow-hidden">
+    <section className="relative h-[clamp(200px,40vw,440px)] flex items-center justify-center overflow-hidden">
       {slides.map((slide, index) => (
         <div
           key={index}

@@ -366,10 +366,16 @@ export const useCars = () => {
         .from("cars")
         .select("*")
         .order("created_at", { ascending: false });
-      if (error) throw error;
-      
+
+      // Fall back to demo cars when the database is unreachable or empty, so the
+      // UI always has something to show (used during design and when no live DB
+      // is configured). The error is logged, not hidden.
+      if (error) {
+        console.warn("Cars query failed, showing demo data:", error.message);
+        return MOCK_CARS;
+      }
+
       const cars = (data as DbCar[]).map(mapDbCarToCar);
-      // Return mock cars if the database is empty so the UI has images/descriptions to show
       if (cars.length === 0) {
         return MOCK_CARS;
       }
