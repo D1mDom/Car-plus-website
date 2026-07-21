@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   status TEXT NOT NULL DEFAULT 'pending'
-    CHECK (status IN ('pending', 'confirmed', 'processing', 'completed', 'cancelled')),
+    CHECK (status IN ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'cancelled')),
   total_amount DECIMAL(12,2) NOT NULL CHECK (total_amount >= 0),
   shipping_address TEXT,
   phone TEXT,
@@ -290,7 +290,7 @@ BEGIN
   -- orders.status: constrain to the values the app actually uses
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'orders_status_check') THEN
     ALTER TABLE public.orders ADD CONSTRAINT orders_status_check
-      CHECK (status IN ('pending', 'confirmed', 'processing', 'completed', 'cancelled'));
+      CHECK (status IN ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'));
   END IF;
 
   -- wishlist.user_id: was missing its foreign key, leaving orphan rows behind

@@ -21,12 +21,14 @@ const WishlistContext = createContext<WishlistContextType | undefined>(undefined
 export const WishlistProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const { user } = useAuth();
   const { data: carsData = [] } = useCars();
 
   const fetchWishlist = () => {
     if (!user) {
       setItems([]);
+      setHydrated(false);
       return;
     }
 
@@ -50,6 +52,9 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
       console.error("Local wishlist error:", e);
     }
     setLoading(false);
+    // Only allow saving back to storage after the first load has run, so an
+    // initial empty state can't overwrite a saved wishlist.
+    setHydrated(true);
   };
 
   useEffect(() => {
@@ -60,11 +65,11 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
 
   // Save to local storage whenever items change
   useEffect(() => {
-    if (user && !loading) {
+    if (user && hydrated) {
       const minimisedItems = items.map(i => ({ id: i.id, car_id: i.car_id }));
       localStorage.setItem(`wishlist_${user.id}`, JSON.stringify(minimisedItems));
     }
-  }, [items, user, loading]);
+  }, [items, user, hydrated]);
 
   const isInWishlist = (carId: string) => {
     return items.some(item => item.car_id === carId);
