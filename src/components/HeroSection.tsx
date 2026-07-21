@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import slide1Bg from "@/assets/slides/slide-1-christmas.jpg";
 import slide2Bg from "@/assets/slides/slide-2-newyear.jpg";
@@ -14,12 +13,6 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 
-interface HeroSectionProps {
-  searchQuery: string;
-  onSearchChange: (value: string) => void;
-  onFilterClick: () => void;
-}
-
 const slides = [
   { image: slide1Bg, alt: "ប្រូម៉ូសិន Christmas" },
   { image: slide2Bg, alt: "ការអបអរឆ្នាំថ្មី" },
@@ -28,11 +21,7 @@ const slides = [
   { image: slide5Bg, alt: "សេវាកម្មគុណភាព" },
 ];
 
-const HeroSection = ({
-  searchQuery,
-  onSearchChange,
-  onFilterClick,
-}: HeroSectionProps) => {
+const HeroSection = () => {
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
 
@@ -93,42 +82,19 @@ const HeroSection = ({
         </CarouselContent>
       </Carousel>
 
-      <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20 flex justify-center gap-2">
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex justify-center gap-2">
         {slides.map((_, index) => (
           <button
             key={index}
             onClick={() => api?.scrollTo(index)}
+            aria-label={`Go to slide ${index + 1}`}
             className={`h-2 rounded-full transition-all duration-300 ${
               current === index
-                ? "w-8 bg-ocean"
+                ? "w-8 bg-primary"
                 : "w-2 bg-foreground/30 hover:bg-foreground/50"
             }`}
           />
         ))}
-      </div>
-
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 w-full max-w-xl px-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="ស្វែងរកតាមឈ្មោះ ឬម៉ូដែល..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-12 h-14 border-2 bg-background/90 backdrop-blur-sm"
-            />
-          </div>
-          <Button
-            variant="outline"
-            size="lg"
-            className="h-14 px-6 gap-2 bg-background/90 backdrop-blur-sm"
-            onClick={onFilterClick}
-          >
-            <SlidersHorizontal className="h-5 w-5" />
-            តម្រង
-          </Button>
-        </div>
       </div>
     </section>
   );
