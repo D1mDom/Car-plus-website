@@ -329,7 +329,7 @@ END $$;
 --
 -- Verify with:  SELECT public.is_admin(id) FROM auth.users WHERE email = '...';
 --
--- Heads up: src/hooks/useAdmin.tsx currently returns isAdmin: true for
--- everyone ("Bypassed for local testing"), so the real check is never used
--- until that stub is removed.
+-- Note: src/hooks/useAdmin.tsx now calls the is_admin() RPC (the old
+-- "always true" bypass was removed), so admin access depends on a row existing
+-- in admin_users for your user. Add yourself with the INSERT above.
 -- ============================================================================
