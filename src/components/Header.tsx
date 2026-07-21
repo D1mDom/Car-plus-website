@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { Heart, Settings, Megaphone } from "lucide-react";
+import { Heart, Settings, Megaphone, Menu } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import logo from "@/assets/logo.png";
 import CartSheet from "@/components/CartSheet";
 import UserMenu from "@/components/UserMenu";
@@ -30,9 +31,42 @@ const Header = () => {
         <div className="border-b-2 border-border bg-background/95 backdrop-blur-xl">
           <div className="container mx-auto px-4">
             <div className="flex h-16 items-center justify-between">
-              <Link to="/" className="flex items-center gap-2">
-                <img src={logo} alt="Car Plus ឡូហ្គោ" className="h-16 w-auto rounded-lg border-2 border-primary/30" />
-              </Link>
+              <div className="flex items-center gap-2">
+                {/* Mobile menu */}
+                <Sheet>
+                  <SheetTrigger asChild className="md:hidden">
+                    <Button variant="ghost" size="icon" aria-label="បើកម៉ឺនុយ">
+                      <Menu className="h-6 w-6" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-72">
+                    <nav className="mt-8 flex flex-col gap-1">
+                      <SheetClose asChild>
+                        <Link to="/" className="rounded-lg px-3 py-3 text-base font-medium hover:bg-accent">ទំព័រដើម</Link>
+                      </SheetClose>
+                      <SheetClose asChild>
+                        <Link to="/#inventory" className="rounded-lg px-3 py-3 text-base font-medium hover:bg-accent">ស្តុកឡាន</Link>
+                      </SheetClose>
+                      <SheetClose asChild>
+                        <Link to="/#about" className="rounded-lg px-3 py-3 text-base font-medium hover:bg-accent">អំពីយើង</Link>
+                      </SheetClose>
+                      <SheetClose asChild>
+                        <Link to="/#contact" className="rounded-lg px-3 py-3 text-base font-medium hover:bg-accent">ទំនាក់ទំនង</Link>
+                      </SheetClose>
+                      {isAdmin && (
+                        <SheetClose asChild>
+                          <Link to="/admin" className="rounded-lg px-3 py-3 text-base font-medium hover:bg-accent">Admin</Link>
+                        </SheetClose>
+                      )}
+                      <a href="https://t.me/Carplus777" target="_blank" rel="noopener noreferrer" className="mt-2 rounded-lg px-3 py-3 text-base font-medium text-primary hover:bg-accent">Telegram @Carplus777</a>
+                    </nav>
+                  </SheetContent>
+                </Sheet>
+
+                <Link to="/" className="flex items-center gap-2">
+                  <img src={logo} alt="Car Plus ឡូហ្គោ" className="h-16 w-auto rounded-lg border-2 border-primary/30" />
+                </Link>
+              </div>
 
               <nav className="hidden md:flex items-center gap-8">
                 <Link to="/" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors border-b-2 border-transparent hover:border-primary pb-1">

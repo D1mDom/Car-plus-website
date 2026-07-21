@@ -45,7 +45,7 @@ const HeroSection = () => {
   const scrollNext = useCallback(() => api?.scrollNext(), [api]);
 
   return (
-    <section className="relative h-[clamp(200px,40vw,440px)] flex items-center justify-center overflow-hidden">
+    <section className="relative h-[clamp(200px,36vw,460px)] flex items-center justify-center overflow-hidden rounded-xl bg-muted">
       {slides.map((slide, index) => (
         <div
           key={index}
@@ -53,7 +53,7 @@ const HeroSection = () => {
             current === index ? "opacity-100" : "opacity-0"
           }`}
         >
-          <img src={slide.image} alt={slide.alt} className="h-full w-full object-cover object-center" />
+          <img src={slide.image} alt={slide.alt} className="h-full w-full object-contain" />
         </div>
       ))}
 

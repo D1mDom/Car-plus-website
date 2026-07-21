@@ -72,12 +72,14 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="pt-16">
-        <HeroSection />
+        <div className="container mx-auto px-4 pt-4">
+          <HeroSection />
+        </div>
 
-        {/* Search + filter row, below the banner (not floating over it) */}
-        <div className="border-b border-border bg-card">
-          <div className="container mx-auto px-4 py-4">
-            <div className="mx-auto flex max-w-3xl flex-col gap-3 sm:flex-row">
+        <section id="inventory" className="py-6">
+          <div className="container mx-auto px-4">
+            {/* Search + filter row (full width, below the banner) */}
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row">
               <div className="relative flex-1">
                 <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -93,21 +95,9 @@ const Index = () => {
                 តម្រង
               </Button>
             </div>
-          </div>
-        </div>
 
-        <section id="inventory" className="py-12">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-                ស្តុក<span className="text-gradient-gold">ឡានពិសេស</span>
-              </h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                រុករករថយន្តគុណភាពដែលយើងបានជ្រើសរើស។ រថយន្តនីមួយៗមានធានា និងឯកសារពេញលេញ។
-              </p>
-            </div>
-
-            <div className="mb-6">
+            {/* Category chips (left-aligned) */}
+            <div className="mb-4">
               <CategoryFilter activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
             </div>
 
