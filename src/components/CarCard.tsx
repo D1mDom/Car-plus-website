@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Car, getStatusLabel, CarStatus } from "@/hooks/useCars";
@@ -26,50 +26,58 @@ const CarCard = ({ car }: CarCardProps) => {
   };
 
   return (
-    <Link to={`/car/${car.id}`}>
-      <Card className="group overflow-hidden cursor-pointer border-2 hover:border-primary/50 transition-all duration-300">
-        <div className="relative aspect-[4/3] overflow-hidden">
+    <Link to={`/car/${car.id}`} className="group block h-full">
+      <Card className="flex h-full flex-col overflow-hidden rounded-xl border border-border/70 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg">
+        <div className="relative aspect-[4/3] overflow-hidden bg-muted">
           <img
             src={car.image}
             alt={car.name}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
-          <Badge variant={getStatusVariant(car.status)} className="absolute top-4 left-4 border-2">
+          {/* Status badge - top left */}
+          <Badge
+            variant={getStatusVariant(car.status)}
+            className="absolute left-3 top-3 border-0 shadow-sm"
+          >
             {getStatusLabel(car.status)}
           </Badge>
-          <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Actions - top right, always visible so they work on touch/phones */}
+          <div className="absolute right-3 top-3 flex gap-2">
             <WishlistButton carId={car.id} />
             <Button
               size="icon"
               variant={isInCart ? "default" : "secondary"}
-              className="h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background"
+              className="h-9 w-9 rounded-full bg-background/90 shadow-sm backdrop-blur-sm hover:bg-background"
               onClick={handleAddToCart}
               disabled={isInCart}
+              aria-label="Add to cart"
             >
               <ShoppingCart className="h-4 w-4" />
             </Button>
           </div>
         </div>
-        <CardContent className="p-5">
-          <div className="space-y-3">
-            <div>
-              <p className="text-xs text-muted-foreground font-mono border border-border rounded px-2 py-0.5 inline-block">{car.code}</p>
-              <h3 className="mt-2 text-lg font-semibold text-foreground group-hover:text-primary transition-colors text-bordered-light">
-                {car.name}
-              </h3>
-            </div>
-            <div className="flex items-center justify-between">
-              <p className="text-2xl font-bold text-gradient-ocean">
-                ${car.price.toLocaleString()}
-              </p>
-              <div className="flex items-center gap-1.5 text-muted-foreground border border-border rounded-full px-2 py-1">
-                <Eye className="h-4 w-4" />
-                <span className="text-sm">{car.viewers}</span>
-              </div>
+
+        <div className="flex flex-1 flex-col gap-3 p-4">
+          <div>
+            <p className="inline-block rounded border border-border px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+              {car.code}
+            </p>
+            <h3 className="mt-1.5 line-clamp-2 text-base font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
+              {car.name}
+            </h3>
+          </div>
+
+          <div className="mt-auto flex items-end justify-between">
+            <p className="text-xl font-bold text-primary sm:text-2xl">
+              ${car.price.toLocaleString()}
+            </p>
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Eye className="h-4 w-4" />
+              <span className="text-sm">{car.viewers}</span>
             </div>
           </div>
-        </CardContent>
+        </div>
       </Card>
     </Link>
   );

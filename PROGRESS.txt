@@ -1,0 +1,119 @@
+PROJECT WORK LOG — Car Plus website
+Append only. Newest entries at the bottom. Every entry records the date and who worked.
+
+===========================================
+DATE: 7/22/2026
+WORKED ON BY: Nimith (with Claude)
+-------------------------------------------
+DONE TODAY:
+- Font: switched headings from Bokor to Koulen, then applied Koulen site-wide
+  (index.html font link, tailwind.config.ts, src/index.css). Fallbacks kept
+  (Battambang, Inter) behind it.
+- Fixed CSS @import order in src/index.css: the Google Fonts @import was after
+  the @tailwind directives, which triggered a Vite warning and could drop the
+  Inter font. Moved it to the top.
+- Added vercel.json with an SPA rewrite so routes like /admin and /wishlist do
+  not 404 on refresh when deployed.
+- Added .vercel to .gitignore.
+- Rewrote supabase_setup.sql into a full, idempotent setup script:
+  - Storage bucket "car-images" (public read, admin-only write, 50 MB limit,
+    image MIME types only).
+  - 10 indexes on the columns the app actually queries (were zero before).
+  - CHECK constraints (price/total >= 0, quantity > 0, orders.status whitelist).
+  - Missing foreign keys added: wishlist.user_id and admin_users.user_id now
+    reference auth.users with ON DELETE CASCADE.
+  - Unique constraints: cart_items(user_id, car_id), wishlist(user_id, car_id).
+  - Bootstrap instructions for granting the first admin.
+  - Section 6 "upgrade" block so an existing DB can be brought up to date.
+- Rewrote src/components/admin/CarFormDialog.tsx image handling: was saving the
+  photo as a base64 data URL into the cars.image column. Now uploads the file to
+  the car-images storage bucket and stores only the public URL. Added
+  client-side compression (scale to max 1920px, re-encode to WebP at 0.85) so a
+  large phone/DSLR photo becomes a few hundred KB before upload. 50 MB input cap.
+- Fixed src/hooks/useAdmin.tsx: it was hardcoded to return isAdmin: true for
+  everyone. Now calls the is_admin RPC and fails closed (false) when signed out
+  or on error. Committed on branch storage-image-upload as a PR.
+
+DECISIONS MADE:
+- car_id columns stay TEXT (not a UUID foreign key to cars). The app falls back
+  to the static catalogue in src/data/cars.ts whose ids are plain strings
+  ("1","2",...). A FK would break that fallback.
+- Upload limit set to 50 MB but paired with WebP compression, so stored files
+  stay small. This also fixes the "uploads are strict / must be tiny" problem,
+  which was really caused by the base64 approach, not a Supabase limit.
+- Stay on Supabase. Not switching backends and not building custom auth: the app
+  is coupled to Supabase auth + RLS across 10 files, 3 edge functions, and all
+  the security policies. Switching would be a full rewrite, wrong for a demo.
+- Koulen applied site-wide at Nimith's request. Noted trade-off: Koulen has a
+  single weight, so bold/semibold no longer look heavier than normal text.
+- For the demo: recommended creating a NEW free Supabase cloud project (fast, no
+  install, keeps all existing code) over local Supabase (needs Docker, not
+  installed) or a backend switch.
+
+STILL PENDING / NEXT TIME:
+- The Supabase project referenced in .env NO LONGER EXISTS (its hostname does
+  not resolve). Nothing in the app can load until this is replaced. Required
+  steps: create a new Supabase project, run supabase_setup.sql in its SQL
+  Editor, put the new URL + anon key in .env, then bootstrap the admin user.
+- The storage upload code has NEVER been run against a live database (there was
+  none). First real upload is the first test. Treat a first-run hiccup as
+  expected, not as broken.
+- Checkout is still a mock (see BUGLOG #002): it writes to localStorage and does
+  not save orders to the database, so /orders is always empty.
+- Stray text "http://localhost:8080/wishlist" in index.html renders on every
+  page (BUGLOG #005). Not yet removed.
+- The useAdmin fix is on branch storage-image-upload as a PR, not merged.
+- Several commits landed on main with garbled messages (git commands pasted into
+  the commit message box instead of run in a terminal). Worth telling the repo
+  owner. Going forward: have Claude run the git commands, or use a proper commit
+  message.
+- config.toml project_id (yrcvllxwujehazcpgyxj) does not match the .env project
+  (wwlwfbnvexj...). Pick one when the new project is created (BUGLOG #008).
+- Both bun.lockb and package-lock.json are tracked; the project should keep one.
+- Consider lazy-loading images (BUGLOG #007) before the site takes real traffic.
+
+NOTE ON REPO OWNERSHIP:
+- This GitHub repo (D1mDom/Car-plus-website) belongs to a friend; Nimith is a
+  collaborator. Prefer branches + PRs over pushing to main.
+===========================================
+
+===========================================
+DATE: 7/22/2026
+WORKED ON BY: Nimith (with Claude)
+-------------------------------------------
+DONE TODAY (UI/UX rebuild - Phase 1: Design System):
+- Agreed scope for the rebuild: single dealership (not marketplace), stay on the
+  current Vite + React + shadcn stack (no Next.js migration), full production
+  target, hybrid fonts.
+- Fonts: replaced the site-wide Koulen with a hybrid system - Inter for English/
+  UI, Poppins for headings, Battambang kept for Khmer. Updated the Google Fonts
+  link in index.html, src/index.css (--font-sans, --font-heading), and
+  tailwind.config.ts.
+- Colors: retuned the whole design token system to match the Car Plus logo.
+  Pulled the logo's real colours with PIL - it is dominantly orange
+  (HSL 26 100% 50%), effectively no navy. So the palette is now orange-forward:
+  orange = primary/brand/CTA, charcoal-navy = text/ink, white = background,
+  navy = sidebar/footer chrome. Updated :root and .dark in src/index.css and
+  added cta / success / info color tokens to tailwind.config.ts.
+- Status colours defined for the car cards: green = In Stock (--success),
+  blue = In Transit (--info).
+- Favicon: copied src/assets/logo.png to public/logo.png and pointed the browser
+  tab at it in index.html (was falling back to the old red favicon.ico).
+
+DECISIONS MADE:
+- Brand colour is orange (matches the logo), not the navy the original spec
+  suggested. Navy is kept only as dark chrome (sidebar/footer) and text.
+- Kept all existing CSS variable names (--ocean, --teal, --surface, etc.) and
+  just changed their values, so no existing component breaks - they now resolve
+  to the orange/navy palette.
+
+STILL PENDING / NEXT TIME:
+- Phase 2: Homepage rebuild (hero + advanced search with In Stock / In Transit
+  tabs, Shop by Brand, Featured Inventory carousel, New Arrivals + ETA badges).
+- Phases 3-5: Search Results page, Vehicle Detail page, mobile bottom nav +
+  sticky Call button.
+- Phase 6: schema additions (stock status + ETA, mileage, transmission,
+  drivetrain, VIN, trim, location, brand) - needs the new Supabase project first.
+- Design direction not yet confirmed by Nimith on screen; may dial orange back
+  if it feels too strong.
+===========================================

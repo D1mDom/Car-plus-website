@@ -1,0 +1,207 @@
+BUG FIX LOG — Car Plus website
+Append only. Never delete entries. Numbered so we can refer back to them.
+
+===========================================
+BUG #001
+DATE FOUND: 7/22/2026
+FOUND BY: Nimith (with Claude)
+STATUS: FIXED
+-------------------------------------------
+WHAT WAS WRONG:
+- The admin panel and admin nav link were visible to everyone, and the guards
+  in Admin / AdminOrders / AdminReports never actually blocked anyone.
+
+CAUSE (root cause):
+- src/hooks/useAdmin.tsx was hardcoded to return { isAdmin: true }. The real
+  admin query was written but unreachable (comment: "Bypassed for local
+  testing"). Every "if (!isAdmin)" check was therefore dead code.
+- The database RLS still blocked non-admin writes, so this was a UI/exposure
+  bug, not a data-theft bug — but strangers could open the admin UI.
+
+HOW IT WAS FIXED:
+- Replaced the stub with a real call to the is_admin RPC, using the signed-in
+  user's id. Returns false when signed out or when the check errors (fail
+  closed), so a failure never grants access.
+
+FILES CHANGED:
+- src/hooks/useAdmin.tsx
+
+FIXED BY: Nimith (with Claude) on 7/22/2026, on branch storage-image-upload (PR)
+===========================================
+
+===========================================
+BUG #002
+DATE FOUND: 7/22/2026
+FOUND BY: Nimith (with Claude)
+STATUS: OPEN
+-------------------------------------------
+WHAT WAS WRONG:
+- After completing checkout the customer sees a success screen, but the order
+  never appears in /orders.
+
+CAUSE (root cause):
+- src/pages/Checkout.tsx handleSubmit is a mock: it waits with setTimeout, then
+  writes the order to localStorage ('order_history'). It never inserts into the
+  Supabase orders / order_items tables. But src/pages/Orders.tsx reads orders
+  from Supabase, so the two never meet. The cart (useCart) is also localStorage
+  only, while a cart_items table with RLS sits unused.
+
+HOW IT WAS FIXED:
+- Not fixed yet. Needs handleSubmit to insert into orders + order_items using
+  the Supabase client (the tables and policies already exist).
+
+FILES CHANGED:
+- (none yet) — will be src/pages/Checkout.tsx, possibly src/hooks/useCart.tsx
+
+FIXED BY: — (open)
+===========================================
+
+===========================================
+BUG #003
+DATE FOUND: 7/22/2026
+FOUND BY: Nimith (with Claude)
+STATUS: FIXED
+-------------------------------------------
+WHAT WAS WRONG:
+- Car photos had to be very small or the site got slow; large uploads were
+  impractical.
+
+CAUSE (root cause):
+- The admin form converted each image to a base64 data URL and stored the whole
+  string in cars.image. base64 inflates size ~33%, the image lived inside the
+  DB row, and useCars does select("*"), so every page load downloaded every
+  car's full image inside one JSON response. No CDN caching, no thumbnails.
+
+HOW IT WAS FIXED:
+- Rewrote CarFormDialog to upload the file to the car-images storage bucket and
+  store only the returned public URL. Added client-side compression (max
+  1920px, WebP at 0.85), so even a 50 MB original becomes a few hundred KB.
+- Added the storage bucket + policies to supabase_setup.sql.
+
+FILES CHANGED:
+- src/components/admin/CarFormDialog.tsx
+- supabase_setup.sql
+
+NOTE: Not yet tested against a live database (none existed). First upload after
+the new project is set up is the real test.
+
+FIXED BY: Nimith (with Claude) on 7/22/2026, on branch storage-image-upload
+===========================================
+
+===========================================
+BUG #004
+DATE FOUND: 7/22/2026
+FOUND BY: Nimith (with Claude)
+STATUS: FIXED
+-------------------------------------------
+WHAT WAS WRONG:
+- Vite printed "@import must precede all other statements" on every build/dev
+  start, and the Inter font could silently fail to load.
+
+CAUSE (root cause):
+- In src/index.css the Google Fonts @import was placed AFTER the @tailwind
+  directives. CSS requires @import at the top of the file, so the bundler could
+  drop it.
+
+HOW IT WAS FIXED:
+- Moved the @import to the first line, before the @tailwind directives.
+
+FILES CHANGED:
+- src/index.css
+
+FIXED BY: Nimith (with Claude) on 7/22/2026
+===========================================
+
+===========================================
+BUG #005
+DATE FOUND: 7/22/2026
+FOUND BY: Nimith (with Claude)
+STATUS: OPEN
+-------------------------------------------
+WHAT WAS WRONG:
+- The literal text "http://localhost:8080/wishlist" shows on every page.
+
+CAUSE (root cause):
+- A stray line sits in index.html between </head> and <body>, so the browser
+  renders it as page text.
+
+HOW IT WAS FIXED:
+- Not fixed yet. Delete the stray line in index.html.
+
+FILES CHANGED:
+- (none yet) — index.html
+
+FIXED BY: — (open)
+===========================================
+
+===========================================
+BUG #006
+DATE FOUND: 7/22/2026
+FOUND BY: Nimith (with Claude)
+STATUS: OPEN
+-------------------------------------------
+WHAT WAS WRONG:
+- The whole app fails to load data (cars, login, everything).
+
+CAUSE (root cause):
+- The Supabase project in .env (wwlwfbnvexjxwtzrqrla.supabase.co) no longer
+  exists — DNS returns "Non-existent domain". The project was deleted or removed.
+  This also lines up with the Vercel deployment being gone.
+
+HOW IT WAS FIXED:
+- Not fixed yet. Create a new Supabase project, run supabase_setup.sql, and put
+  the new URL + anon key in .env. Then bootstrap the admin user.
+
+FILES CHANGED:
+- (none yet) — .env (new credentials)
+
+FIXED BY: — (open)
+===========================================
+
+===========================================
+BUG #007
+DATE FOUND: 7/22/2026
+FOUND BY: Nimith (with Claude)
+STATUS: OPEN
+-------------------------------------------
+WHAT WAS WRONG:
+- The homepage downloads every car image up front, using more bandwidth than
+  needed and loading slowly on mobile.
+
+CAUSE (root cause):
+- No image uses loading="lazy" anywhere (CarCard, CarListItem, CarDetail), so
+  the browser fetches all images immediately even below the fold. The card grid
+  also loads the full-size image instead of a thumbnail.
+
+HOW IT WAS FIXED:
+- Not fixed yet. Add loading="lazy" to the grid/list images; optionally add
+  thumbnail versions for the card grid.
+
+FILES CHANGED:
+- (none yet) — src/components/CarCard.tsx, src/components/CarListItem.tsx
+
+FIXED BY: — (open)
+===========================================
+
+===========================================
+BUG #008
+DATE FOUND: 7/22/2026
+FOUND BY: Nimith (with Claude)
+STATUS: OPEN
+-------------------------------------------
+WHAT WAS WRONG:
+- The Supabase CLI config and the app point at two different projects.
+
+CAUSE (root cause):
+- supabase/config.toml has project_id = "yrcvllxwujehazcpgyxj" while .env uses
+  project "wwlwfbnvexj...". So CLI migrations/functions would target a different
+  database than the frontend.
+
+HOW IT WAS FIXED:
+- Not fixed yet. When the new project is created, set both files to that one id.
+
+FILES CHANGED:
+- (none yet) — supabase/config.toml and .env
+
+FIXED BY: — (open)
+===========================================
