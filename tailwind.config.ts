@@ -14,8 +14,8 @@ export default {
   	},
   	extend: {
 		fontFamily: {
-			sans: ['Koulen', 'Battambang', 'Inter', 'sans-serif'],
-			heading: ['Koulen', 'Battambang', 'cursive']
+			sans: ['Inter', 'Battambang', 'sans-serif'],
+			heading: ['Poppins', 'Inter', 'Battambang', 'sans-serif']
 		},
   		colors: {
   			border: 'hsl(var(--border))',
@@ -34,6 +34,19 @@ export default {
   			destructive: {
   				DEFAULT: 'hsl(var(--destructive))',
   				foreground: 'hsl(var(--destructive-foreground))'
+  			},
+  			cta: {
+  				DEFAULT: 'hsl(var(--cta))',
+  				foreground: 'hsl(var(--cta-foreground))',
+  				hover: 'hsl(var(--cta-hover))'
+  			},
+  			success: {
+  				DEFAULT: 'hsl(var(--success))',
+  				foreground: 'hsl(var(--success-foreground))'
+  			},
+  			info: {
+  				DEFAULT: 'hsl(var(--info))',
+  				foreground: 'hsl(var(--info-foreground))'
   			},
   			muted: {
   				DEFAULT: 'hsl(var(--muted))',
