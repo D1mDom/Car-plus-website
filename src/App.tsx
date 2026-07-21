@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import { WishlistProvider } from "@/hooks/useWishlist";
-import { CarAdvisorChat } from "@/components/CarAdvisorChat";
 import Index from "./pages/Index";
 import CarDetail from "./pages/CarDetail";
 import Auth from "./pages/Auth";
@@ -42,7 +41,6 @@ const App = () => {
                   <Route path="/admin/orders" element={<AdminOrders />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-                <CarAdvisorChat />
               </WishlistProvider>
             </CartProvider>
           </AuthProvider>

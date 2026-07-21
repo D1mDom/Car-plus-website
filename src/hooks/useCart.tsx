@@ -25,6 +25,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const { user } = useAuth();
   const { data: carsData = [] } = useCars();
   const { toast } = useToast();
@@ -32,15 +33,16 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const fetchCartItems = () => {
     if (!user) {
       setItems([]);
+      setHydrated(false);
       return;
     }
-    
+
     setLoading(true);
     try {
       const stored = localStorage.getItem(`cart_${user.id}`);
       if (stored) {
         const parsed = JSON.parse(stored);
-        
+
         // Hydrate local storage IDs with actual car data
         const hydratedItems = parsed.map((item: any) => {
           const car = carsData.find(c => c.id === item.car_id);
@@ -52,13 +54,16 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
             quantity: item.quantity
           };
         }).filter(Boolean);
-        
+
         setItems(hydratedItems);
       }
     } catch (e) {
       console.error("Local cart error:", e);
     }
     setLoading(false);
+    // Only persist after the first load, so an empty initial state can't wipe
+    // a saved cart.
+    setHydrated(true);
   };
 
   useEffect(() => {
@@ -69,11 +74,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   // Save to local storage whenever items change
   useEffect(() => {
-    if (user && !loading) {
+    if (user && hydrated) {
       const minimisedItems = items.map(i => ({ id: i.id, car_id: i.car_id, quantity: i.quantity }));
       localStorage.setItem(`cart_${user.id}`, JSON.stringify(minimisedItems));
     }
-  }, [items, user, loading]);
+  }, [items, user, hydrated]);
 
   const addToCart = async (carId: string) => {
     if (!user) {

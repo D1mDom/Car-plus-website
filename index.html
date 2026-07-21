@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Car Plus - រថយន្តគុណភាពនៅភ្នំពេញ</title>
+  <title>CAR PLUS</title>
   <link rel="icon" type="image/png" href="/logo.png" />
   <link rel="apple-touch-icon" href="/logo.png" />
   <meta name="description"
@@ -39,6 +39,11 @@
       gap: 22px;
       background: #ffffff;
       z-index: 9999;
+      transition: opacity 0.5s ease;
+    }
+    #app-loader.app-loader--hidden {
+      opacity: 0;
+      pointer-events: none;
     }
     #app-loader img {
       width: 120px;
@@ -62,12 +67,23 @@
 </head>
 
 <body>
-  <div id="root">
-    <div id="app-loader">
-      <img src="/logo.png" alt="Car Plus" />
-      <div class="al-ring"></div>
-    </div>
+  <div id="root"></div>
+  <div id="app-loader">
+    <img src="/logo.png" alt="Car Plus" />
+    <div class="al-ring"></div>
   </div>
+  <script>
+    // Keep the branded splash visible for a short minimum, then fade it out.
+    // The app mounts underneath it in the meantime.
+    (function () {
+      setTimeout(function () {
+        var loader = document.getElementById("app-loader");
+        if (!loader) return;
+        loader.classList.add("app-loader--hidden");
+        setTimeout(function () { loader.remove(); }, 500);
+      }, 500);
+    })();
+  </script>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 

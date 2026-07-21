@@ -117,3 +117,43 @@ STILL PENDING / NEXT TIME:
 - Design direction not yet confirmed by Nimith on screen; may dial orange back
   if it feels too strong.
 ===========================================
+
+===========================================
+DATE: 7/22/2026
+WORKED ON BY: Nimith (with Claude)
+-------------------------------------------
+DONE TODAY (full layout/logic/error review + fixes):
+- Ran a 3-pass review (layout / logic / errors+security) over src/. Findings
+  logged as BUGLOG #009-#012 plus notes below.
+- Fixed BUG #009 (auth was bypassed with a fake user) - restored real Supabase
+  auth in useAuth.
+- Fixed BUG #010 (admin Orders showed mock data) - useAdminOrders now queries
+  the real orders + order_items.
+- Fixed BUG #002 (checkout never saved) - Checkout now inserts orders +
+  order_items, then clears the cart.
+- Fixed BUG #011 (order status constraint mismatch) - widened the SQL CHECK to
+  include shipped/delivered/completed.
+- Fixed BUG #012 (cart/wishlist could be wiped on reload) - added a hydrated
+  guard in useCart and useWishlist.
+- Earlier this session: BUG #001 (useAdmin real check), demo-car fallback in
+  useCars, redesigned CarCard (mobile-first), capped hero height, added a load
+  screen + logo favicon, removed the stray index.html URL, orange design system.
+
+IMPORTANT: all DB-dependent fixes typecheck and build but are NOT yet tested
+against a live database (there isn't one). First real test is after the new
+Supabase project is connected.
+
+DELIBERATELY DEFERRED (with reason):
+- Cart & wishlist still use localStorage, not the cart_items/wishlist tables
+  (BUGLOG L1). Works per-user; DB conversion is optional and better done after
+  login is verified live.
+- "Global" promotion still localStorage (needs a settings table) - low impact.
+- Minor UI: card action buttons 36px (vs 44px ideal), floating chat button
+  overlaps on mobile, verify alt text on admin images.
+
+STILL PENDING / NEXT TIME:
+- Nimith to create the new Supabase project, run supabase_setup.sql, update .env,
+  bootstrap admin - then we test login -> cart -> checkout -> orders end to end.
+- Continue the loklan-style polish: category chips, search+toolbar row, mobile
+  bottom nav + sticky Call button, vehicle detail page.
+===========================================

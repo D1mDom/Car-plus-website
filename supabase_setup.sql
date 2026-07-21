@@ -14,11 +14,10 @@
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- Drop triggers if they exist
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
-DROP TRIGGER IF EXISTS update_orders_updated_at ON public.orders;
-DROP TRIGGER IF EXISTS update_cars_updated_at ON public.cars;
+-- Triggers below use CREATE OR REPLACE TRIGGER so this script is re-runnable.
+-- (A plain "DROP TRIGGER IF EXISTS ... ON public.<table>" would error on a
+-- fresh database, because IF EXISTS forgives a missing trigger but still
+-- requires the table to already exist.)
 
 -- ============================================================================
 -- 1. Profiles & Orders
@@ -72,7 +71,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   status TEXT NOT NULL DEFAULT 'pending'
-    CHECK (status IN ('pending', 'confirmed', 'processing', 'completed', 'cancelled')),
+    CHECK (status IN ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'cancelled')),
   total_amount DECIMAL(12,2) NOT NULL CHECK (total_amount >= 0),
   shipping_address TEXT,
   phone TEXT,
@@ -118,7 +117,7 @@ BEGIN
 END;
 $$;
 
-CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+CREATE OR REPLACE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 CREATE OR REPLACE FUNCTION public.update_updated_at_column() RETURNS TRIGGER AS $$
 BEGIN
@@ -127,8 +126,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SET search_path = public;
 
-CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON public.orders FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_orders_updated_at BEFORE UPDATE ON public.orders FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- ============================================================================
 -- 2. Wishlist
@@ -191,7 +190,7 @@ CREATE TABLE IF NOT EXISTS public.admin_users (
 
 ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
 
-CREATE TRIGGER update_cars_updated_at BEFORE UPDATE ON public.cars FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_cars_updated_at BEFORE UPDATE ON public.cars FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Admin policies.
 -- is_admin() is SECURITY DEFINER so it can read admin_users without tripping
@@ -290,7 +289,7 @@ BEGIN
   -- orders.status: constrain to the values the app actually uses
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'orders_status_check') THEN
     ALTER TABLE public.orders ADD CONSTRAINT orders_status_check
-      CHECK (status IN ('pending', 'confirmed', 'processing', 'completed', 'cancelled'));
+      CHECK (status IN ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'));
   END IF;
 
   -- wishlist.user_id: was missing its foreign key, leaving orphan rows behind
@@ -329,7 +328,7 @@ END $$;
 --
 -- Verify with:  SELECT public.is_admin(id) FROM auth.users WHERE email = '...';
 --
--- Heads up: src/hooks/useAdmin.tsx currently returns isAdmin: true for
--- everyone ("Bypassed for local testing"), so the real check is never used
--- until that stub is removed.
+-- Note: src/hooks/useAdmin.tsx now calls the is_admin() RPC (the old
+-- "always true" bypass was removed), so admin access depends on a row existing
+-- in admin_users for your user. Add yourself with the INSERT above.
 -- ============================================================================

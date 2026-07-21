@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import HeroSection from "@/components/HeroSection";
@@ -8,8 +8,10 @@ import CarListItem from "@/components/CarListItem";
 import AboutSection from "@/components/AboutSection";
 import FilterPanel, { FilterState, defaultFilters } from "@/components/FilterPanel";
 import InventoryToolbar, { SortOption, ViewMode } from "@/components/InventoryToolbar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useCars, type CarStatus, type Car } from "@/hooks/useCars";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search, SlidersHorizontal } from "lucide-react";
 
 const Index = () => {
   const { data: carsData = [], isLoading } = useCars();
@@ -19,6 +21,23 @@ const Index = () => {
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+
+  const priceRange = useMemo(() => {
+    if (carsData.length === 0) return { min: 0, max: 100000 };
+    const prices = carsData.map((c) => c.price);
+    return { min: Math.min(...prices), max: Math.max(...prices) };
+  }, [carsData]);
+
+  // Once cars load, widen the price filter to the real range so nothing is
+  // hidden by the default $100k cap (unless the user has already changed it).
+  useEffect(() => {
+    if (carsData.length === 0) return;
+    setFilters((f) =>
+      f.priceMin === defaultFilters.priceMin && f.priceMax === defaultFilters.priceMax
+        ? { ...f, priceMin: priceRange.min, priceMax: priceRange.max }
+        : f
+    );
+  }, [carsData, priceRange]);
 
   const filteredAndSortedCars = useMemo(() => {
     let result = carsData.filter((car) => {
@@ -53,20 +72,32 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="pt-16">
-        <HeroSection searchQuery={searchQuery} onSearchChange={setSearchQuery} onFilterClick={handleFilterClick} />
+        <div className="container mx-auto px-4 pt-4">
+          <HeroSection />
+        </div>
 
-        <section id="inventory" className="py-24">
+        <section id="inventory" className="py-6">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-                ស្តុក<span className="text-gradient-gold">ឡានពិសេស</span>
-              </h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                រុករករថយន្តគុណភាពដែលយើងបានជ្រើសរើស។ រថយន្តនីមួយៗមានធានា និងឯកសារពេញលេញ។
-              </p>
+            {/* Search + filter row (full width, below the banner) */}
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="ស្វែងរកតាមឈ្មោះ ឬម៉ូដែល..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-12 border-border bg-background pl-12"
+                />
+              </div>
+              <Button size="lg" className="h-12 gap-2 px-6" onClick={handleFilterClick}>
+                <SlidersHorizontal className="h-5 w-5" />
+                តម្រង
+              </Button>
             </div>
 
-            <div className="mb-6">
+            {/* Category chips (left-aligned) */}
+            <div className="mb-4">
               <CategoryFilter activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
             </div>
 
@@ -109,7 +140,7 @@ const Index = () => {
                   onClick={() => {
                     setSearchQuery("");
                     setActiveCategory("all");
-                    setFilters(defaultFilters);
+                    setFilters({ ...defaultFilters, priceMin: priceRange.min, priceMax: priceRange.max });
                   }}
                   className="mt-4 text-primary hover:underline"
                 >

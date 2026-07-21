@@ -33,7 +33,7 @@ FIXED BY: Nimith (with Claude) on 7/22/2026, on branch storage-image-upload (PR)
 BUG #002
 DATE FOUND: 7/22/2026
 FOUND BY: Nimith (with Claude)
-STATUS: OPEN
+STATUS: FIXED
 -------------------------------------------
 WHAT WAS WRONG:
 - After completing checkout the customer sees a success screen, but the order
@@ -47,13 +47,14 @@ CAUSE (root cause):
   only, while a cart_items table with RLS sits unused.
 
 HOW IT WAS FIXED:
-- Not fixed yet. Needs handleSubmit to insert into orders + order_items using
-  the Supabase client (the tables and policies already exist).
+- handleSubmit now inserts into orders, then order_items (using the returned
+  order id), then clears the cart. Removed the setTimeout mock and the
+  localStorage order_history write.
 
 FILES CHANGED:
-- (none yet) — will be src/pages/Checkout.tsx, possibly src/hooks/useCart.tsx
+- src/pages/Checkout.tsx
 
-FIXED BY: — (open)
+FIXED BY: Nimith (with Claude) on 7/22/2026 (not yet tested against a live DB)
 ===========================================
 
 ===========================================
@@ -204,4 +205,108 @@ FILES CHANGED:
 - (none yet) — supabase/config.toml and .env
 
 FIXED BY: — (open)
+===========================================
+
+===========================================
+BUG #009
+DATE FOUND: 7/22/2026
+FOUND BY: Nimith (with Claude)
+STATUS: FIXED
+-------------------------------------------
+WHAT WAS WRONG:
+- Login did nothing visible; the login page was unreachable; every visitor was
+  treated as one fake admin user.
+
+CAUSE (root cause):
+- src/hooks/useAuth.tsx initialised `user` to a hardcoded fake user
+  ("mock-admin-id") and had the real supabase.auth.onAuthStateChange /
+  getSession listener commented out. So signIn() ran but never updated `user`,
+  and Auth.tsx's "if (user) navigate('/')" always redirected the login page away.
+
+HOW IT WAS FIXED:
+- Restored real auth: user/session start null, loading starts true, and the
+  onAuthStateChange + getSession block is active again. Removed the mock user.
+
+FILES CHANGED:
+- src/hooks/useAuth.tsx
+
+NOTE: pairs with BUG #001 (useAdmin real check). Both need the live DB to test.
+
+FIXED BY: Nimith (with Claude) on 7/22/2026 (not yet tested against a live DB)
+===========================================
+
+===========================================
+BUG #010
+DATE FOUND: 7/22/2026
+FOUND BY: Nimith (with Claude)
+STATUS: FIXED
+-------------------------------------------
+WHAT WAS WRONG:
+- The admin Orders page showed invented orders; real customer orders never appeared.
+
+CAUSE (root cause):
+- src/hooks/useAdminOrders.tsx returned a hardcoded mockOrders array instead of
+  querying the database.
+
+HOW IT WAS FIXED:
+- Replaced the mock with supabase.from("orders").select("*, order_items(*)")
+  ordered by created_at. (The status-update mutation already used the real DB.)
+
+FILES CHANGED:
+- src/hooks/useAdminOrders.tsx
+
+FIXED BY: Nimith (with Claude) on 7/22/2026 (not yet tested against a live DB)
+===========================================
+
+===========================================
+BUG #011
+DATE FOUND: 7/22/2026
+FOUND BY: Nimith (with Claude)
+STATUS: FIXED
+-------------------------------------------
+WHAT WAS WRONG:
+- Setting an order to "shipped" or "delivered" from the admin UI would be
+  rejected by the database.
+
+CAUSE (root cause):
+- The orders.status CHECK constraint in supabase_setup.sql allowed only
+  pending/confirmed/processing/completed/cancelled, but useAdminOrders'
+  ORDER_STATUSES offers shipped and delivered too. Three different status
+  vocabularies existed across the SQL, the admin hook, and Orders.tsx.
+
+HOW IT WAS FIXED:
+- Widened the CHECK constraint (both the CREATE TABLE and the section-6 ALTER)
+  to the union: pending, confirmed, processing, shipped, delivered, completed,
+  cancelled.
+
+FILES CHANGED:
+- supabase_setup.sql
+
+FIXED BY: Nimith (with Claude) on 7/22/2026
+===========================================
+
+===========================================
+BUG #012
+DATE FOUND: 7/22/2026
+FOUND BY: Nimith (with Claude)
+STATUS: FIXED
+-------------------------------------------
+WHAT WAS WRONG:
+- A saved cart / wishlist could be wiped on page reload.
+
+CAUSE (root cause):
+- In useCart and useWishlist the "save to localStorage" effect was guarded only
+  by !loading, so on first mount (items = [], loading = false) it could write an
+  empty array to storage before the initial fetch read it back.
+
+HOW IT WAS FIXED:
+- Added a `hydrated` flag set true only after the first fetch runs; the save
+  effect now waits for `hydrated`, so an empty initial state can't overwrite
+  stored data.
+
+FILES CHANGED:
+- src/hooks/useCart.tsx
+- src/hooks/useWishlist.tsx
+
+FIXED BY: Nimith (with Claude) on 7/22/2026 (behaviour not yet reproduced live)
 ===========================================

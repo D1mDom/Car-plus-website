@@ -26,59 +26,14 @@ export const useAdminOrders = () => {
   return useQuery({
     queryKey: ["admin-orders"],
     queryFn: async (): Promise<OrderWithItems[]> => {
-      // Mock network delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      const mockOrders: OrderWithItems[] = [
-        {
-          id: "ord-8839x",
-          user_id: "user-1",
-          total_amount: 153500,
-          status: "pending",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          shipping_address: "Phnom Penh, Cambodia",
-          phone: "+855 12 345 678",
-          notes: "Call before delivery",
-          order_items: [
-            { id: "item-1", car_id: "mock-3", price: 135000 },
-            { id: "item-2", car_id: "mock-1", price: 18500 }
-          ],
-          user_email: "teacher@school.edu"
-        },
-        {
-          id: "ord-1192p",
-          user_id: "user-2",
-          total_amount: 25000,
-          status: "confirmed",
-          created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-          updated_at: new Date(Date.now() - 40000000).toISOString(),
-          shipping_address: "Siem Reap, Cambodia",
-          phone: "+855 98 765 432",
-          notes: "Gift packaging please",
-          order_items: [
-            { id: "item-3", car_id: "mock-15", price: 25000 }
-          ],
-          user_email: "demo-buyer@gmail.com"
-        },
-        {
-          id: "ord-4422m",
-          user_id: "user-3",
-          total_amount: 350000,
-          status: "delivered",
-          created_at: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days ago
-          updated_at: new Date(Date.now() - 86400000 * 1).toISOString(),
-          shipping_address: "Sihanoukville, Cambodia",
-          phone: "+855 15 999 888",
-          notes: null,
-          order_items: [
-            { id: "item-4", car_id: "mock-14", price: 350000 }
-          ],
-          user_email: "luxury.collector@yahoo.com"
-        }
-      ];
+      // Orders with their line items in one query (admin RLS allows viewing all).
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*, order_items(*)")
+        .order("created_at", { ascending: false });
 
-      return mockOrders;
+      if (error) throw error;
+      return (data ?? []) as OrderWithItems[];
     },
   });
 };

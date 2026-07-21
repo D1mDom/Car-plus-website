@@ -73,15 +73,32 @@ const Checkout = () => {
     }
     setLoading(true);
     try {
-      // Mock network delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
+      // Create the order, then its line items (order_items has a FK to orders).
+      const { data: order, error: orderError } = await supabase
+        .from("orders")
+        .insert({
+          user_id: user.id,
+          total_amount: getCartTotal(),
+          status: "pending",
+          shipping_address: formData.address,
+          phone: formData.phone,
+          notes: formData.notes || null,
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      const orderItems = items.map((item) => ({
+        order_id: order.id,
+        car_id: item.car_id,
+        price: item.car.price,
+      }));
+
+      const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
+      if (itemsError) throw itemsError;
+
       await clearCart();
-      
-      // Save order metadata slightly to localstorage (optional for mock)
-      const orderHistory = JSON.parse(localStorage.getItem('order_history') || '[]');
-      orderHistory.push({ id: Math.random().toString(36).substr(2, 9), total: getCartTotal(), date: new Date().toISOString(), items });
-      localStorage.setItem('order_history', JSON.stringify(orderHistory));
 
       setOrderComplete(true);
       toast({ title: "ការបញ្ជាទិញបានសម្រេច!", description: "យើងនឹងទាក់ទងអ្នកឆាប់ៗដើម្បីបញ្ជាក់ការបញ្ជាទិញ។" });

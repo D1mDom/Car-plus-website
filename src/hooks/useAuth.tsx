@@ -14,22 +14,15 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>({
-    id: "mock-admin-id",
-    email: "admin@local.test",
-    app_metadata: {},
-    user_metadata: {},
-    aud: "authenticated",
-    created_at: new Date().toISOString(),
-  } as User);
-  const [session, setSession] = useState<Session | null>({} as Session);
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Bypassed for local testing: don't listen to Supabase auth changes
-    /*
+    // Keep local state in sync with Supabase auth. onAuthStateChange also fires
+    // an initial event, and getSession() restores a persisted session on reload.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -43,7 +36,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => subscription.unsubscribe();
-    */
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
