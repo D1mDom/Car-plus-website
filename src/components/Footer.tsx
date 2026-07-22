@@ -1,7 +1,10 @@
 import { Link } from "react-router-dom";
 import logo from "@/assets/logo.png";
+import { useContact } from "@/hooks/useContact";
 
 const Footer = () => {
+  const { data: contact } = useContact();
+  const telegramHandle = (contact?.telegram || "@Carplus777").replace(/^@/, "");
   return (
     <footer id="contact" className="border-t-2 border-border bg-card">
       <div className="container mx-auto px-4 py-16">
@@ -66,7 +69,7 @@ const Footer = () => {
                     <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
                   </svg>
                 </div>
-                <span className="text-sm text-muted-foreground">+855 12 345 678</span>
+                <span className="text-sm text-muted-foreground">{contact?.phone || "+855 12 345 678"}</span>
               </li>
               <li className="flex items-center gap-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-primary/30 bg-surface">
@@ -75,12 +78,12 @@ const Footer = () => {
                   </svg>
                 </div>
                 <a
-                  href="https://t.me/Carplus777"
+                  href={`https://t.me/${telegramHandle}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
-                  @Carplus777
+                  {contact?.telegram || "@Carplus777"}
                 </a>
               </li>
               <li className="flex items-center gap-3">
@@ -90,7 +93,7 @@ const Footer = () => {
                   </svg>
                 </div>
                 <a
-                  href="https://facebook.com/CarPlus"
+                  href={contact?.facebook || "https://facebook.com/CarPlus"}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
