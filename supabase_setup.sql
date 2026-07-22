@@ -256,6 +256,40 @@ CREATE POLICY "Admins can delete car images" ON storage.objects
   FOR DELETE USING (bucket_id = 'car-images' AND public.is_admin(auth.uid()));
 
 -- ============================================================================
+-- 4b. Contact info (single-row, admin-editable)
+--
+-- One row holds the site's contact details. Everyone can read it (the footer
+-- shows it); only admins can update it. The CHECK keeps it to a single row.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.contact_info (
+  id INTEGER PRIMARY KEY DEFAULT 1,
+  phone TEXT,
+  telegram TEXT,
+  facebook TEXT,
+  address TEXT,
+  email TEXT,
+  map_link TEXT,
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  CONSTRAINT contact_info_single_row CHECK (id = 1)
+);
+
+ALTER TABLE public.contact_info ENABLE ROW LEVEL SECURITY;
+
+-- Seed the single row with the current hardcoded values (only if empty)
+INSERT INTO public.contact_info (id, phone, telegram, facebook, address, email, map_link)
+VALUES (1, '+855 12 345 678', '@Carplus777', 'https://facebook.com/CarPlus', 'ភ្នំពេញ, កម្ពុជា', '', '')
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Anyone can view contact info" ON public.contact_info;
+DROP POLICY IF EXISTS "Admins can update contact info" ON public.contact_info;
+
+CREATE POLICY "Anyone can view contact info" ON public.contact_info FOR SELECT USING (true);
+CREATE POLICY "Admins can update contact info" ON public.contact_info FOR UPDATE USING (public.is_admin(auth.uid()));
+
+CREATE OR REPLACE TRIGGER update_contact_info_updated_at BEFORE UPDATE ON public.contact_info FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- ============================================================================
 -- 5. Indexes
 --
 -- Every one of these backs a query the app actually runs. Without them each
@@ -264,7 +298,7 @@ CREATE POLICY "Admins can delete car images" ON storage.objects
 
 CREATE INDEX IF NOT EXISTS idx_profiles_user_id      ON public.profiles(user_id);
 CREATE INDEX IF NOT EXISTS idx_cart_items_user_id    ON public.cart_items(user_id);
-CREATE INDEX IF NOT EXISTS idx_wishlist_user_id      ON public.wishlist(user_id);
+CREATE INDEX IF NOT EXISTS idx_wishlist_user_id      ON  public.wishlist(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id        ON public.orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status         ON public.orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at     ON public.orders(created_at DESC);

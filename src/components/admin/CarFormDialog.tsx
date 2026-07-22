@@ -94,7 +94,7 @@ const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   model: z.string().min(1, "Model is required"),
   year: z.coerce.number().min(1900).max(new Date().getFullYear() + 1),
-  price: z.coerce.number().min(0),
+  price: z.coerce.number().positive("តម្លៃត្រូវតែធំជាង ០ (សូមបញ្ចូលតម្លៃ)"),
   status: z.enum(["ready", "onroad", "luxury", "plate"]),
   viewers: z.coerce.number().min(0).default(0),
   image: z.string().min(1, "Image is required"),
@@ -285,7 +285,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>{car ? "Edit Car" : "Add New Car"}</DialogTitle>
+          <DialogTitle>{car ? "កែសម្រួលឡាន" : "បន្ថែមឡានថ្មី"}</DialogTitle>
         </DialogHeader>
         <ScrollArea className="max-h-[70vh] pr-4">
           <Form {...form}>
@@ -296,7 +296,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                   name="code"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Code</FormLabel>
+                      <FormLabel>លេខកូដ</FormLabel>
                       <FormControl>
                         <Input placeholder="DCS2024_..." {...field} />
                       </FormControl>
@@ -309,7 +309,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Name</FormLabel>
+                      <FormLabel>ឈ្មោះ</FormLabel>
                       <FormControl>
                         <Input placeholder="Toyota Camry SE" {...field} />
                       </FormControl>
@@ -325,7 +325,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                   name="model"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Model</FormLabel>
+                      <FormLabel>ម៉ូដែល</FormLabel>
                       <FormControl>
                         <Input placeholder="Toyota Camry" {...field} />
                       </FormControl>
@@ -338,7 +338,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                   name="year"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Year</FormLabel>
+                      <FormLabel>ឆ្នាំ</FormLabel>
                       <FormControl>
                         <Input type="number" {...field} />
                       </FormControl>
@@ -354,7 +354,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                   name="price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Price ($)</FormLabel>
+                      <FormLabel>តម្លៃ ($)</FormLabel>
                       <FormControl>
                         <Input type="number" {...field} />
                       </FormControl>
@@ -367,7 +367,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                   name="status"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Status</FormLabel>
+                      <FormLabel>ស្ថានភាព</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -375,10 +375,10 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="ready">Ready car</SelectItem>
-                          <SelectItem value="onroad">On-road car</SelectItem>
-                          <SelectItem value="luxury">Luxury car</SelectItem>
-                          <SelectItem value="plate">With licence plate</SelectItem>
+                          <SelectItem value="ready">ឡានរួចរាល់</SelectItem>
+                          <SelectItem value="onroad">ឡានលើផ្លូវ</SelectItem>
+                          <SelectItem value="luxury">ឡានប្រណីត</SelectItem>
+                          <SelectItem value="plate">មានស្លាកលេខ</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -392,7 +392,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                 name="image"
                 render={() => (
                   <FormItem>
-                    <FormLabel>Car Image</FormLabel>
+                    <FormLabel>រូបភាពឡាន</FormLabel>
                     <FormControl>
                       <div className="space-y-3">
                         {/* Hidden file input */}
@@ -482,7 +482,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                   name="bodyType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Body Type</FormLabel>
+                      <FormLabel>ប្រភេទតួ</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -507,7 +507,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                   name="fuelType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fuel Type</FormLabel>
+                      <FormLabel>ប្រភេទឥន្ធនៈ</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -530,7 +530,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                   name="color"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Color</FormLabel>
+                      <FormLabel>ពណ៌</FormLabel>
                       <FormControl>
                         <Input placeholder="White" {...field} />
                       </FormControl>
@@ -546,7 +546,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                   name="taxStatus"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tax Status</FormLabel>
+                      <FormLabel>ស្ថានភាពពន្ធ</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -554,8 +554,8 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Tax slip">Tax slip</SelectItem>
-                          <SelectItem value="Tax paid">Tax paid</SelectItem>
+                          <SelectItem value="Tax slip">ស្លាកពន្ធ</SelectItem>
+                          <SelectItem value="Tax paid">បង់ពន្ធរួច</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -567,7 +567,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                   name="condition"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Condition</FormLabel>
+                      <FormLabel>គុណភាព</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -575,10 +575,10 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Excellent">Excellent</SelectItem>
-                          <SelectItem value="Very Good">Very Good</SelectItem>
-                          <SelectItem value="Good">Good</SelectItem>
-                          <SelectItem value="Fair">Fair</SelectItem>
+                          <SelectItem value="Excellent">ល្អឥតខ្ចោះ</SelectItem>
+                          <SelectItem value="Very Good">ល្អណាស់</SelectItem>
+                          <SelectItem value="Good">ល្អ</SelectItem>
+                          <SelectItem value="Fair">មធ្យម</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -592,7 +592,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description (one point per line)</FormLabel>
+                    <FormLabel>ការពិពណ៌នា (មួយចំណុចក្នុងមួយបន្ទាត់)</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Six-month warranty on the engine...&#10;Financing available..."
@@ -611,9 +611,9 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                 render={({ field }) => (
                   <FormItem className="flex items-center justify-between rounded-lg border p-3">
                     <div className="space-y-0.5">
-                      <FormLabel>Active</FormLabel>
+                      <FormLabel>បង្ហាញ</FormLabel>
                       <p className="text-sm text-muted-foreground">
-                        Show this car on the public website
+                        បង្ហាញឡាននេះនៅលើគេហទំព័រ
                       </p>
                     </div>
                     <FormControl>
@@ -625,10 +625,10 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
 
               <div className="flex justify-end gap-3 pt-4">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
+                  បោះបង់
                 </Button>
                 <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Saving..." : car ? "Update Car" : "Add Car"}
+                  {isLoading ? "កំពុងរក្សាទុក..." : car ? "រក្សាទុក" : "បន្ថែមឡាន"}
                 </Button>
               </div>
             </form>

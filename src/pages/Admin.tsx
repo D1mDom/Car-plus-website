@@ -4,12 +4,12 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
-import { useCars, useDeleteCar } from "@/hooks/useCars";
+import { useCars, useDeleteCar, getStatusLabel } from "@/hooks/useCars";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Car, BarChart3, Loader2, Package, Megaphone } from "lucide-react";
+import { Plus, Pencil, Trash2, Car, BarChart3, Loader2, Package, Megaphone, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 import CarFormDialog from "@/components/admin/CarFormDialog";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { Car as CarType } from "@/hooks/useCars";
+import type { Car as CarType, CarStatus } from "@/hooks/useCars";
 
 const Admin = () => {
   const { user, loading: authLoading } = useAuth();
@@ -65,10 +65,10 @@ const Admin = () => {
         <Header />
         <main className="pt-24 pb-16">
           <div className="container mx-auto px-4 text-center">
-            <h1 className="text-3xl font-bold text-destructive mb-4">Access Denied</h1>
-            <p className="text-muted-foreground mb-6">You don't have permission to access this page.</p>
+            <h1 className="text-3xl font-bold text-destructive mb-4">គ្មានសិទ្ធិចូល</h1>
+            <p className="text-muted-foreground mb-6">អ្នកគ្មានសិទ្ធិចូលទំព័រនេះទេ។</p>
             <Button asChild>
-              <Link to="/">Go Home</Link>
+              <Link to="/">ត្រឡប់ទៅទំព័រដើម</Link>
             </Button>
           </div>
         </main>
@@ -107,8 +107,12 @@ const Admin = () => {
       luxury: "outline",
       plate: "destructive",
     };
-    return <Badge variant={variants[status] || "default"}>{status}</Badge>;
+    return <Badge variant={variants[status] || "default"}>{getStatusLabel(status as CarStatus)}</Badge>;
   };
+
+  // Only real (database) cars belong in the admin. The demo fallback cars
+  // (id "mock-...") aren't real rows, so they can't be edited or deleted.
+  const realCars = (cars ?? []).filter((c) => !String(c.id).startsWith("mock-"));
 
   return (
     <div className="min-h-screen bg-background">
@@ -117,25 +121,31 @@ const Admin = () => {
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-              <p className="text-muted-foreground">Manage your car inventory</p>
+              <h1 className="text-3xl font-bold">ផ្ទាំងគ្រប់គ្រង</h1>
+              <p className="text-muted-foreground">គ្រប់គ្រងស្តុកឡានរបស់អ្នក</p>
             </div>
             <div className="flex gap-3">
               <Button variant="outline" asChild>
                 <Link to="/admin/orders">
                   <Package className="h-4 w-4 mr-2" />
-                  Orders
+                  ការបញ្ជាទិញ
                 </Link>
               </Button>
               <Button variant="outline" asChild>
                 <Link to="/admin/reports">
                   <BarChart3 className="h-4 w-4 mr-2" />
-                  Reports
+                  របាយការណ៍
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link to="/admin/contact">
+                  <Phone className="h-4 w-4 mr-2" />
+                  ទំនាក់ទំនង
                 </Link>
               </Button>
               <Button onClick={() => setFormOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Car
+                បន្ថែមឡាន
               </Button>
             </div>
           </div>
@@ -144,39 +154,39 @@ const Admin = () => {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total Cars</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">ឡានសរុប</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{cars?.length || 0}</div>
+                <div className="text-2xl font-bold">{realCars.length}</div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Ready Cars</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">ឡានរួចរាល់</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {cars?.filter(c => c.status === "ready").length || 0}
+                  {realCars.filter(c => c.status === "ready").length}
                 </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Luxury Cars</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">ឡានប្រណីត</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {cars?.filter(c => c.status === "luxury").length || 0}
+                  {realCars.filter(c => c.status === "luxury").length}
                 </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total Value</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">តម្លៃសរុប</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  ${cars?.reduce((sum, c) => sum + c.price, 0).toLocaleString() || 0}
+                  ${realCars.reduce((sum, c) => sum + c.price, 0).toLocaleString()}
                 </div>
               </CardContent>
             </Card>
@@ -187,7 +197,7 @@ const Admin = () => {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-primary">
                 <Megaphone className="h-5 w-5" />
-                Global Promotion Banner
+                ផ្ទាំងផ្សព្វផ្សាយ
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -195,20 +205,20 @@ const Admin = () => {
                 <Input 
                   value={promoInput}
                   onChange={(e) => setPromoInput(e.target.value)}
-                  placeholder="e.g., 🔥 Khmer New Year Mega Event: Free Shipping!"
+                  placeholder="ឧ. ព្រឹត្តិការណ៍ចូលឆ្នាំខ្មែរ៖ ដឹកជញ្ជូនឥតគិតថ្លៃ!"
                   className="flex-1 bg-background"
                 />
                 <Button 
                   onClick={() => {
                     setPromotionText(promoInput);
-                    toast.success(promoInput ? "Promotion Banner Published!" : "Promotion Banner Removed");
+                    toast.success(promoInput ? "បានផ្សព្វផ្សាយ!" : "បានលុបផ្ទាំងផ្សព្វផ្សាយ");
                   }}
                 >
-                  Update Banner
+                  ធ្វើបច្ចុប្បន្នភាព
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                This text will appear at the very top of the website. Leave it completely blank to hide the banner.
+                អត្ថបទនេះនឹងបង្ហាញនៅផ្នែកខាងលើបំផុតនៃគេហទំព័រ។ ទុកឲ្យទទេ ដើម្បីលាក់វា។
               </p>
             </CardContent>
           </Card>
@@ -218,7 +228,7 @@ const Admin = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Car className="h-5 w-5" />
-                Car Inventory
+                ស្តុកឡាន
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -226,23 +236,23 @@ const Admin = () => {
                 <div className="flex justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              ) : cars && cars.length > 0 ? (
+              ) : realCars.length > 0 ? (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Image</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Code</TableHead>
-                        <TableHead>Year</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Active</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead>រូបភាព</TableHead>
+                        <TableHead>ឈ្មោះ</TableHead>
+                        <TableHead>លេខកូដ</TableHead>
+                        <TableHead>ឆ្នាំ</TableHead>
+                        <TableHead>តម្លៃ</TableHead>
+                        <TableHead>ស្ថានភាព</TableHead>
+                        <TableHead>បង្ហាញ</TableHead>
+                        <TableHead className="text-right">សកម្មភាព</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {cars.map((car) => (
+                      {realCars.map((car) => (
                         <TableRow key={car.id}>
                           <TableCell>
                             <img
@@ -258,7 +268,7 @@ const Admin = () => {
                           <TableCell>{getStatusBadge(car.status)}</TableCell>
                           <TableCell>
                             <Badge variant={car.isActive ? "default" : "secondary"}>
-                              {car.isActive ? "Yes" : "No"}
+                              {car.isActive ? "បង្ហាញ" : "លាក់"}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
@@ -283,10 +293,10 @@ const Admin = () => {
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <Car className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No cars in inventory</p>
+                  <p>គ្មានឡានក្នុងស្តុកទេ</p>
                   <Button className="mt-4" onClick={() => setFormOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Your First Car
+                    បន្ថែមឡានដំបូង
                   </Button>
                 </div>
               )}
@@ -305,14 +315,14 @@ const Admin = () => {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Car</AlertDialogTitle>
+            <AlertDialogTitle>លុបឡាន</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this car? This action cannot be undone.
+              តើអ្នកប្រាកដទេថាចង់លុបឡាននេះ? សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+            <AlertDialogCancel>បោះបង់</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>លុប</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -44,7 +44,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         const parsed = JSON.parse(stored);
 
         // Hydrate local storage IDs with actual car data
-        const hydratedItems = parsed.map((item: any) => {
+        const hydratedItems = parsed.map((item: { id: string; car_id: string; quantity: number }) => {
           const car = carsData.find(c => c.id === item.car_id);
           if (!car) return null;
           return {

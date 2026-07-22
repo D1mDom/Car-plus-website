@@ -37,7 +37,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
       const stored = localStorage.getItem(`wishlist_${user.id}`);
       if (stored) {
         const parsed = JSON.parse(stored);
-        const hydratedItems = parsed.map((item: any) => {
+        const hydratedItems = parsed.map((item: { id: string; car_id: string }) => {
           const car = carsData.find(c => c.id === item.car_id);
           if (!car) return null;
           return {

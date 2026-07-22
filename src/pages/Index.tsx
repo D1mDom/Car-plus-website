@@ -6,6 +6,7 @@ import CategoryFilter from "@/components/CategoryFilter";
 import CarCard from "@/components/CarCard";
 import CarListItem from "@/components/CarListItem";
 import AboutSection from "@/components/AboutSection";
+import LocationMap from "@/components/LocationMap";
 import FilterPanel, { FilterState, defaultFilters } from "@/components/FilterPanel";
 import InventoryToolbar, { SortOption, ViewMode } from "@/components/InventoryToolbar";
 import { Button } from "@/components/ui/button";
@@ -152,6 +153,7 @@ const Index = () => {
         </section>
 
         <AboutSection />
+        <LocationMap />
       </main>
       <Footer />
       <FilterPanel open={filterPanelOpen} onOpenChange={setFilterPanelOpen} filters={filters} onFiltersChange={setFilters} />
