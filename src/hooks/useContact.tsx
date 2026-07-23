@@ -67,7 +67,7 @@ export const useUpdateContact = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contact-info"] });
-      toast.success("បានរក្សាទុកព័ត៌មានទំនាក់ទំនង");
+      toast.success("Contact info saved");
     },
     onError: (error: unknown) => {
       // Supabase errors are plain objects with a `message`, not Error instances.
@@ -75,7 +75,7 @@ export const useUpdateContact = () => {
         error && typeof error === "object" && "message" in error
           ? String((error as { message: unknown }).message)
           : "error";
-      toast.error("បរាជ័យក្នុងការរក្សាទុក: " + message);
+      toast.error("Failed to save: " + message);
     },
   });
 };

@@ -35,7 +35,7 @@ const ContactForm = () => {
     }
     setLoading(true);
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast.success("សារបានផ្ញើដោយជោគជ័យ! យើងនឹងឆ្លើយតបឆាប់ៗ។");
+    toast.success("Message sent! We'll reply soon.");
     setFormData({ name: "", email: "", phone: "", message: "" });
     setLoading(false);
   };

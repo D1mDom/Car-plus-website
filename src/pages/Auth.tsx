@@ -23,6 +23,12 @@ const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Keep the credential fields to plain English. These strip emoji,
+  // other-language scripts, and symbols that don't belong as you type.
+  const cleanEmail = (v: string) => v.replace(/[^a-zA-Z0-9@._%+-]/g, "");
+  const cleanPassword = (v: string) => v.replace(/[^\x20-\x7E]/g, "");
+  const cleanName = (v: string) => v.replace(/[^a-zA-Z\s'-]/g, "");
+
   useEffect(() => { if (user) navigate("/"); }, [user, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -75,11 +81,11 @@ const Auth = () => {
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signin-email">អ៊ីមែល</Label>
-                    <Input id="signin-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    <Input id="signin-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(cleanEmail(e.target.value))} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signin-password">ពាក្យសម្ងាត់</Label>
-                    <Input id="signin-password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    <Input id="signin-password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(cleanPassword(e.target.value))} required />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "កំពុងចូល..." : "ចូល"}
@@ -91,15 +97,15 @@ const Auth = () => {
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signup-name">ឈ្មោះពេញ</Label>
-                    <Input id="signup-name" type="text" placeholder="ឈ្មោះរបស់អ្នក" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+                    <Input id="signup-name" type="text" placeholder="ឈ្មោះរបស់អ្នក" value={fullName} onChange={(e) => setFullName(cleanName(e.target.value))} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">អ៊ីមែល</Label>
-                    <Input id="signup-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    <Input id="signup-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(cleanEmail(e.target.value))} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">ពាក្យសម្ងាត់</Label>
-                    <Input id="signup-password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    <Input id="signup-password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(cleanPassword(e.target.value))} required />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "កំពុងបង្កើតគណនី..." : "បង្កើតគណនី"}

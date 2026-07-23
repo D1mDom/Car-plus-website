@@ -1,73 +1,92 @@
-# Welcome to your Lovable project
+# Car Plus
 
-## Project info
+A car dealership website for a Phnom Penh dealer. Visitors browse the car
+inventory and save favourites; admins manage cars, contact details, and
+promotions from a built-in admin panel. The customer-facing UI is in Khmer.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Tech stack
 
-## How can I edit this code?
+- Vite + React + TypeScript
+- Tailwind CSS + shadcn/ui
+- Supabase (Postgres, Auth, Storage, Row Level Security)
+- React Router + TanStack Query
 
-There are several ways of editing your application.
+## Getting started
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Prerequisites: Node.js and npm.
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# 1. Install dependencies
+npm install
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# 2. Set your Supabase credentials in .env (see below)
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# 3. Start the dev server (http://localhost:8080)
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Environment variables (.env)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+VITE_SUPABASE_URL="https://<your-project>.supabase.co"
+VITE_SUPABASE_PUBLISHABLE_KEY="<your anon / publishable key>"
+```
 
-**Use GitHub Codespaces**
+Only these two are required by the app. The anon key is safe to expose in the
+browser; the data is protected by Row Level Security in the database.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Database setup (Supabase)
 
-## What technologies are used for this project?
+1. Create a new Supabase project.
+2. Open the SQL Editor and run the entire `supabase_setup.sql` file. This
+   creates all tables, RLS policies, the `car-images` storage bucket, and
+   indexes. It is safe to re-run.
+3. Copy the Project URL and anon key from Project Settings -> API into `.env`.
 
-This project is built with:
+## Making yourself an admin
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+For security, admins cannot be created through the app. Sign up on the site
+first, then run this in the Supabase SQL Editor:
 
-## How can I deploy this project?
+```sql
+INSERT INTO public.admin_users (user_id)
+SELECT id FROM auth.users WHERE email = 'you@example.com'
+ON CONFLICT (user_id) DO NOTHING;
+```
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+Refresh the site and a gear icon appears in the header, linking to `/admin`.
 
-## Can I connect a custom domain to my Lovable project?
+## What the admin can do
 
-Yes, you can!
+- Add, edit, and delete cars (with photo upload to Supabase Storage)
+- Edit contact info (phone, Telegram, Facebook, address, Google Map)
+- Set a site-wide promotion banner
+- View orders and reports
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Scripts
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- `npm run dev` - start the dev server
+- `npm run build` - production build
+- `npm run preview` - preview the production build locally
+- `npm run lint` - run ESLint
+
+## Project structure
+
+- `src/pages` - routes (home, car detail, auth, admin pages)
+- `src/components` - UI components and admin dialogs
+- `src/hooks` - data hooks (useCars, useAuth, useContact, useWishlist, ...)
+- `src/integrations/supabase` - Supabase client and generated types
+- `supabase_setup.sql` - full database schema, policies, and storage setup
+- `PROGRESS.txt` / `BUGLOG.txt` - shared work log and bug log
+
+## Deployment
+
+The app builds to static files (Vite). Deploy the `dist/` output to any static
+host such as Vercel. A `vercel.json` is included with an SPA rewrite so
+client-side routes work on refresh. Set the same `VITE_SUPABASE_*` environment
+variables in the host.
+
+## Notes
+
+- The customer-facing UI is in Khmer; some admin labels are English.
+- Cart and wishlist currently use the browser's local storage per signed-in user.
