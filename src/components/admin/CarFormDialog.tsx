@@ -3,11 +3,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -278,12 +278,12 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
   const isLoading = createCar.isPending || updateCar.isPending;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full overflow-y-auto p-0 sm:max-w-xl">
-        <SheetHeader className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4 text-left">
-          <SheetTitle>{car ? "កែសម្រួលឡាន" : "បន្ថែមឡានថ្មី"}</SheetTitle>
-        </SheetHeader>
-        <div className="px-6 py-5">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{car ? "កែសម្រួលឡាន" : "បន្ថែមឡានថ្មី"}</DialogTitle>
+        </DialogHeader>
+        <div>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
@@ -611,8 +611,8 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
             </form>
           </Form>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 };
 

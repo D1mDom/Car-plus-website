@@ -1,4 +1,4 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -52,11 +52,11 @@ const FilterPanel = ({ open, onOpenChange, filters, onFiltersChange }: FilterPan
   const hasActiveFilters = filters.yearMin !== null || filters.yearMax !== null || filters.fuelType !== null || filters.color !== null || filters.priceMin !== minPrice || filters.priceMax !== maxPrice;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md bg-card border-border">
-        <SheetHeader className="pb-6 border-b border-border">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
+        <DialogHeader className="border-b border-border pb-4">
           <div className="flex items-center justify-between">
-            <SheetTitle className="text-xl font-semibold">តម្រងកម្រិតខ្ពស់</SheetTitle>
+            <DialogTitle className="text-xl font-semibold">តម្រងកម្រិតខ្ពស់</DialogTitle>
             {hasActiveFilters && (
               <Button variant="ghost" size="sm" onClick={handleReset} className="text-muted-foreground hover:text-foreground gap-2">
                 <RotateCcw className="h-4 w-4" />
@@ -64,7 +64,7 @@ const FilterPanel = ({ open, onOpenChange, filters, onFiltersChange }: FilterPan
               </Button>
             )}
           </div>
-        </SheetHeader>
+        </DialogHeader>
 
         <div className="space-y-8 py-6">
           <div className="space-y-4">
@@ -137,13 +137,13 @@ const FilterPanel = ({ open, onOpenChange, filters, onFiltersChange }: FilterPan
           </div>
         </div>
 
-        <div className="pt-6 border-t border-border">
+        <div className="border-t border-border pt-6">
           <Button onClick={() => onOpenChange(false)} className="w-full" size="lg">
             អនុវត្តតម្រង
           </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 };
 
