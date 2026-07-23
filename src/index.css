@@ -7,7 +7,9 @@
 @layer base {
   :root {
     /* Car Plus - Corporate Automotive Theme (Navy / White / Orange) */
-    --background: 0 0% 100%;
+    /* Page background is a soft slate (#F8FAFC); cards stay pure white and
+       lift off it with a 1px border rather than heavy shadows. */
+    --background: 210 40% 98%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
@@ -16,24 +18,25 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 26 100% 50%;
+    --primary: 25 100% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 216 45% 18%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 40% 20%;
 
-    --muted: 210 20% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 19% 38%;
 
-    --accent: 28 60% 95%;
-    --accent-foreground: 24 90% 40%;
+    /* Warm orange tint (#FFF7ED) for pill badges, hover states, icon bubbles */
+    --accent: 33 100% 96%;
+    --accent-foreground: 21 90% 42%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 20% 88%;
-    --input: 214 20% 88%;
-    --ring: 26 100% 50%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 25 100% 50%;
 
     --radius: 0.625rem;
 
@@ -52,8 +55,8 @@
     --ocean-dark: 22 100% 42%;
     --teal: 208 70% 45%;
     --teal-light: 205 65% 58%;
-    --surface: 30 25% 97%;
-    --surface-hover: 30 30% 94%;
+    --surface: 210 40% 96%;
+    --surface-hover: 210 40% 93%;
     --text-border: 26 100% 45%;
 
     /* Gradients */
@@ -158,6 +161,12 @@
 @layer base {
   * {
     @apply border-border;
+  }
+
+  /* Base font size - bumped up from the 16px default so text (esp. Khmer)
+     reads a bit larger. Everything scales from this since sizes use rem. */
+  html {
+    font-size: 17px;
   }
 
   body {

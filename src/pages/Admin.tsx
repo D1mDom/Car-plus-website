@@ -119,12 +119,12 @@ const Admin = () => {
       <Header />
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center mb-8">
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-3xl font-bold">ផ្ទាំងគ្រប់គ្រង</h1>
+              <h1 className="text-2xl font-bold sm:text-3xl">ផ្ទាំងគ្រប់គ្រង</h1>
               <p className="text-muted-foreground">គ្រប់គ្រងស្តុកឡានរបស់អ្នក</p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-2 sm:gap-3">
               <Button variant="outline" asChild>
                 <Link to="/admin/orders">
                   <Package className="h-4 w-4 mr-2" />
@@ -211,7 +211,7 @@ const Admin = () => {
                 <Button 
                   onClick={() => {
                     setPromotionText(promoInput);
-                    toast.success(promoInput ? "បានផ្សព្វផ្សាយ!" : "បានលុបផ្ទាំងផ្សព្វផ្សាយ");
+                    toast.success(promoInput ? "Promotion published!" : "Promotion removed");
                   }}
                 >
                   ធ្វើបច្ចុប្បន្នភាព

@@ -59,49 +59,52 @@ const teamMembers = [
 const AboutSection = () => {
   return (
     <>
-      <section id="about" className="py-24 bg-gradient-light">
+      <section id="about" className="py-20 sm:py-24">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-bordered">
-              អំពី <span className="text-gradient-ocean">Car Plus</span>
+          <div className="mx-auto mb-14 max-w-3xl text-center">
+            <h2 className="mb-4 text-3xl font-bold text-foreground sm:text-4xl">
+              អំពី <span className="text-primary">Car Plus</span>
             </h2>
-            <p className="text-muted-foreground text-lg leading-relaxed mb-8">
+            <p className="text-lg leading-relaxed text-muted-foreground">
               បង្កើតឡើងក្នុងឆ្នាំ ២០១៤ Car Plus បានរីកចម្រើនពីអាជីវកម្មគ្រួសារតូចមួយ ទៅជាឈ្មួញលក់រថយន្តដែលទុកចិត្តបំផុតមួយនៅភ្នំពេញ។ បេសកកម្មរបស់យើងគឺផ្តល់រថយន្តគុណភាពខ្ពស់ជាមួយប្រវត្តិថ្លាភ្លឺ ធានា និងសេវាកម្មអតិថិជនល្អឥតខ្ចោះ។
             </p>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+          {/* Stats - one card with dividers */}
+          <div className="mb-16 grid grid-cols-2 divide-border overflow-hidden rounded-2xl border border-border bg-card sm:grid-cols-4 sm:divide-x [&>*:nth-child(-n+2)]:border-b sm:[&>*]:border-b-0 [&>*:nth-child(odd)]:border-r sm:[&>*:nth-child(odd)]:border-r-0">
             {stats.map((stat) => (
-              <div key={stat.label} className="text-center p-6 rounded-xl bg-card border-2 border-border">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 mx-auto mb-3">
-                  <stat.icon className="h-6 w-6 text-primary" />
+              <div key={stat.label} className="flex flex-col items-center gap-2 border-border p-6 text-center">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                  <stat.icon className="h-5 w-5" />
                 </div>
-                <p className="text-3xl font-bold text-gradient-ocean mb-1">{stat.value}</p>
+                <p className="text-3xl font-bold text-foreground">{stat.value}</p>
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
               </div>
             ))}
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+          {/* Features - left-aligned cards */}
+          <div className="mb-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {features.map((feature) => (
-              <div key={feature.title} className="group p-6 rounded-xl bg-card border-2 border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 mb-4 group-hover:bg-primary/20 transition-colors">
-                  <feature.icon className="h-6 w-6 text-primary" />
+              <div key={feature.title} className="group rounded-2xl border border-border bg-card p-6 transition-colors hover:border-primary/40">
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-accent-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                  <feature.icon className="h-5 w-5" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2 text-foreground text-bordered-light">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
+                <h3 className="mb-2 text-base font-semibold text-foreground">{feature.title}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
               </div>
             ))}
           </div>
 
+          {/* Team - sleek left-aligned cards */}
           <div className="mb-16">
-            <h3 className="text-2xl font-bold text-center mb-8 text-bordered">
-              ស្គាល់ <span className="text-gradient-ocean">ក្រុមការងារ</span>យើង
+            <h3 className="mb-8 text-center text-2xl font-bold text-foreground">
+              ស្គាល់ <span className="text-primary">ក្រុមការងារ</span>យើង
             </h3>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {teamMembers.map((member) => (
-                <div key={member.name} className="text-center p-6 rounded-xl bg-card border-2 border-border hover:border-primary/50 transition-all duration-300">
-                  <img src={member.image} alt={member.name} className="w-24 h-24 rounded-full mx-auto mb-4 object-cover border-4 border-primary/20" />
+                <div key={member.name} className="rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/40">
+                  <img src={member.image} alt={member.name} className="mb-4 h-16 w-16 rounded-full object-cover" />
                   <h4 className="font-semibold text-foreground">{member.name}</h4>
                   <p className="text-sm text-muted-foreground">{member.role}</p>
                 </div>
@@ -109,29 +112,36 @@ const AboutSection = () => {
             </div>
           </div>
 
-          <div className="max-w-2xl mx-auto text-center">
-            <h3 className="text-2xl font-bold text-bordered mb-6">
-              ទស្សនា <span className="text-gradient-ocean">សាលបង្ហាញ</span>រយើង
+          {/* Showroom / quick contact */}
+          <div className="mx-auto max-w-3xl text-center">
+            <h3 className="mb-4 text-2xl font-bold text-foreground">
+              ទស្សនា <span className="text-primary">សាលបង្ហាញ</span>យើង
             </h3>
-            <p className="text-muted-foreground leading-relaxed mb-8">
+            <p className="mb-8 leading-relaxed text-muted-foreground">
               សូមអញ្ជើញមកមើលរថយន្តគុណភាពរបស់យើងដោយផ្ទាល់។ ក្រុមការងាររបស់យើងរួចរាល់ជួយអ្នកស្វែងរកឡានដ៏ល្អឥតខ្ចោះ។
             </p>
-            
-            <div className="grid sm:grid-cols-3 gap-6">
-              <div className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border-2 border-border">
-                <MapPin className="h-6 w-6 text-primary" />
+
+            <div className="grid gap-5 sm:grid-cols-3">
+              <div className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                  <MapPin className="h-5 w-5" />
+                </div>
                 <p className="font-medium text-foreground">អាសយដ្ឋាន</p>
-                <p className="text-sm text-muted-foreground text-center">ផ្ទះ ៣៩៣ ផ្លូវឧកញ៉ា ម៉ុង ឫទ្ធី (១៩២៨) ភ្នំពេញ ១២១០១</p>
+                <p className="text-center text-sm text-muted-foreground">ផ្ទះ ៣៩៣ ផ្លូវឧកញ៉ា ម៉ុង ឫទ្ធី (១៩២៨) ភ្នំពេញ ១២១០១</p>
               </div>
-              
-              <div className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border-2 border-border">
-                <Phone className="h-6 w-6 text-primary" />
+
+              <div className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                  <Phone className="h-5 w-5" />
+                </div>
                 <p className="font-medium text-foreground">ទូរស័ព្ទ</p>
                 <p className="text-sm text-muted-foreground">069 927 292</p>
               </div>
-              
-              <div className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border-2 border-border">
-                <MessageCircle className="h-6 w-6 text-primary" />
+
+              <div className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                  <MessageCircle className="h-5 w-5" />
+                </div>
                 <p className="font-medium text-foreground">តេឡេក្រាម</p>
                 <p className="text-sm text-muted-foreground">@carplus_cambodia</p>
               </div>
@@ -140,29 +150,29 @@ const AboutSection = () => {
         </div>
       </section>
 
-      <section id="contact" className="py-24 bg-background">
+      <section id="contact" className="border-t border-border bg-card py-20 sm:py-24">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-bordered">
-              ទំនាក់ <span className="text-gradient-ocean">ទំនង</span>
+          <div className="mx-auto mb-14 max-w-3xl text-center">
+            <h2 className="mb-4 text-3xl font-bold text-foreground sm:text-4xl">
+              ទំនាក់ <span className="text-primary">ទំនង</span>
             </h2>
-            <p className="text-muted-foreground text-lg leading-relaxed">
+            <p className="text-lg leading-relaxed text-muted-foreground">
               មានសំណួរអំពីឡាន ឬចង់ណាត់ជួបសាកឡាន? ទាក់ទងមកយើង ហើយក្រុមការងារយើងនឹងឆ្លើយតបជូនឆាប់រហ័ស។
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-12">
-            <div className="bg-card p-8 rounded-xl border-2 border-border">
-              <h3 className="text-xl font-bold mb-6 text-bordered">ផ្ញើសារមកយើង</h3>
+          <div className="grid gap-8 lg:grid-cols-2">
+            <div className="rounded-2xl border border-border bg-background p-6 sm:p-8">
+              <h3 className="mb-6 text-xl font-bold text-foreground">ផ្ញើសារមកយើង</h3>
               <ContactForm />
             </div>
 
-            <div className="space-y-8">
-              <div className="bg-card p-6 rounded-xl border-2 border-border">
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-border bg-background p-6">
                 <BusinessHours />
               </div>
-              
-              <div className="bg-card p-6 rounded-xl border-2 border-border">
+
+              <div className="rounded-2xl border border-border bg-background p-6">
                 <SocialLinks />
               </div>
             </div>

@@ -422,8 +422,8 @@ export const useCreateCar = () => {
       if (error) throw error;
       return mapDbCarToCar(data as DbCar);
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["cars"] }); toast.success("បានបន្ថែមឡានដោយជោគជ័យ"); },
-    onError: (error) => { toast.error("បរាជ័យក្នុងការបន្ថែមឡាន: " + error.message); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["cars"] }); toast.success("Car added successfully"); },
+    onError: (error) => { toast.error("Failed to add car: " + error.message); },
   });
 };
 
@@ -452,8 +452,8 @@ export const useUpdateCar = () => {
       if (error) throw error;
       return mapDbCarToCar(data as DbCar);
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["cars"] }); toast.success("បានធ្វើបច្ចុប្បន្នភាពឡានដោយជោគជ័យ"); },
-    onError: (error) => { toast.error("បរាជ័យក្នុងការធ្វើបច្ចុប្បន្នភាពឡាន: " + error.message); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["cars"] }); toast.success("Car updated successfully"); },
+    onError: (error) => { toast.error("Failed to update car: " + error.message); },
   });
 };
 
@@ -464,8 +464,8 @@ export const useDeleteCar = () => {
       const { error } = await supabase.from("cars").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["cars"] }); toast.success("បានលុបឡានដោយជោគជ័យ"); },
-    onError: (error) => { toast.error("បរាជ័យក្នុងការលុបឡាន: " + error.message); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["cars"] }); toast.success("Car deleted successfully"); },
+    onError: (error) => { toast.error("Failed to delete car: " + error.message); },
   });
 };
 

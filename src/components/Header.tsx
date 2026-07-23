@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
-import { Heart, Settings, Megaphone, Menu } from "lucide-react";
+import { Heart, Megaphone, Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import logo from "@/assets/logo.png";
-import CartSheet from "@/components/CartSheet";
 import UserMenu from "@/components/UserMenu";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -84,16 +83,9 @@ const Header = () => {
               </nav>
 
               <div className="flex items-center gap-3">
-                {isAdmin && (
-                  <Button variant="ghost" size="icon" asChild>
-                    <Link to="/admin">
-                      <Settings className="h-5 w-5" />
-                    </Link>
-                  </Button>
-                )}
-                <Button variant="ghost" size="icon" className="relative" asChild>
+                <Button variant="ghost" size="icon" className="relative rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" asChild>
                   <Link to="/wishlist">
-                    <Heart className="h-5 w-5" />
+                    <Heart className={`h-5 w-5 ${items.length > 0 ? "fill-primary text-primary" : ""}`} />
                     {items.length > 0 && (
                       <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
                         {items.length}
@@ -101,7 +93,6 @@ const Header = () => {
                     )}
                   </Link>
                 </Button>
-                <CartSheet />
                 <UserMenu />
                 <a 
                   target="_blank" 

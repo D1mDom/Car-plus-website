@@ -11,7 +11,20 @@ import FilterPanel, { FilterState, defaultFilters } from "@/components/FilterPan
 import InventoryToolbar, { SortOption, ViewMode } from "@/components/InventoryToolbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useCars, type CarStatus, type Car } from "@/hooks/useCars";
+import { useCars, useDeleteCar, type CarStatus, type Car } from "@/hooks/useCars";
+import { useAdmin } from "@/hooks/useAdmin";
+import CarFormDialog from "@/components/admin/CarFormDialog";
+import AdminToolbar from "@/components/admin/AdminToolbar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Loader2, Search, SlidersHorizontal } from "lucide-react";
 
 const Index = () => {
@@ -22,6 +35,21 @@ const Index = () => {
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+
+  // Inline admin mode: manage cars right from the public page.
+  const { isAdmin } = useAdmin();
+  const deleteCar = useDeleteCar();
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingCar, setEditingCar] = useState<Car | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const handleAdd = () => { setEditingCar(null); setFormOpen(true); };
+  const handleEdit = (car: Car) => { setEditingCar(car); setFormOpen(true); };
+  const handleDelete = (car: Car) => setDeleteId(car.id);
+  const handleFormClose = () => { setFormOpen(false); setEditingCar(null); };
+  const confirmDelete = () => {
+    if (deleteId) { deleteCar.mutate(deleteId); setDeleteId(null); }
+  };
 
   const priceRange = useMemo(() => {
     if (carsData.length === 0) return { min: 0, max: 100000 };
@@ -73,6 +101,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="pt-16">
+        {isAdmin && <AdminToolbar cars={carsData} onAdd={handleAdd} />}
         <div className="container mx-auto px-4 pt-4">
           <HeroSection />
         </div>
@@ -121,7 +150,11 @@ const Index = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                   {filteredAndSortedCars.map((car, index) => (
                     <div key={car.id} className="animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
-                      <CarCard car={car} />
+                      <CarCard
+                        car={car}
+                        onEdit={isAdmin ? handleEdit : undefined}
+                        onDelete={isAdmin ? handleDelete : undefined}
+                      />
                     </div>
                   ))}
                 </div>
@@ -157,6 +190,26 @@ const Index = () => {
       </main>
       <Footer />
       <FilterPanel open={filterPanelOpen} onOpenChange={setFilterPanelOpen} filters={filters} onFiltersChange={setFilters} />
+
+      {isAdmin && (
+        <>
+          <CarFormDialog open={formOpen} onOpenChange={handleFormClose} car={editingCar} />
+          <AlertDialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>លុបឡាន</AlertDialogTitle>
+                <AlertDialogDescription>
+                  តើអ្នកប្រាកដទេថាចង់លុបឡាននេះ? សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>បោះបង់</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmDelete}>លុប</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      )}
     </div>
   );
 };

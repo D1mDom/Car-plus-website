@@ -3,11 +3,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Form,
   FormControl,
@@ -28,7 +28,6 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateCar, useUpdateCar, type Car, type CarStatus } from "@/hooks/useCars";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Upload, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -97,7 +96,7 @@ const formSchema = z.object({
   price: z.coerce.number().positive("តម្លៃត្រូវតែធំជាង ០ (សូមបញ្ចូលតម្លៃ)"),
   status: z.enum(["ready", "onroad", "luxury", "plate"]),
   viewers: z.coerce.number().min(0).default(0),
-  image: z.string().min(1, "Image is required"),
+  images: z.array(z.string()).min(1, "សូមបញ្ចូលរូបភាពយ៉ាងតិចមួយ"),
   bodyType: z.string().min(1, "Body type is required"),
   taxStatus: z.string().min(1, "Tax status is required"),
   condition: z.string().min(1, "Condition is required"),
@@ -118,7 +117,6 @@ interface CarFormDialogProps {
 const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
   const createCar = useCreateCar();
   const updateCar = useUpdateCar();
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -133,7 +131,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
       price: 0,
       status: "ready",
       viewers: 0,
-      image: "",
+      images: [],
       bodyType: "Sedan",
       taxStatus: "Tax slip",
       condition: "Excellent",
@@ -143,6 +141,8 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
       isActive: true,
     },
   });
+
+  const images = form.watch("images") || [];
 
   useEffect(() => {
     if (car) {
@@ -154,7 +154,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
         price: car.price,
         status: car.status,
         viewers: car.viewers,
-        image: car.image,
+        images: car.images && car.images.length > 0 ? car.images : (car.image ? [car.image] : []),
         bodyType: car.bodyType,
         taxStatus: car.taxStatus,
         condition: car.condition,
@@ -163,7 +163,6 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
         description: car.description.join("\n"),
         isActive: car.isActive ?? true,
       });
-      setImagePreview(car.image);
     } else {
       form.reset({
         code: "",
@@ -173,7 +172,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
         price: 0,
         status: "ready",
         viewers: 0,
-        image: "",
+        images: [],
         bodyType: "Sedan",
         taxStatus: "Tax slip",
         condition: "Excellent",
@@ -182,7 +181,6 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
         description: "",
         isActive: true,
       });
-      setImagePreview(null);
     }
   }, [car, form]);
 
@@ -203,43 +201,38 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
     return data.publicUrl;
   };
 
-  const handleFileSelect = async (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
-      return;
-    }
-    if (file.size > MAX_UPLOAD_BYTES) {
-      toast.error("Image must be less than 50MB");
-      return;
-    }
-
-    // Show the local file immediately so the dialog isn't blank while a large
-    // upload runs; swapped for the storage URL once it lands.
-    const localPreview = URL.createObjectURL(file);
-    setImagePreview(localPreview);
+  // Upload one or more files, appending each resulting URL to the images array.
+  const handleFiles = async (files: FileList | File[]) => {
+    const arr = Array.from(files);
     setIsUploading(true);
-
     try {
-      const publicUrl = await uploadImage(file);
-      setImagePreview(publicUrl);
-      form.setValue("image", publicUrl, { shouldValidate: true });
+      for (const file of arr) {
+        if (!file.type.startsWith("image/")) {
+          toast.error("Please select an image file");
+          continue;
+        }
+        if (file.size > MAX_UPLOAD_BYTES) {
+          toast.error("Image must be less than 50MB");
+          continue;
+        }
+        const publicUrl = await uploadImage(file);
+        const current = form.getValues("images") || [];
+        form.setValue("images", [...current, publicUrl], { shouldValidate: true });
+      }
       toast.success("Image uploaded successfully");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to upload image";
       toast.error(message);
-      setImagePreview(null);
-      form.setValue("image", "", { shouldValidate: true });
     } finally {
-      URL.revokeObjectURL(localPreview);
       setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFileSelect(file);
+    if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -252,16 +245,19 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
     setIsDragging(false);
   };
 
-  const removeImage = () => {
-    setImagePreview(null);
-    form.setValue("image", "", { shouldValidate: true });
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  const removeImageAt = (index: number) => {
+    const current = form.getValues("images") || [];
+    form.setValue(
+      "images",
+      current.filter((_, i) => i !== index),
+      { shouldValidate: true }
+    );
   };
 
   const onSubmit = (values: FormValues) => {
     const carData = {
       ...values,
-      images: [values.image],
+      image: values.images[0], // first photo is the cover
       description: values.description.split("\n").filter(Boolean),
     };
 
@@ -282,12 +278,12 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
   const isLoading = createCar.isPending || updateCar.isPending;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle>{car ? "កែសម្រួលឡាន" : "បន្ថែមឡានថ្មី"}</DialogTitle>
-        </DialogHeader>
-        <ScrollArea className="max-h-[70vh] pr-4">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full overflow-y-auto p-0 sm:max-w-xl">
+        <SheetHeader className="sticky top-0 z-10 border-b border-border bg-card px-6 py-4 text-left">
+          <SheetTitle>{car ? "កែសម្រួលឡាន" : "បន្ថែមឡានថ្មី"}</SheetTitle>
+        </SheetHeader>
+        <div className="px-6 py-5">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
@@ -389,86 +385,67 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
 
               <FormField
                 control={form.control}
-                name="image"
+                name="images"
                 render={() => (
                   <FormItem>
-                    <FormLabel>រូបភាពឡាន</FormLabel>
+                    <FormLabel>រូបភាពឡាន (អាចដាក់ច្រើន)</FormLabel>
                     <FormControl>
                       <div className="space-y-3">
-                        {/* Hidden file input */}
                         <input
                           ref={fileInputRef}
                           type="file"
                           accept="image/*"
+                          multiple
                           className="hidden"
                           onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleFileSelect(file);
+                            if (e.target.files?.length) handleFiles(e.target.files);
                           }}
                         />
 
-                        {/* Preview or Upload Area */}
-                        {imagePreview ? (
-                          <div className="relative group rounded-lg overflow-hidden border-2 border-border">
-                            <img
-                              src={imagePreview}
-                              alt="Car preview"
-                              className="w-full h-48 object-cover"
-                            />
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                              <Button
+                        <div className="grid grid-cols-3 gap-3">
+                          {images.map((url, i) => (
+                            <div key={i} className="group relative aspect-[4/3] overflow-hidden rounded-lg border-2 border-border">
+                              <img src={url} alt={`រូបភាព ${i + 1}`} className="h-full w-full object-cover" />
+                              {i === 0 && (
+                                <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
+                                  គម្រប
+                                </span>
+                              )}
+                              <button
                                 type="button"
-                                size="sm"
-                                variant="secondary"
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={isUploading}
+                                onClick={() => removeImageAt(i)}
+                                aria-label="លុបរូបភាព"
+                                className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
                               >
-                                Change
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="destructive"
-                                onClick={removeImage}
-                                disabled={isUploading}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
+                                <X className="h-3.5 w-3.5" />
+                              </button>
                             </div>
-                            {isUploading && (
-                              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                                <Loader2 className="h-8 w-8 animate-spin text-white" />
-                              </div>
-                            )}
-                          </div>
-                        ) : (
+                          ))}
+
                           <div
                             onClick={() => fileInputRef.current?.click()}
                             onDrop={handleDrop}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}
-                            className={`flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                            className={`flex aspect-[4/3] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
                               isDragging
                                 ? "border-primary bg-primary/5"
                                 : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50"
                             }`}
                           >
                             {isUploading ? (
-                              <>
-                                <Loader2 className="h-10 w-10 animate-spin text-muted-foreground mb-2" />
-                                <p className="text-sm text-muted-foreground">Uploading...</p>
-                              </>
+                              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                             ) : (
                               <>
-                                <div className="rounded-full bg-muted p-3 mb-3">
-                                  <Upload className="h-6 w-6 text-muted-foreground" />
-                                </div>
-                                <p className="text-sm font-medium">Click to upload or drag and drop</p>
-                                <p className="text-xs text-muted-foreground mt-1">PNG, JPG, WEBP up to 5MB</p>
+                                <Upload className="mb-1 h-5 w-5 text-muted-foreground" />
+                                <p className="text-xs text-muted-foreground">បន្ថែមរូបភាព</p>
                               </>
                             )}
                           </div>
-                        )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          រូបទី ១ គឺជារូបគម្រប។ PNG, JPG, WEBP (រហូតដល់ 50MB)
+                        </p>
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -633,9 +610,9 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
               </div>
             </form>
           </Form>
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };
 
