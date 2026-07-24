@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImagePlus } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import slide1Bg from "@/assets/slides/slide-1-christmas.jpg";
 import slide2Bg from "@/assets/slides/slide-2-newyear.jpg";
@@ -12,8 +12,12 @@ import {
   CarouselItem,
   type CarouselApi,
 } from "@/components/ui/carousel";
+import { useAdmin } from "@/hooks/useAdmin";
+import { useBanners } from "@/hooks/useBanners";
+import BannerManagerDialog from "@/components/admin/BannerManagerDialog";
 
-const slides = [
+// Shown when no banners have been uploaded yet.
+const DEFAULT_SLIDES = [
   { image: slide1Bg, alt: "ប្រូម៉ូសិន Christmas" },
   { image: slide2Bg, alt: "ការអបអរឆ្នាំថ្មី" },
   { image: slide3Bg, alt: "សាល Car Plus" },
@@ -24,6 +28,14 @@ const slides = [
 const HeroSection = () => {
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
+  const { isAdmin } = useAdmin();
+  const { data: banners = [] } = useBanners();
+  const [managerOpen, setManagerOpen] = useState(false);
+
+  // Use uploaded banners when present, otherwise the built-in default slides.
+  const slides = banners.length > 0
+    ? banners.map((b) => ({ image: b.image, alt: "បដា Car Plus" }))
+    : DEFAULT_SLIDES;
 
   useEffect(() => {
     if (!api) return;
@@ -104,6 +116,18 @@ const HeroSection = () => {
           />
         ))}
       </div>
+
+      {isAdmin && (
+        <Button
+          size="sm"
+          className="absolute right-4 top-4 z-20 gap-1.5 shadow-md"
+          onClick={() => setManagerOpen(true)}
+        >
+          <ImagePlus className="h-4 w-4" />
+          គ្រប់គ្រងបដា
+        </Button>
+      )}
+      {isAdmin && <BannerManagerDialog open={managerOpen} onOpenChange={setManagerOpen} />}
     </section>
   );
 };

@@ -331,6 +331,36 @@ CREATE POLICY "Admins can delete team members" ON public.team_members FOR DELETE
 CREATE OR REPLACE TRIGGER update_team_members_updated_at BEFORE UPDATE ON public.team_members FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- ============================================================================
+-- 4d. Hero banners (admin-editable)
+--
+-- The rotating banner images at the top of the home page. Everyone can read
+-- them; only admins can add/remove/reorder. Images live in the car-images
+-- bucket. If this table is empty the site shows its built-in default slides.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.banners (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  image TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.banners ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can view banners" ON public.banners;
+DROP POLICY IF EXISTS "Admins can insert banners" ON public.banners;
+DROP POLICY IF EXISTS "Admins can update banners" ON public.banners;
+DROP POLICY IF EXISTS "Admins can delete banners" ON public.banners;
+
+CREATE POLICY "Anyone can view banners" ON public.banners FOR SELECT USING (true);
+CREATE POLICY "Admins can insert banners" ON public.banners FOR INSERT WITH CHECK (public.is_admin(auth.uid()));
+CREATE POLICY "Admins can update banners" ON public.banners FOR UPDATE USING (public.is_admin(auth.uid()));
+CREATE POLICY "Admins can delete banners" ON public.banners FOR DELETE USING (public.is_admin(auth.uid()));
+
+CREATE OR REPLACE TRIGGER update_banners_updated_at BEFORE UPDATE ON public.banners FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- ============================================================================
 -- 5. Indexes
 --
 -- Every one of these backs a query the app actually runs. Without them each
@@ -348,6 +378,7 @@ CREATE INDEX IF NOT EXISTS idx_cars_is_active        ON public.cars(is_active);
 CREATE INDEX IF NOT EXISTS idx_cars_status           ON public.cars(status);
 CREATE INDEX IF NOT EXISTS idx_admin_users_user_id   ON public.admin_users(user_id);
 CREATE INDEX IF NOT EXISTS idx_team_members_sort      ON public.team_members(sort_order);
+CREATE INDEX IF NOT EXISTS idx_banners_sort           ON public.banners(sort_order);
 
 -- ============================================================================
 -- 6. Upgrades for databases created before this script

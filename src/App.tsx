@@ -9,6 +9,7 @@ import { WishlistProvider } from "@/hooks/useWishlist";
 import Index from "./pages/Index";
 import CarDetail from "./pages/CarDetail";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
 import Wishlist from "./pages/Wishlist";
@@ -34,6 +35,7 @@ const App = () => {
                   <Route path="/" element={<Index />} />
                   <Route path="/car/:id" element={<CarDetail />} />
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/orders" element={<Orders />} />
                   <Route path="/wishlist" element={<Wishlist />} />

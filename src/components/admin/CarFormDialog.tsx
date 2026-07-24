@@ -134,7 +134,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
       viewers: 0,
       images: [],
       bodyType: "Sedan",
-      taxStatus: "Tax slip",
+      taxStatus: "ក្រដាសពន្ធ",
       condition: "Excellent",
       fuelType: "Petrol",
       color: "White",
@@ -175,7 +175,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
         viewers: 0,
         images: [],
         bodyType: "Sedan",
-        taxStatus: "Tax slip",
+        taxStatus: "ក្រដាសពន្ធ",
         condition: "Excellent",
         fuelType: "Petrol",
         color: "White",
@@ -532,8 +532,8 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Tax slip">ស្លាកពន្ធ</SelectItem>
-                          <SelectItem value="Tax paid">បង់ពន្ធរួច</SelectItem>
+                          <SelectItem value="ក្រដាសពន្ធ">ក្រដាសពន្ធ</SelectItem>
+                          <SelectItem value="ស្លាកលេខ">ស្លាកលេខ</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
