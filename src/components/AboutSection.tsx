@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Shield, Award, Wrench, CreditCard, Pencil, Trash2, Plus } from "lucide-react";
-import ContactForm from "./ContactForm";
 import BusinessHours from "./BusinessHours";
 import SocialLinks from "./SocialLinks";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -147,20 +146,13 @@ const AboutSection = () => {
             </p>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-2">
-            <div className="rounded-2xl border border-border bg-background p-6 sm:p-8">
-              <h3 className="mb-6 text-xl font-bold text-foreground">ផ្ញើសារមកយើង</h3>
-              <ContactForm />
+          <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-2">
+            <div className="rounded-2xl border border-border bg-background p-6">
+              <BusinessHours />
             </div>
 
-            <div className="space-y-6">
-              <div className="rounded-2xl border border-border bg-background p-6">
-                <BusinessHours />
-              </div>
-
-              <div className="rounded-2xl border border-border bg-background p-6">
-                <SocialLinks />
-              </div>
+            <div className="rounded-2xl border border-border bg-background p-6">
+              <SocialLinks />
             </div>
           </div>
         </div>

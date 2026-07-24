@@ -21,18 +21,19 @@ const UserMenu = () => {
     );
   }
 
-  // Show the display name set at signup; fall back to the email name if none.
+  // Only show a name the user actually set — don't invent one from the email.
   const displayName =
     (user.user_metadata?.full_name as string) ||
     (user.user_metadata?.display_name as string) ||
-    user.email?.split("@")[0] ||
     "";
 
   return (
     <div className="flex items-center gap-2">
-      <span className="hidden max-w-[140px] truncate text-sm font-medium text-foreground sm:inline">
-        {displayName}
-      </span>
+      {displayName && (
+        <span className="hidden max-w-[140px] truncate text-sm font-medium text-foreground sm:inline">
+          {displayName}
+        </span>
+      )}
       <Button
         variant="outline"
         size="sm"

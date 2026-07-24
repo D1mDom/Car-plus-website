@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Heart, Megaphone, Menu, LayoutDashboard } from "lucide-react";
+import { Heart, Megaphone, Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import logo from "@/assets/logo.png";
 import UserMenu from "@/components/UserMenu";
@@ -110,12 +110,6 @@ const Header = () => {
                 <Link to="/#contact" onClick={(e) => handleNav(e, "contact")} className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors border-b-2 border-transparent hover:border-primary pb-1">
                   ទំនាក់ទំនង
                 </Link>
-                {isAdmin && (
-                  <Link to="/admin" className="flex items-center gap-1.5 text-sm font-medium text-primary transition-colors border-b-2 border-transparent hover:border-primary pb-1">
-                    <LayoutDashboard className="h-4 w-4" />
-                    ផ្ទាំងគ្រប់គ្រង
-                  </Link>
-                )}
               </nav>
 
               <div className="flex items-center gap-3">
