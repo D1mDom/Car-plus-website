@@ -25,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Search, SlidersHorizontal } from "lucide-react";
+import { Loader2, Search, SlidersHorizontal, Plus } from "lucide-react";
 
 const Index = () => {
   const { data: carsData = [], isLoading } = useCars();
@@ -101,7 +101,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="pt-16">
-        {isAdmin && <AdminToolbar cars={carsData} onAdd={handleAdd} />}
+        {isAdmin && <AdminToolbar cars={carsData} />}
         <div className="container mx-auto px-4 pt-4">
           <HeroSection />
         </div>
@@ -120,10 +120,16 @@ const Index = () => {
                   className="h-12 border-border bg-background pl-12"
                 />
               </div>
-              <Button size="lg" className="h-12 gap-2 px-6" onClick={handleFilterClick}>
+              <Button size="lg" variant="outline" className="h-12 gap-2 px-6" onClick={handleFilterClick}>
                 <SlidersHorizontal className="h-5 w-5" />
                 តម្រង
               </Button>
+              {isAdmin && (
+                <Button size="lg" className="h-12 gap-2 px-6" onClick={handleAdd}>
+                  <Plus className="h-5 w-5" />
+                  បន្ថែមឡាន
+                </Button>
+              )}
             </div>
 
             {/* Category chips (left-aligned) */}

@@ -1,12 +1,6 @@
-import { Facebook, Instagram, MessageCircle, Youtube } from "lucide-react";
+import { Facebook, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const socialLinks = [
-  { name: "Facebook", icon: Facebook, url: "https://facebook.com/CarPlus", color: "hover:bg-[#1877F2] hover:text-white" },
-  { name: "Instagram", icon: Instagram, url: "https://instagram.com/carplus_cambodia", color: "hover:bg-gradient-to-br hover:from-[#833AB4] hover:via-[#FD1D1D] hover:to-[#F77737] hover:text-white" },
-  { name: "Telegram", icon: MessageCircle, url: "https://t.me/Carplus777", color: "hover:bg-[#0088cc] hover:text-white" },
-  { name: "YouTube", icon: Youtube, url: "https://youtube.com/@carplus", color: "hover:bg-[#FF0000] hover:text-white" },
-];
+import { useContact } from "@/hooks/useContact";
 
 const TikTokIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -15,6 +9,16 @@ const TikTokIcon = ({ className }: { className?: string }) => (
 );
 
 const SocialLinks = () => {
+  const { data: contact } = useContact();
+  const telegramHandle = (contact?.telegram || "@Carplus777").replace(/^@/, "");
+
+  // Facebook and Telegram come from the admin contact settings so they stay in
+  // sync everywhere; TikTok has no field yet so it stays a static link.
+  const socialLinks = [
+    { name: "Facebook", icon: Facebook, url: contact?.facebook || "https://facebook.com/CarPlus", color: "hover:bg-[#1877F2] hover:text-white" },
+    { name: "Telegram", icon: MessageCircle, url: `https://t.me/${telegramHandle}`, color: "hover:bg-[#0088cc] hover:text-white" },
+  ];
+
   return (
     <div className="space-y-4">
       <h3 className="font-semibold text-foreground">តាមដានយើង</h3>

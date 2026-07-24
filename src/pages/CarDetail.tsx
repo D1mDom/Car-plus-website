@@ -5,16 +5,27 @@ import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Phone, MessageCircle, Check, Calendar, Fuel, Palette, Shield, Car as CarIcon, ShoppingCart, Loader2 } from "lucide-react";
+import { ArrowLeft, Phone, MessageCircle, Check, Pin, Calendar, Fuel, Palette, Shield, Car as CarIcon, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { useCart } from "@/hooks/useCart";
+import { useContact } from "@/hooks/useContact";
+
+// Description lines are stored with a leading emoji (📌 for a heading-style
+// point, ✅ for a feature). Emojis render inconsistently across devices and we
+// already show an icon, so strip the emoji here and pick a matching lucide icon.
+const parseDescriptionItem = (raw: string) => {
+  const pinned = /^\s*📌/.test(raw);
+  const text = raw
+    .replace(/^[\p{Extended_Pictographic}️‍\s]+/u, "")
+    .trim();
+  return { text, pinned };
+};
 
 const CarDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { data: car, isLoading } = useCarById(id || "");
   const [selectedImage, setSelectedImage] = useState(0);
-  const { addToCart, items } = useCart();
-  const isInCart = items.some((item) => item.car_id === id);
+  const { data: contact } = useContact();
+  const telegram = (contact?.telegram || "@Carplus777").replace(/^@/, "");
 
   if (isLoading) {
     return (<div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>);
@@ -73,14 +84,11 @@ const CarDetail = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button size="lg" className="flex-1 gap-2" onClick={() => addToCart(car.id)} disabled={isInCart}>
-                  <ShoppingCart className="h-5 w-5" />
-                  {isInCart ? "ក្នុងកន្ត្រក" : "ដាក់ក្នុងកន្ត្រក"}
-                </Button>
-                <Button size="lg" variant="ocean" className="flex-1 gap-2" asChild>
-                  <Link to={isInCart ? "/checkout" : "#"} onClick={() => !isInCart && addToCart(car.id)}>
-                    ទិញឥឡូវ
-                  </Link>
+                <Button size="lg" className="flex-1 gap-2" asChild>
+                  <a href={`https://t.me/${telegram}`} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="h-5 w-5" />
+                    ទំនាក់ទំនងតាមតេឡេក្រាម
+                  </a>
                 </Button>
               </div>
 
@@ -88,12 +96,18 @@ const CarDetail = () => {
                 <CardContent className="p-6">
                   <h2 className="text-lg font-semibold mb-4 text-foreground">អ្វីដែលរួមបញ្ចូល</h2>
                   <ul className="space-y-3">
-                    {car.description.map((item, index) => (
-                      <li key={index} className="flex items-start gap-3">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 mt-0.5"><Check className="h-3 w-3 text-primary" /></div>
-                        <span className="text-muted-foreground">{item}</span>
-                      </li>
-                    ))}
+                    {car.description.map((raw, index) => {
+                      const { text, pinned } = parseDescriptionItem(raw);
+                      const Icon = pinned ? Pin : Check;
+                      return (
+                        <li key={index} className="flex items-start gap-3">
+                          <div className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded-full ${pinned ? "bg-accent" : "bg-primary/10"}`}>
+                            <Icon className={`h-3 w-3 ${pinned ? "text-accent-foreground" : "text-primary"}`} />
+                          </div>
+                          <span className={pinned ? "font-medium text-foreground" : "text-muted-foreground"}>{text}</span>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </CardContent>
               </Card>

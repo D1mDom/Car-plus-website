@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Heart, Megaphone, Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import logo from "@/assets/logo.png";
@@ -7,11 +7,41 @@ import { useWishlist } from "@/hooks/useWishlist";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
 import { usePromotion } from "@/hooks/usePromotion";
+import { useContact } from "@/hooks/useContact";
 
 const Header = () => {
   const { items } = useWishlist();
   const { isAdmin } = useAdmin();
   const { promotionText } = usePromotion();
+  const { data: contact } = useContact();
+  const telegramDisplay = contact?.telegram || "@Carplus777";
+  const telegramHandle = telegramDisplay.replace(/^@/, "");
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Smooth-scroll to an in-page section. React Router's <Link to="/#id"> does not
+  // scroll to the anchor on its own, so we handle it here. If we're on another
+  // route first go home, then scroll once the page has rendered.
+  const scrollToSection = (id: string) => {
+    if (!id) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    const el = document.getElementById(id);
+    if (!el) return;
+    const y = el.getBoundingClientRect().top + window.scrollY - 90;
+    window.scrollTo({ top: y, behavior: "smooth" });
+  };
+
+  const handleNav = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    if (location.pathname !== "/") {
+      navigate("/");
+      setTimeout(() => scrollToSection(id), 120);
+    } else {
+      scrollToSection(id);
+    }
+  };
 
   return (
     <>
@@ -41,23 +71,23 @@ const Header = () => {
                   <SheetContent side="left" className="w-72">
                     <nav className="mt-8 flex flex-col gap-1">
                       <SheetClose asChild>
-                        <Link to="/" className="rounded-lg px-3 py-3 text-base font-medium hover:bg-accent">ទំព័រដើម</Link>
+                        <Link to="/" onClick={(e) => handleNav(e, "")} className="rounded-lg px-3 py-3 text-base font-medium hover:bg-accent">ទំព័រដើម</Link>
                       </SheetClose>
                       <SheetClose asChild>
-                        <Link to="/#inventory" className="rounded-lg px-3 py-3 text-base font-medium hover:bg-accent">ស្តុកឡាន</Link>
+                        <Link to="/#inventory" onClick={(e) => handleNav(e, "inventory")} className="rounded-lg px-3 py-3 text-base font-medium hover:bg-accent">ស្តុកឡាន</Link>
                       </SheetClose>
                       <SheetClose asChild>
-                        <Link to="/#about" className="rounded-lg px-3 py-3 text-base font-medium hover:bg-accent">អំពីយើង</Link>
+                        <Link to="/#about" onClick={(e) => handleNav(e, "about")} className="rounded-lg px-3 py-3 text-base font-medium hover:bg-accent">អំពីយើង</Link>
                       </SheetClose>
                       <SheetClose asChild>
-                        <Link to="/#contact" className="rounded-lg px-3 py-3 text-base font-medium hover:bg-accent">ទំនាក់ទំនង</Link>
+                        <Link to="/#contact" onClick={(e) => handleNav(e, "contact")} className="rounded-lg px-3 py-3 text-base font-medium hover:bg-accent">ទំនាក់ទំនង</Link>
                       </SheetClose>
                       {isAdmin && (
                         <SheetClose asChild>
                           <Link to="/admin" className="rounded-lg px-3 py-3 text-base font-medium hover:bg-accent">Admin</Link>
                         </SheetClose>
                       )}
-                      <a href="https://t.me/Carplus777" target="_blank" rel="noopener noreferrer" className="mt-2 rounded-lg px-3 py-3 text-base font-medium text-primary hover:bg-accent">Telegram @Carplus777</a>
+                      <a href={`https://t.me/${telegramHandle}`} target="_blank" rel="noopener noreferrer" className="mt-2 rounded-lg px-3 py-3 text-base font-medium text-primary hover:bg-accent">Telegram {telegramDisplay}</a>
                     </nav>
                   </SheetContent>
                 </Sheet>
@@ -68,16 +98,16 @@ const Header = () => {
               </div>
 
               <nav className="hidden md:flex items-center gap-8">
-                <Link to="/" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors border-b-2 border-transparent hover:border-primary pb-1">
+                <Link to="/" onClick={(e) => handleNav(e, "")} className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors border-b-2 border-transparent hover:border-primary pb-1">
                   ទំព័រដើម
                 </Link>
-                <Link to="/#inventory" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors border-b-2 border-transparent hover:border-primary pb-1">
+                <Link to="/#inventory" onClick={(e) => handleNav(e, "inventory")} className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors border-b-2 border-transparent hover:border-primary pb-1">
                   ស្តុកឡាន
                 </Link>
-                <Link to="/#about" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors border-b-2 border-transparent hover:border-primary pb-1">
+                <Link to="/#about" onClick={(e) => handleNav(e, "about")} className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors border-b-2 border-transparent hover:border-primary pb-1">
                   អំពីយើង
                 </Link>
-                <Link to="/#contact" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors border-b-2 border-transparent hover:border-primary pb-1">
+                <Link to="/#contact" onClick={(e) => handleNav(e, "contact")} className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors border-b-2 border-transparent hover:border-primary pb-1">
                   ទំនាក់ទំនង
                 </Link>
               </nav>
@@ -94,17 +124,6 @@ const Header = () => {
                   </Link>
                 </Button>
                 <UserMenu />
-                <a 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="hidden sm:flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors border-2 border-primary/30 rounded-lg px-3 py-1.5 hover:border-primary" 
-                  href="https://t.me/Carplus777"
-                >
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z" />
-                  </svg>
-                  @Carplus777
-                </a>
               </div>
             </div>
           </div>

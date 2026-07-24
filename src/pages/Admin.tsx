@@ -9,12 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Car, BarChart3, Loader2, Package, Megaphone, Phone } from "lucide-react";
+import { Plus, Pencil, Trash2, Car, Loader2, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 import CarFormDialog from "@/components/admin/CarFormDialog";
-import { Input } from "@/components/ui/input";
-import { usePromotion } from "@/hooks/usePromotion";
-import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,15 +34,6 @@ const Admin = () => {
   const [editingCar, setEditingCar] = useState<CarType | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [carToDelete, setCarToDelete] = useState<string | null>(null);
-  
-  const { promotionText, setPromotionText } = usePromotion();
-  const [promoInput, setPromoInput] = useState(promotionText);
-
-  // Sync internal input when external promotion loaded
-  useState(() => {
-    setPromoInput(promotionText);
-  });
-
 
   if (authLoading || adminLoading) {
     return (
@@ -126,18 +114,6 @@ const Admin = () => {
             </div>
             <div className="flex flex-wrap gap-2 sm:gap-3">
               <Button variant="outline" asChild>
-                <Link to="/admin/orders">
-                  <Package className="h-4 w-4 mr-2" />
-                  ការបញ្ជាទិញ
-                </Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link to="/admin/reports">
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  របាយការណ៍
-                </Link>
-              </Button>
-              <Button variant="outline" asChild>
                 <Link to="/admin/contact">
                   <Phone className="h-4 w-4 mr-2" />
                   ទំនាក់ទំនង
@@ -191,37 +167,6 @@ const Admin = () => {
               </CardContent>
             </Card>
           </div>
-
-          {/* Promotion Settings Card */}
-          <Card className="mb-8 border-primary/20 bg-primary/5">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-primary">
-                <Megaphone className="h-5 w-5" />
-                ផ្ទាំងផ្សព្វផ្សាយ
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Input 
-                  value={promoInput}
-                  onChange={(e) => setPromoInput(e.target.value)}
-                  placeholder="ឧ. ព្រឹត្តិការណ៍ចូលឆ្នាំខ្មែរ៖ ដឹកជញ្ជូនឥតគិតថ្លៃ!"
-                  className="flex-1 bg-background"
-                />
-                <Button 
-                  onClick={() => {
-                    setPromotionText(promoInput);
-                    toast.success(promoInput ? "Promotion published!" : "Promotion removed");
-                  }}
-                >
-                  ធ្វើបច្ចុប្បន្នភាព
-                </Button>
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                អត្ថបទនេះនឹងបង្ហាញនៅផ្នែកខាងលើបំផុតនៃគេហទំព័រ។ ទុកឲ្យទទេ ដើម្បីលាក់វា។
-              </p>
-            </CardContent>
-          </Card>
 
           {/* Cars Table */}
           <Card>

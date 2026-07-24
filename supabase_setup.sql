@@ -290,6 +290,47 @@ CREATE POLICY "Admins can update contact info" ON public.contact_info FOR UPDATE
 CREATE OR REPLACE TRIGGER update_contact_info_updated_at BEFORE UPDATE ON public.contact_info FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- ============================================================================
+-- 4c. Team members (admin-editable)
+--
+-- The "Meet our team" cards on the About section. Everyone can read them; only
+-- admins can add/edit/remove. Photos live in the same car-images bucket.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.team_members (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL,
+  image TEXT NOT NULL DEFAULT '',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.team_members ENABLE ROW LEVEL SECURITY;
+
+-- Seed the current team (only if the table is empty)
+INSERT INTO public.team_members (name, role, image, sort_order)
+SELECT * FROM (VALUES
+  ('សុវណ្ណ ចេន', 'ស្ថាបនិក និង CEO', 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&h=200&fit=crop&crop=face', 1),
+  ('តារា គឹម', 'អ្នកគ្រប់គ្រងផ្នែកលក់', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face', 2),
+  ('ស្រីមុំ ផាន់', 'អ្នកឯកទេសហិរញ្ញវត្ថុ', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&h=200&fit=crop&crop=face', 3),
+  ('វីរៈ ហេង', 'អ្នកគ្រប់គ្រងសេវាកម្ម', 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face', 4)
+) AS seed(name, role, image, sort_order)
+WHERE NOT EXISTS (SELECT 1 FROM public.team_members);
+
+DROP POLICY IF EXISTS "Anyone can view team members" ON public.team_members;
+DROP POLICY IF EXISTS "Admins can insert team members" ON public.team_members;
+DROP POLICY IF EXISTS "Admins can update team members" ON public.team_members;
+DROP POLICY IF EXISTS "Admins can delete team members" ON public.team_members;
+
+CREATE POLICY "Anyone can view team members" ON public.team_members FOR SELECT USING (true);
+CREATE POLICY "Admins can insert team members" ON public.team_members FOR INSERT WITH CHECK (public.is_admin(auth.uid()));
+CREATE POLICY "Admins can update team members" ON public.team_members FOR UPDATE USING (public.is_admin(auth.uid()));
+CREATE POLICY "Admins can delete team members" ON public.team_members FOR DELETE USING (public.is_admin(auth.uid()));
+
+CREATE OR REPLACE TRIGGER update_team_members_updated_at BEFORE UPDATE ON public.team_members FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- ============================================================================
 -- 5. Indexes
 --
 -- Every one of these backs a query the app actually runs. Without them each
@@ -306,6 +347,7 @@ CREATE INDEX IF NOT EXISTS idx_order_items_order_id  ON public.order_items(order
 CREATE INDEX IF NOT EXISTS idx_cars_is_active        ON public.cars(is_active);
 CREATE INDEX IF NOT EXISTS idx_cars_status           ON public.cars(status);
 CREATE INDEX IF NOT EXISTS idx_admin_users_user_id   ON public.admin_users(user_id);
+CREATE INDEX IF NOT EXISTS idx_team_members_sort      ON public.team_members(sort_order);
 
 -- ============================================================================
 -- 6. Upgrades for databases created before this script

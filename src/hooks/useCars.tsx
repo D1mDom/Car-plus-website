@@ -452,7 +452,11 @@ export const useUpdateCar = () => {
       if (error) throw error;
       return mapDbCarToCar(data as DbCar);
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["cars"] }); toast.success("Car updated successfully"); },
+    onSuccess: (car) => {
+      queryClient.invalidateQueries({ queryKey: ["cars"] });
+      queryClient.invalidateQueries({ queryKey: ["car", car.id] });
+      toast.success("Car updated successfully");
+    },
     onError: (error) => { toast.error("Failed to update car: " + error.message); },
   });
 };
