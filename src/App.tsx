@@ -4,18 +4,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import { CartProvider } from "@/hooks/useCart";
 import { WishlistProvider } from "@/hooks/useWishlist";
 import Index from "./pages/Index";
 import CarDetail from "./pages/CarDetail";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
-import Checkout from "./pages/Checkout";
-import Orders from "./pages/Orders";
 import Wishlist from "./pages/Wishlist";
 import Admin from "./pages/Admin";
-import AdminReports from "./pages/AdminReports";
-import AdminOrders from "./pages/AdminOrders";
 import AdminContact from "./pages/AdminContact";
 import NotFound from "./pages/NotFound";
 
@@ -27,26 +22,20 @@ const App = () => {
       <TooltipProvider>
         <BrowserRouter>
           <AuthProvider>
-            <CartProvider>
-              <WishlistProvider>
-                <Toaster />
-                <Sonner />
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/car/:id" element={<CarDetail />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/orders" element={<Orders />} />
-                  <Route path="/wishlist" element={<Wishlist />} />
-                  <Route path="/admin" element={<Admin />} />
-                  <Route path="/admin/reports" element={<AdminReports />} />
-                  <Route path="/admin/orders" element={<AdminOrders />} />
-                  <Route path="/admin/contact" element={<AdminContact />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </WishlistProvider>
-            </CartProvider>
+            <WishlistProvider>
+              <Toaster />
+              <Sonner />
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/car/:id" element={<CarDetail />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/wishlist" element={<Wishlist />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="/admin/contact" element={<AdminContact />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </WishlistProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

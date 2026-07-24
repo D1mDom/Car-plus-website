@@ -91,7 +91,7 @@ const Index = () => {
       case "newest": default: break;
     }
     return result;
-  }, [searchQuery, activeCategory, filters, sortBy]);
+  }, [carsData, searchQuery, activeCategory, filters, sortBy]);
 
   const handleFilterClick = () => {
     setFilterPanelOpen(true);

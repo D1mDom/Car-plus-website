@@ -5,12 +5,16 @@ import Footer from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useCars, useDeleteCar, getStatusLabel } from "@/hooks/useCars";
+import { useTeam, isRealTeamMember } from "@/hooks/useTeam";
+import { useBanners } from "@/hooks/useBanners";
+import { useContact } from "@/hooks/useContact";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Car, Loader2, Phone } from "lucide-react";
+import { Plus, Pencil, Trash2, Car, Loader2, Phone, Download } from "lucide-react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import CarFormDialog from "@/components/admin/CarFormDialog";
 import {
   AlertDialog,
@@ -29,11 +33,77 @@ const Admin = () => {
   const { isAdmin, isLoading: adminLoading } = useAdmin();
   const { data: cars, isLoading: carsLoading } = useCars();
   const deleteCar = useDeleteCar();
+  const { data: teamData = [] } = useTeam();
+  const { data: bannersData = [] } = useBanners();
+  const { data: contactData } = useContact();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingCar, setEditingCar] = useState<CarType | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [carToDelete, setCarToDelete] = useState<string | null>(null);
+
+  // One-click backup: download all editable content as a restorable .sql file.
+  // Paste it into the Supabase SQL Editor (on a database that already has the
+  // schema from supabase_setup.sql) to restore the data.
+  const handleBackup = () => {
+    // Format any value as a SQL literal, escaping quotes and building text[] arrays.
+    const sql = (v: unknown): string => {
+      if (v === null || v === undefined) return "NULL";
+      if (typeof v === "number") return String(v);
+      if (typeof v === "boolean") return v ? "true" : "false";
+      if (Array.isArray(v)) {
+        return `ARRAY[${v.map((x) => `'${String(x).replace(/'/g, "''")}'`).join(", ")}]::text[]`;
+      }
+      return `'${String(v).replace(/'/g, "''")}'`;
+    };
+
+    const realCarsData = (cars ?? []).filter((c) => !String(c.id).startsWith("mock-"));
+    const lines: string[] = [
+      `-- Car Plus data backup — ${new Date().toISOString()}`,
+      `-- Restore: run supabase_setup.sql first (schema), then paste this in the SQL Editor.`,
+      "",
+    ];
+
+    for (const c of realCarsData) {
+      lines.push(
+        `INSERT INTO public.cars (id, code, name, model, year, price, status, viewers, image, images, body_type, tax_status, condition, fuel_type, color, description, is_active) VALUES (` +
+        [c.id, c.code, c.name, c.model, c.year, c.price, c.status, c.viewers, c.image, c.images, c.bodyType, c.taxStatus, c.condition, c.fuelType, c.color, c.description, c.isActive ?? true].map(sql).join(", ") +
+        `) ON CONFLICT (id) DO NOTHING;`
+      );
+    }
+    for (const m of teamData.filter((t) => isRealTeamMember(t.id))) {
+      lines.push(
+        `INSERT INTO public.team_members (id, name, role, image, sort_order) VALUES (` +
+        [m.id, m.name, m.role, m.image, m.sort_order].map(sql).join(", ") +
+        `) ON CONFLICT (id) DO NOTHING;`
+      );
+    }
+    for (const b of bannersData) {
+      lines.push(
+        `INSERT INTO public.banners (id, image, sort_order) VALUES (` +
+        [b.id, b.image, b.sort_order].map(sql).join(", ") +
+        `) ON CONFLICT (id) DO NOTHING;`
+      );
+    }
+    if (contactData) {
+      lines.push(
+        `INSERT INTO public.contact_info (id, phone, telegram, facebook, address, email, map_link) VALUES (1, ` +
+        [contactData.phone, contactData.telegram, contactData.facebook, contactData.address, contactData.email, contactData.map_link].map(sql).join(", ") +
+        `) ON CONFLICT (id) DO UPDATE SET phone=EXCLUDED.phone, telegram=EXCLUDED.telegram, facebook=EXCLUDED.facebook, address=EXCLUDED.address, email=EXCLUDED.email, map_link=EXCLUDED.map_link;`
+      );
+    }
+
+    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `carplus-backup-${new Date().toISOString().slice(0, 10)}.sql`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast.success("Backup downloaded (SQL)");
+  };
 
   if (authLoading || adminLoading) {
     return (
@@ -113,6 +183,10 @@ const Admin = () => {
               <p className="text-muted-foreground">គ្រប់គ្រងស្តុកឡានរបស់អ្នក</p>
             </div>
             <div className="flex flex-wrap gap-2 sm:gap-3">
+              <Button variant="outline" onClick={handleBackup}>
+                <Download className="h-4 w-4 mr-2" />
+                Backup
+              </Button>
               <Button variant="outline" asChild>
                 <Link to="/admin/contact">
                   <Phone className="h-4 w-4 mr-2" />

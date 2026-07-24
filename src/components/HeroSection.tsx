@@ -37,6 +37,12 @@ const HeroSection = () => {
     ? banners.map((b) => ({ image: b.image, alt: "បដា Car Plus" }))
     : DEFAULT_SLIDES;
 
+  // If the slide count shrinks (e.g. banners load and replace the defaults),
+  // keep the active index in range so a slide is always shown.
+  useEffect(() => {
+    if (current > slides.length - 1) setCurrent(0);
+  }, [slides.length, current]);
+
   useEffect(() => {
     if (!api) return;
     setCurrent(api.selectedScrollSnap());

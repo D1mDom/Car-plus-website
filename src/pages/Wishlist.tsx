@@ -28,7 +28,7 @@ const Wishlist = () => {
             <ArrowLeft className="h-4 w-4 mr-2" />ត្រឡប់ទៅទំព័រដើម
           </Link>
           <h1 className="text-3xl font-bold text-bordered flex items-center gap-3">
-            <Heart className="h-8 w-8 text-primary" />បញ្ជីប្រាថ្នារបស់ខ្ញុំ
+            <Heart className="h-8 w-8 text-primary" />Wishlist
           </h1>
           <p className="text-muted-foreground mt-2">
             {items.length} ឡានបានរក្សាទុក
@@ -38,7 +38,6 @@ const Wishlist = () => {
         {items.length === 0 ? (
           <div className="text-center py-16">
             <Heart className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
-            <h2 className="text-xl font-semibold mb-2">បញ្ជីប្រាថ្នារបស់អ្នកទទេ</h2>
             <p className="text-muted-foreground mb-6">រក្សាទុកឡានដែលអ្នកចាប់អារម្មណ៍ដើម្បីមើលពេលក្រោយ</p>
             <Button asChild><Link to="/#inventory">មើលឡាន</Link></Button>
           </div>
