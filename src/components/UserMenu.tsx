@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { User, LogOut, CircleUserRound } from "lucide-react";
+import { User, LogOut } from "lucide-react";
 
 const UserMenu = () => {
   const { user, signOut, loading } = useAuth();
@@ -16,25 +15,34 @@ const UserMenu = () => {
       <Link to="/auth">
         <Button variant="outline" size="sm" className="gap-2">
           <User className="h-4 w-4" />
-          ចូល
+          Login
         </Button>
       </Link>
     );
   }
 
+  // Show the display name set at signup; fall back to the email name if none.
+  const displayName =
+    (user.user_metadata?.full_name as string) ||
+    (user.user_metadata?.display_name as string) ||
+    user.email?.split("@")[0] ||
+    "";
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary"><CircleUserRound className="h-5 w-5" /></Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
-        <div className="px-2 py-1.5"><p className="text-sm font-medium truncate">{user.email}</p></div>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive">
-          <LogOut className="mr-2 h-4 w-4" />ចាកចេញ
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex items-center gap-2">
+      <span className="hidden max-w-[140px] truncate text-sm font-medium text-foreground sm:inline">
+        {displayName}
+      </span>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={signOut}
+        className="gap-2 text-destructive hover:text-destructive"
+      >
+        <LogOut className="h-4 w-4" />
+        <span className="hidden sm:inline">Logout</span>
+      </Button>
+    </div>
   );
 };
 
