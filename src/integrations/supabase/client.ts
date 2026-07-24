@@ -13,5 +13,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    // Parse the recovery/confirmation token from the URL after an email link,
+    // so the password-reset page gets a session automatically.
+    detectSessionInUrl: true,
   }
 });

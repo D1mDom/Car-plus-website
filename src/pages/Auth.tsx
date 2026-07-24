@@ -19,7 +19,8 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const [showReset, setShowReset] = useState(false);
+  const { signIn, signUp, resetPassword, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -60,6 +61,19 @@ const Auth = () => {
     toast({ title: "បង្កើតគណនីបានសម្រេច!", description: "ឥឡូវអ្នកអាចចូលគណនីរបស់អ្នកបាន" });
   };
 
+  const handleResetRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try { emailSchema.parse(email); } catch (err) {
+      if (err instanceof z.ZodError) { toast({ title: "កំហុសផ្ទៀងផ្ទាត់", description: err.errors[0].message, variant: "destructive" }); return; }
+    }
+    setLoading(true);
+    const { error } = await resetPassword(email);
+    setLoading(false);
+    if (error) { toast({ title: "Reset failed", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Check your email", description: "We sent a password reset link to " + email });
+    setShowReset(false);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -78,19 +92,42 @@ const Auth = () => {
               </TabsList>
               
               <TabsContent value="signin">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email">អ៊ីមែល</Label>
-                    <Input id="signin-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(cleanEmail(e.target.value))} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password">ពាក្យសម្ងាត់</Label>
-                    <Input id="signin-password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(cleanPassword(e.target.value))} required />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "កំពុងចូល..." : "ចូល"}
-                  </Button>
-                </form>
+                {showReset ? (
+                  <form onSubmit={handleResetRequest} className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      បញ្ចូលអ៊ីមែលរបស់អ្នក យើងនឹងផ្ញើតំណភ្ជាប់សម្រាប់កំណត់ពាក្យសម្ងាត់ឡើងវិញ។
+                    </p>
+                    <div className="space-y-2">
+                      <Label htmlFor="reset-email">អ៊ីមែល</Label>
+                      <Input id="reset-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(cleanEmail(e.target.value))} required />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? "កំពុងផ្ញើ..." : "ផ្ញើតំណភ្ជាប់"}
+                    </Button>
+                    <button type="button" onClick={() => setShowReset(false)} className="w-full text-center text-sm text-muted-foreground hover:text-foreground">
+                      ត្រឡប់ទៅការចូល
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleSignIn} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-email">អ៊ីមែល</Label>
+                      <Input id="signin-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(cleanEmail(e.target.value))} required />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="signin-password">ពាក្យសម្ងាត់</Label>
+                        <button type="button" onClick={() => setShowReset(true)} className="text-xs text-primary hover:underline">
+                          ភ្លេចពាក្យសម្ងាត់?
+                        </button>
+                      </div>
+                      <Input id="signin-password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(cleanPassword(e.target.value))} required />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? "កំពុងចូល..." : "ចូល"}
+                    </Button>
+                  </form>
+                )}
               </TabsContent>
               
               <TabsContent value="signup">
