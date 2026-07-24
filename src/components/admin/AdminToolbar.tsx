@@ -1,10 +1,8 @@
-import { Button } from "@/components/ui/button";
-import { Plus, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import type { Car } from "@/hooks/useCars";
 
 interface AdminToolbarProps {
   cars: Car[];
-  onAdd: () => void;
 }
 
 const Stat = ({ label, value }: { label: string; value: string | number }) => (
@@ -14,7 +12,7 @@ const Stat = ({ label, value }: { label: string; value: string | number }) => (
   </div>
 );
 
-const AdminToolbar = ({ cars, onAdd }: AdminToolbarProps) => {
+const AdminToolbar = ({ cars }: AdminToolbarProps) => {
   // Only count real (database) cars, not the demo fallback.
   const real = cars.filter((c) => !String(c.id).startsWith("mock-"));
   const total = real.length;
@@ -37,10 +35,6 @@ const AdminToolbar = ({ cars, onAdd }: AdminToolbarProps) => {
             <Stat label="តម្លៃសរុប" value={`$${value.toLocaleString()}`} />
           </div>
         </div>
-        <Button size="sm" onClick={onAdd} className="gap-1.5">
-          <Plus className="h-4 w-4" />
-          បន្ថែមឡាន
-        </Button>
       </div>
     </div>
   );

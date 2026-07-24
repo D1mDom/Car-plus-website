@@ -1,7 +1,22 @@
-import { Shield, Award, Wrench, CreditCard, MapPin, Phone, MessageCircle, Users, Car, Trophy, Clock } from "lucide-react";
+import { useState } from "react";
+import { Shield, Award, Wrench, CreditCard, Pencil, Trash2, Plus } from "lucide-react";
 import ContactForm from "./ContactForm";
 import BusinessHours from "./BusinessHours";
 import SocialLinks from "./SocialLinks";
+import { useAdmin } from "@/hooks/useAdmin";
+import { useTeam, useDeleteTeamMember, isRealTeamMember, type TeamMember } from "@/hooks/useTeam";
+import TeamFormDialog from "./admin/TeamFormDialog";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const features = [
   {
@@ -26,37 +41,22 @@ const features = [
   },
 ];
 
-const stats = [
-  { icon: Clock, value: "10+", label: "ឆ្នាំបទពិសោធន៍" },
-  { icon: Car, value: "500+", label: "ឡានបានលក់" },
-  { icon: Users, value: "450+", label: "អតិថិជនសប្បាយចិត្ត" },
-  { icon: Trophy, value: "#1", label: "ឈ្មួញទុកចិត្ត" },
-];
-
-const teamMembers = [
-  {
-    name: "សុវណ្ណ ចេន",
-    role: "ស្ថាបនិក និង CEO",
-    image: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&h=200&fit=crop&crop=face",
-  },
-  {
-    name: "តារា គឹម",
-    role: "អ្នកគ្រប់គ្រងផ្នែកលក់",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face",
-  },
-  {
-    name: "ស្រីមុំ ផាន់",
-    role: "អ្នកឯកទេសហិរញ្ញវត្ថុ",
-    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&h=200&fit=crop&crop=face",
-  },
-  {
-    name: "វីរៈ ហេង",
-    role: "អ្នកគ្រប់គ្រងសេវាកម្ម",
-    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face",
-  },
-];
-
 const AboutSection = () => {
+  const { isAdmin } = useAdmin();
+  const { data: teamMembers = [] } = useTeam();
+  const deleteMember = useDeleteTeamMember();
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const nextSortOrder = teamMembers.reduce((max, m) => Math.max(max, m.sort_order), 0) + 1;
+
+  const handleAdd = () => { setEditingMember(null); setFormOpen(true); };
+  const handleEdit = (member: TeamMember) => { setEditingMember(member); setFormOpen(true); };
+  const confirmDelete = () => {
+    if (deleteId) { deleteMember.mutate(deleteId); setDeleteId(null); }
+  };
+
   return (
     <>
       <section id="about" className="py-20 sm:py-24">
@@ -68,19 +68,6 @@ const AboutSection = () => {
             <p className="text-lg leading-relaxed text-muted-foreground">
               បង្កើតឡើងក្នុងឆ្នាំ ២០១៤ Car Plus បានរីកចម្រើនពីអាជីវកម្មគ្រួសារតូចមួយ ទៅជាឈ្មួញលក់រថយន្តដែលទុកចិត្តបំផុតមួយនៅភ្នំពេញ។ បេសកកម្មរបស់យើងគឺផ្តល់រថយន្តគុណភាពខ្ពស់ជាមួយប្រវត្តិថ្លាភ្លឺ ធានា និងសេវាកម្មអតិថិជនល្អឥតខ្ចោះ។
             </p>
-          </div>
-
-          {/* Stats - one card with dividers */}
-          <div className="mb-16 grid grid-cols-2 divide-border overflow-hidden rounded-2xl border border-border bg-card sm:grid-cols-4 sm:divide-x [&>*:nth-child(-n+2)]:border-b sm:[&>*]:border-b-0 [&>*:nth-child(odd)]:border-r sm:[&>*:nth-child(odd)]:border-r-0">
-            {stats.map((stat) => (
-              <div key={stat.label} className="flex flex-col items-center gap-2 border-border p-6 text-center">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-                  <stat.icon className="h-5 w-5" />
-                </div>
-                <p className="text-3xl font-bold text-foreground">{stat.value}</p>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-              </div>
-            ))}
           </div>
 
           {/* Features - left-aligned cards */}
@@ -98,13 +85,47 @@ const AboutSection = () => {
 
           {/* Team - sleek left-aligned cards */}
           <div className="mb-16">
-            <h3 className="mb-8 text-center text-2xl font-bold text-foreground">
-              ស្គាល់ <span className="text-primary">ក្រុមការងារ</span>យើង
-            </h3>
+            <div className="mb-8 flex items-center justify-center gap-3">
+              <h3 className="text-center text-2xl font-bold text-foreground">
+                ស្គាល់ <span className="text-primary">ក្រុមការងារ</span>យើង
+              </h3>
+              {isAdmin && (
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={handleAdd}>
+                  <Plus className="h-4 w-4" />
+                  បន្ថែម
+                </Button>
+              )}
+            </div>
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {teamMembers.map((member) => (
-                <div key={member.name} className="rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/40">
-                  <img src={member.image} alt={member.name} className="mb-4 h-16 w-16 rounded-full object-cover" />
+                <div key={member.id} className="group relative rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/40">
+                  {isAdmin && isRealTeamMember(member.id) && (
+                    <div className="absolute right-3 top-3 flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(member)}
+                        aria-label="កែសម្រួល"
+                        className="rounded-full bg-background p-2 text-primary shadow-sm ring-1 ring-border transition-colors hover:bg-accent"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteId(member.id)}
+                        aria-label="លុប"
+                        className="rounded-full bg-background p-2 text-destructive shadow-sm ring-1 ring-border transition-colors hover:bg-accent"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                  {member.image ? (
+                    <img src={member.image} alt={member.name} className="mb-4 h-16 w-16 rounded-full object-cover" />
+                  ) : (
+                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted text-lg font-semibold text-muted-foreground">
+                      {member.name.charAt(0)}
+                    </div>
+                  )}
                   <h4 className="font-semibold text-foreground">{member.name}</h4>
                   <p className="text-sm text-muted-foreground">{member.role}</p>
                 </div>
@@ -112,41 +133,6 @@ const AboutSection = () => {
             </div>
           </div>
 
-          {/* Showroom / quick contact */}
-          <div className="mx-auto max-w-3xl text-center">
-            <h3 className="mb-4 text-2xl font-bold text-foreground">
-              ទស្សនា <span className="text-primary">សាលបង្ហាញ</span>យើង
-            </h3>
-            <p className="mb-8 leading-relaxed text-muted-foreground">
-              សូមអញ្ជើញមកមើលរថយន្តគុណភាពរបស់យើងដោយផ្ទាល់។ ក្រុមការងាររបស់យើងរួចរាល់ជួយអ្នកស្វែងរកឡានដ៏ល្អឥតខ្ចោះ។
-            </p>
-
-            <div className="grid gap-5 sm:grid-cols-3">
-              <div className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-                  <MapPin className="h-5 w-5" />
-                </div>
-                <p className="font-medium text-foreground">អាសយដ្ឋាន</p>
-                <p className="text-center text-sm text-muted-foreground">ផ្ទះ ៣៩៣ ផ្លូវឧកញ៉ា ម៉ុង ឫទ្ធី (១៩២៨) ភ្នំពេញ ១២១០១</p>
-              </div>
-
-              <div className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-                  <Phone className="h-5 w-5" />
-                </div>
-                <p className="font-medium text-foreground">ទូរស័ព្ទ</p>
-                <p className="text-sm text-muted-foreground">069 927 292</p>
-              </div>
-
-              <div className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-                  <MessageCircle className="h-5 w-5" />
-                </div>
-                <p className="font-medium text-foreground">តេឡេក្រាម</p>
-                <p className="text-sm text-muted-foreground">@carplus_cambodia</p>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -179,6 +165,31 @@ const AboutSection = () => {
           </div>
         </div>
       </section>
+
+      {isAdmin && (
+        <>
+          <TeamFormDialog
+            open={formOpen}
+            onOpenChange={setFormOpen}
+            member={editingMember}
+            nextSortOrder={nextSortOrder}
+          />
+          <AlertDialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>លុបសមាជិកក្រុម</AlertDialogTitle>
+                <AlertDialogDescription>
+                  តើអ្នកប្រាកដទេថាចង់លុបសមាជិកនេះ? សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>បោះបង់</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmDelete}>លុប</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      )}
     </>
   );
 };

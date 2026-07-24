@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Car, getStatusLabel, CarStatus } from "@/hooks/useCars";
+import { Car, getStatusLabel } from "@/hooks/useCars";
 import { Images, Calendar, Fuel, Car as CarIcon, MessageCircle, Pencil, Trash2 } from "lucide-react";
 import WishlistButton from "@/components/WishlistButton";
 import { useContact } from "@/hooks/useContact";
@@ -15,10 +14,6 @@ interface CarCardProps {
   onDelete?: (car: Car) => void;
 }
 
-const getStatusVariant = (status: CarStatus): "ready" | "onroad" | "luxury" | "plate" => {
-  return status;
-};
-
 const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
   const { data: contact } = useContact();
   const adminMode = Boolean(onEdit || onDelete);
@@ -29,6 +24,11 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
   const images = car.images && car.images.length > 0 ? car.images : [car.image];
   const [active, setActive] = useState(0);
   const hasMultiple = images.length > 1;
+
+  // If photos change (e.g. an admin removes one), keep the preview index in range.
+  useEffect(() => {
+    if (active > images.length - 1) setActive(0);
+  }, [images.length, active]);
 
   const previewImage = (e: React.MouseEvent, index: number) => {
     e.preventDefault();
@@ -52,13 +52,6 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
             loading="lazy"
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
-          {/* Status badge - top left */}
-          <Badge
-            variant={getStatusVariant(car.status)}
-            className="absolute left-3 top-3 border-0 shadow-sm"
-          >
-            {getStatusLabel(car.status)}
-          </Badge>
           {/* Photo count */}
           {hasMultiple && (
             <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-xs font-medium text-white">
@@ -130,6 +123,9 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
 
           {/* Spec micro-badges */}
           <div className="mt-3 flex flex-wrap gap-1.5">
+            <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+              {getStatusLabel(car.status)}
+            </span>
             {specs.map((s, i) => (
               <span
                 key={i}

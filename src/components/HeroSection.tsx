@@ -53,7 +53,15 @@ const HeroSection = () => {
             current === index ? "opacity-100" : "opacity-0"
           }`}
         >
-          <img src={slide.image} alt={slide.alt} className="h-full w-full object-contain" />
+          {/* Blurred, zoomed copy fills the empty side space so there are no gray
+              bars, while the sharp banner below stays fully visible (uncropped). */}
+          <img
+            src={slide.image}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl"
+          />
+          <img src={slide.image} alt={slide.alt} className="relative h-full w-full object-contain" />
         </div>
       ))}
 

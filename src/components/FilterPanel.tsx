@@ -68,29 +68,20 @@ const FilterPanel = ({ open, onOpenChange, filters, onFiltersChange }: FilterPan
 
         <div className="space-y-8 py-6">
           <div className="space-y-4">
-            <Label className="text-sm font-medium text-foreground">ជួរឆ្នាំ</Label>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">ពី</Label>
-                <Select value={filters.yearMin?.toString() || ""} onValueChange={(value) => onFiltersChange({ ...filters, yearMin: value ? parseInt(value) : null })}>
-                  <SelectTrigger className="bg-background"><SelectValue placeholder="ណាមួយ" /></SelectTrigger>
-                  <SelectContent className="bg-card border-border">
-                    <SelectItem value="any">ណាមួយ</SelectItem>
-                    {years.map((year) => (<SelectItem key={year} value={year.toString()}>{year}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">ដល់</Label>
-                <Select value={filters.yearMax?.toString() || ""} onValueChange={(value) => onFiltersChange({ ...filters, yearMax: value ? parseInt(value) : null })}>
-                  <SelectTrigger className="bg-background"><SelectValue placeholder="ណាមួយ" /></SelectTrigger>
-                  <SelectContent className="bg-card border-border">
-                    <SelectItem value="any">ណាមួយ</SelectItem>
-                    {years.map((year) => (<SelectItem key={year} value={year.toString()}>{year}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            <Label className="text-sm font-medium text-foreground">ឆ្នាំ</Label>
+            <Select
+              value={filters.yearMin?.toString() || ""}
+              onValueChange={(value) => {
+                const year = value === "any" ? null : parseInt(value);
+                onFiltersChange({ ...filters, yearMin: year, yearMax: year });
+              }}
+            >
+              <SelectTrigger className="bg-background"><SelectValue placeholder="ណាមួយ" /></SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="any">ណាមួយ</SelectItem>
+                {years.map((year) => (<SelectItem key={year} value={year.toString()}>{year}</SelectItem>))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-4">
@@ -124,11 +115,11 @@ const FilterPanel = ({ open, onOpenChange, filters, onFiltersChange }: FilterPan
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium text-foreground">ជួរតម្លៃ</Label>
-              <span className="text-sm text-primary font-medium">{formatPrice(filters.priceMin)} - {formatPrice(filters.priceMax)}</span>
+              <Label className="text-sm font-medium text-foreground">ចាប់ពីតម្លៃ</Label>
+              <span className="text-sm text-primary font-medium">{formatPrice(filters.priceMin)}</span>
             </div>
             <div className="pt-2">
-              <Slider min={minPrice} max={maxPrice} step={1000} value={[filters.priceMin, filters.priceMax]} onValueChange={([min, max]) => onFiltersChange({ ...filters, priceMin: min, priceMax: max })} className="w-full" />
+              <Slider min={minPrice} max={maxPrice} step={1000} value={[filters.priceMin]} onValueChange={([min]) => onFiltersChange({ ...filters, priceMin: min, priceMax: maxPrice })} className="w-full" />
               <div className="flex justify-between mt-2 text-xs text-muted-foreground">
                 <span>{formatPrice(minPrice)}</span>
                 <span>{formatPrice(maxPrice)}</span>

@@ -31,6 +31,7 @@ import { useCreateCar, useUpdateCar, type Car, type CarStatus } from "@/hooks/us
 import { Upload, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { safeUUID } from "@/lib/utils";
 
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 const CAR_IMAGES_BUCKET = "car-images";
@@ -189,7 +190,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
   // put megabytes into every car row and re-download them on each page load.
   const uploadImage = async (file: File): Promise<string> => {
     const { blob, extension } = await compressImage(file);
-    const path = `${crypto.randomUUID()}.${extension}`;
+    const path = `${safeUUID()}.${extension}`;
 
     const { error: uploadError } = await supabase.storage
       .from(CAR_IMAGES_BUCKET)
@@ -444,7 +445,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                           </div>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          រូបទី ១ គឺជារូបគម្រប។ PNG, JPG, WEBP (រហូតដល់ 50MB)
+                          រូបទី ១ គឺជារូបគម្រប
                         </p>
                       </div>
                     </FormControl>
