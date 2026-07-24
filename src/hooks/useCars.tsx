@@ -405,6 +405,16 @@ export const useCarById = (id: string) => {
   });
 };
 
+// Turn Supabase errors into a friendly message. A duplicate code trips the
+// cars.code UNIQUE constraint (Postgres error 23505) — say so plainly.
+const carErrorMessage = (error: unknown, action: string): string => {
+  const e = error as { code?: string; message?: string };
+  if (e?.code === "23505" || (e?.message ?? "").includes("cars_code_key")) {
+    return "This car code already exists. Please use a different code.";
+  }
+  return `Failed to ${action} car: ${e?.message ?? "error"}`;
+};
+
 export const useCreateCar = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -423,7 +433,7 @@ export const useCreateCar = () => {
       return mapDbCarToCar(data as DbCar);
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["cars"] }); toast.success("Car added successfully"); },
-    onError: (error) => { toast.error("Failed to add car: " + error.message); },
+    onError: (error) => { toast.error(carErrorMessage(error, "add")); },
   });
 };
 
@@ -457,7 +467,7 @@ export const useUpdateCar = () => {
       queryClient.invalidateQueries({ queryKey: ["car", car.id] });
       toast.success("Car updated successfully");
     },
-    onError: (error) => { toast.error("Failed to update car: " + error.message); },
+    onError: (error) => { toast.error(carErrorMessage(error, "update")); },
   });
 };
 

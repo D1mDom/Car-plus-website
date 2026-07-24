@@ -94,6 +94,12 @@ const BannerManagerDialog = ({ open, onOpenChange }: BannerManagerDialogProps) =
             )}
           </div>
 
+          <div className="rounded-lg bg-muted/50 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+            <span className="font-medium text-foreground">ទំហំរូបបដាដែលសមស្រប៖</span> ប្រើរូបផ្តេក (landscape) ប្រហែល{" "}
+            <span className="font-medium text-foreground">1920 × 640 px</span> (សមាមាត្រ 3:1)។
+            ដាក់អក្សរ/ឡូហ្គោនៅចំកណ្តាល។ PNG, JPG, WEBP។
+          </div>
+
           {banners.length === 0 ? (
             <p className="py-4 text-center text-sm text-muted-foreground">
               មិនទាន់មានបដាទេ។ បើទទេ គេហទំព័របង្ហាញបដាដើមរបស់ប្រព័ន្ធ។

@@ -27,11 +27,13 @@ const ResetPassword = () => {
 
   const cleanPassword = (v: string) => v.replace(/[^\x20-\x7E]/g, "");
 
-  // Supabase parses the recovery token from the email link and sets a temporary
-  // session. Wait for it before letting the user set a new password.
+  // The recovery link establishes a session (detectSessionInUrl parses the token
+  // from the URL). Accept either the PASSWORD_RECOVERY event or an already-present
+  // session — checking only the event races against Supabase firing it before this
+  // listener subscribes, which would wrongly reject a valid link.
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) setReady(true);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || session) setReady(true);
       setChecking(false);
     });
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -55,7 +57,9 @@ const ResetPassword = () => {
     setLoading(false);
     if (error) { toast({ title: "Reset failed", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Password updated", description: "Please log in with your new password." });
-    await supabase.auth.signOut();
+    // Local scope: clear the recovery session in this browser without the
+    // server-side global revoke that can 403 on the temporary recovery token.
+    await supabase.auth.signOut({ scope: "local" });
     navigate("/auth");
   };
 

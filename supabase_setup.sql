@@ -20,136 +20,21 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- requires the table to already exist.)
 
 -- ============================================================================
--- 1. Profiles & Orders
+-- 1. Shared helpers
+--
+-- The app stores no per-user tables: the wishlist is client-side (localStorage),
+-- and the cart/checkout/orders feature was removed. User identity lives entirely
+-- in Supabase Auth (auth.users) — there is no profiles table.
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS public.profiles (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
-  full_name TEXT,
-  phone TEXT,
-  address TEXT,
-  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
-);
-
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Users can view their own profile" ON public.profiles;
-DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
-DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
-
-CREATE POLICY "Users can view their own profile" ON public.profiles FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can update their own profile" ON public.profiles FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert their own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- car_id is TEXT (not a UUID foreign key) on purpose: the app falls back to
--- the static catalogue in src/data/cars.ts, whose ids are plain strings
--- ("1", "2", ...). Making this a FK to public.cars would break that fallback.
-CREATE TABLE IF NOT EXISTS public.cart_items (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  car_id TEXT NOT NULL,
-  quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
-  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-  UNIQUE(user_id, car_id)
-);
-
-ALTER TABLE public.cart_items ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Users can view their own cart items" ON public.cart_items;
-DROP POLICY IF EXISTS "Users can add to their own cart" ON public.cart_items;
-DROP POLICY IF EXISTS "Users can update their own cart items" ON public.cart_items;
-DROP POLICY IF EXISTS "Users can delete their own cart items" ON public.cart_items;
-
-CREATE POLICY "Users can view their own cart items" ON public.cart_items FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can add to their own cart" ON public.cart_items FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update their own cart items" ON public.cart_items FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Users can delete their own cart items" ON public.cart_items FOR DELETE USING (auth.uid() = user_id);
-
-CREATE TABLE IF NOT EXISTS public.orders (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  status TEXT NOT NULL DEFAULT 'pending'
-    CHECK (status IN ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'cancelled')),
-  total_amount DECIMAL(12,2) NOT NULL CHECK (total_amount >= 0),
-  shipping_address TEXT,
-  phone TEXT,
-  notes TEXT,
-  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
-);
-
-ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Users can view their own orders" ON public.orders;
-DROP POLICY IF EXISTS "Users can create their own orders" ON public.orders;
-DROP POLICY IF EXISTS "Admins can view all orders" ON public.orders;
-DROP POLICY IF EXISTS "Admins can update all orders" ON public.orders;
-
-CREATE POLICY "Users can view their own orders" ON public.orders FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can create their own orders" ON public.orders FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-CREATE TABLE IF NOT EXISTS public.order_items (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  order_id UUID NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
-  car_id TEXT NOT NULL,
-  price DECIMAL(12,2) NOT NULL CHECK (price >= 0),
-  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
-);
-
-ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Users can view their own order items" ON public.order_items;
-DROP POLICY IF EXISTS "Users can create order items for their orders" ON public.order_items;
-DROP POLICY IF EXISTS "Admins can view all order items" ON public.order_items;
-
-CREATE POLICY "Users can view their own order items" ON public.order_items FOR SELECT
-USING (EXISTS (SELECT 1 FROM public.orders WHERE orders.id = order_items.order_id AND orders.user_id = auth.uid()));
-
-CREATE POLICY "Users can create order items for their orders" ON public.order_items FOR INSERT
-WITH CHECK (EXISTS (SELECT 1 FROM public.orders WHERE orders.id = order_items.order_id AND orders.user_id = auth.uid()));
-
-CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN
-  INSERT INTO public.profiles (user_id, full_name) VALUES (new.id, new.raw_user_meta_data ->> 'full_name');
-  RETURN new;
-END;
-$$;
-
-CREATE OR REPLACE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
+-- Shared trigger function that stamps updated_at on write. Used by cars,
+-- contact_info, team_members, and banners.
 CREATE OR REPLACE FUNCTION public.update_updated_at_column() RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = now();
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SET search_path = public;
-
-CREATE OR REPLACE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-CREATE OR REPLACE TRIGGER update_orders_updated_at BEFORE UPDATE ON public.orders FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
--- ============================================================================
--- 2. Wishlist
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS public.wishlist (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  car_id TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-  UNIQUE(user_id, car_id)
-);
-
-ALTER TABLE public.wishlist ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Users can view their own wishlist" ON public.wishlist;
-DROP POLICY IF EXISTS "Users can add to their own wishlist" ON public.wishlist;
-DROP POLICY IF EXISTS "Users can remove from their own wishlist" ON public.wishlist;
-
-CREATE POLICY "Users can view their own wishlist" ON public.wishlist FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can add to their own wishlist" ON public.wishlist FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can remove from their own wishlist" ON public.wishlist FOR DELETE USING (auth.uid() = user_id);
 
 -- ============================================================================
 -- 3. Cars and Admin
@@ -210,9 +95,6 @@ CREATE POLICY "Admins can view all cars" ON public.cars FOR SELECT USING (public
 CREATE POLICY "Admins can insert cars" ON public.cars FOR INSERT WITH CHECK (public.is_admin(auth.uid()));
 CREATE POLICY "Admins can update cars" ON public.cars FOR UPDATE USING (public.is_admin(auth.uid()));
 CREATE POLICY "Admins can delete cars" ON public.cars FOR DELETE USING (public.is_admin(auth.uid()));
-CREATE POLICY "Admins can view all orders" ON public.orders FOR SELECT USING (public.is_admin(auth.uid()));
-CREATE POLICY "Admins can update all orders" ON public.orders FOR UPDATE USING (public.is_admin(auth.uid()));
-CREATE POLICY "Admins can view all order items" ON public.order_items FOR SELECT USING (public.is_admin(auth.uid()));
 
 -- Note: admin_users has no INSERT/UPDATE/DELETE policy on purpose. Admins are
 -- granted only from the dashboard or by the service role, so nobody can
@@ -367,13 +249,6 @@ CREATE OR REPLACE TRIGGER update_banners_updated_at BEFORE UPDATE ON public.bann
 -- lookup is a sequential scan over the whole table.
 -- ============================================================================
 
-CREATE INDEX IF NOT EXISTS idx_profiles_user_id      ON public.profiles(user_id);
-CREATE INDEX IF NOT EXISTS idx_cart_items_user_id    ON public.cart_items(user_id);
-CREATE INDEX IF NOT EXISTS idx_wishlist_user_id      ON  public.wishlist(user_id);
-CREATE INDEX IF NOT EXISTS idx_orders_user_id        ON public.orders(user_id);
-CREATE INDEX IF NOT EXISTS idx_orders_status         ON public.orders(status);
-CREATE INDEX IF NOT EXISTS idx_orders_created_at     ON public.orders(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_order_items_order_id  ON public.order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_cars_is_active        ON public.cars(is_active);
 CREATE INDEX IF NOT EXISTS idx_cars_status           ON public.cars(status);
 CREATE INDEX IF NOT EXISTS idx_admin_users_user_id   ON public.admin_users(user_id);
@@ -386,40 +261,18 @@ CREATE INDEX IF NOT EXISTS idx_banners_sort           ON public.banners(sort_ord
 -- CREATE TABLE IF NOT EXISTS skips existing tables, so these bring an older
 -- database in line. All are safe no-ops on a fresh setup.
 --
--- The DELETE statements remove rows that would violate the new constraints
--- (orphaned wishlist/admin rows, duplicate cart entries). On a fresh database
--- they match nothing. On an existing one, review before running.
+-- The DELETE statement removes rows that would violate the new constraint
+-- (orphaned admin rows). On a fresh database it matches nothing.
 -- ============================================================================
 
 DO $$
 BEGIN
-  -- orders.status: constrain to the values the app actually uses
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'orders_status_check') THEN
-    ALTER TABLE public.orders ADD CONSTRAINT orders_status_check
-      CHECK (status IN ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'));
-  END IF;
-
-  -- wishlist.user_id: was missing its foreign key, leaving orphan rows behind
+  -- admin_users.user_id: was missing its foreign key, leaving orphan rows behind
   -- when a user was deleted
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wishlist_user_id_fkey') THEN
-    DELETE FROM public.wishlist WHERE user_id NOT IN (SELECT id FROM auth.users);
-    ALTER TABLE public.wishlist ADD CONSTRAINT wishlist_user_id_fkey
-      FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
-  END IF;
-
-  -- admin_users.user_id: same problem
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'admin_users_user_id_fkey') THEN
     DELETE FROM public.admin_users WHERE user_id NOT IN (SELECT id FROM auth.users);
     ALTER TABLE public.admin_users ADD CONSTRAINT admin_users_user_id_fkey
       FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
-  END IF;
-
-  -- cart_items: prevent the same car being added twice
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'cart_items_user_id_car_id_key') THEN
-    DELETE FROM public.cart_items a USING public.cart_items b
-      WHERE a.id > b.id AND a.user_id = b.user_id AND a.car_id = b.car_id;
-    ALTER TABLE public.cart_items ADD CONSTRAINT cart_items_user_id_car_id_key
-      UNIQUE (user_id, car_id);
   END IF;
 END $$;
 
