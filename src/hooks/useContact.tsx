@@ -58,6 +58,8 @@ export const useUpdateContact = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (contact: ContactInfo) => {
+      // The single id=1 row is seeded by supabase_setup.sql, and the table's RLS
+      // only grants admins UPDATE (not INSERT), so update that row directly.
       const { error } = await db
         .from("contact_info")
         .update({ ...contact, updated_at: new Date().toISOString() })
