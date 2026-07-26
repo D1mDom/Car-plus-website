@@ -100,7 +100,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="pt-16">
+      <main>
         {isAdmin && <AdminToolbar cars={carsData} />}
         <div className="container mx-auto px-4 pt-4">
           <HeroSection />
