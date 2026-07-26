@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Phone, MessageCircle, Check, Pin, Calendar, Fuel, Palette, Shield, Car as CarIcon, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useContact } from "@/hooks/useContact";
+import { onImgError } from "@/lib/imageFallback";
 
 // Description lines are stored with a leading emoji (📌 for a heading-style
 // point, ✅ for a feature). Emojis render inconsistently across devices and we
@@ -64,13 +65,13 @@ const CarDetail = () => {
           <div className="grid lg:grid-cols-2 gap-10">
             <div className="space-y-4">
               <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-surface">
-                <img src={car.images[selectedImage] || car.image} alt={car.name} className="h-full w-full object-cover" />
+                <img src={(car.images ?? [])[selectedImage] || car.image} onError={onImgError} alt={car.name} className="h-full w-full object-cover" />
                 <Badge variant={car.status} className="absolute top-4 left-4">{getStatusLabel(car.status)}</Badge>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                {car.images.map((image, index) => (
+                {(car.images ?? []).map((image, index) => (
                   <button key={index} onClick={() => setSelectedImage(index)} className={`relative aspect-[4/3] rounded-lg overflow-hidden border-2 transition-all ${selectedImage === index ? "border-primary" : "border-transparent hover:border-border"}`}>
-                    <img src={image} alt={`${car.name} រូប ${index + 1}`} className="h-full w-full object-cover" />
+                    <img src={image} alt={`${car.name} រូប ${index + 1}`} onError={onImgError} className="h-full w-full object-cover" />
                   </button>
                 ))}
               </div>

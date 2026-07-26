@@ -5,6 +5,7 @@ import SocialLinks from "./SocialLinks";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useTeam, useDeleteTeamMember, isRealTeamMember, type TeamMember } from "@/hooks/useTeam";
 import TeamFormDialog from "./admin/TeamFormDialog";
+import { onImgError } from "@/lib/imageFallback";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -119,7 +120,7 @@ const AboutSection = () => {
                     </div>
                   )}
                   {member.image ? (
-                    <img src={member.image} alt={member.name} className="mb-4 h-16 w-16 rounded-full object-cover" />
+                    <img src={member.image} alt={member.name} onError={onImgError} className="mb-4 h-16 w-16 rounded-full object-cover" />
                   ) : (
                     <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted text-lg font-semibold text-muted-foreground">
                       {member.name.charAt(0)}

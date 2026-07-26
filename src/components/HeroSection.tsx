@@ -15,6 +15,7 @@ import {
 import { useAdmin } from "@/hooks/useAdmin";
 import { useBanners } from "@/hooks/useBanners";
 import BannerManagerDialog from "@/components/admin/BannerManagerDialog";
+import { onImgError } from "@/lib/imageFallback";
 
 // Shown when no banners have been uploaded yet.
 const DEFAULT_SLIDES = [
@@ -79,7 +80,7 @@ const HeroSection = () => {
             aria-hidden="true"
             className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl"
           />
-          <img src={slide.image} alt={slide.alt} className="relative h-full w-full object-contain" />
+          <img src={slide.image} alt={slide.alt} onError={onImgError} className="relative h-full w-full object-contain" />
         </div>
       ))}
 

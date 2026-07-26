@@ -6,6 +6,7 @@ import { Car, getStatusLabel } from "@/hooks/useCars";
 import { Images, Calendar, Fuel, Car as CarIcon, MessageCircle, Pencil, Trash2 } from "lucide-react";
 import WishlistButton from "@/components/WishlistButton";
 import { useContact } from "@/hooks/useContact";
+import { onImgError } from "@/lib/imageFallback";
 
 interface CarCardProps {
   car: Car;
@@ -50,6 +51,7 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
             src={images[active] || car.image}
             alt={car.name}
             loading="lazy"
+            onError={onImgError}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
           {/* Photo count */}
