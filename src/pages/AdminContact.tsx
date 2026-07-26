@@ -84,7 +84,13 @@ const AdminContact = () => {
                         id={key}
                         value={form[key] ?? ""}
                         placeholder={placeholder}
-                        onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                        onChange={(e) => {
+                          // The phone field accepts only digits, +, spaces, - and ().
+                          const value = key === "phone"
+                            ? e.target.value.replace(/[^0-9+\-\s()]/g, "")
+                            : e.target.value;
+                          setForm({ ...form, [key]: value });
+                        }}
                       />
                     </div>
                   ))}

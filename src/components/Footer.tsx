@@ -6,7 +6,7 @@ const Footer = () => {
   const { data: contact } = useContact();
   const telegramHandle = (contact?.telegram || "@Carplus777").replace(/^@/, "");
   return (
-    <footer id="contact" className="border-t-2 border-border bg-card">
+    <footer className="border-t-2 border-border bg-card">
       <div className="container mx-auto px-4 py-16">
         <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-4">
