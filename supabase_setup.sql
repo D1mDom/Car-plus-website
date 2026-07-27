@@ -230,6 +230,19 @@ CREATE TABLE IF NOT EXISTS public.banners (
 
 ALTER TABLE public.banners ENABLE ROW LEVEL SECURITY;
 
+-- Seed the default banner slides (only if the table is empty) so admins can
+-- edit/reorder/replace them. These files live in /public/slides, so their URLs
+-- are stable and always resolve.
+INSERT INTO public.banners (image, sort_order)
+SELECT * FROM (VALUES
+  ('/slides/slide-1-christmas.jpg', 1),
+  ('/slides/slide-2-newyear.jpg', 2),
+  ('/slides/slide-3-showroom.jpg', 3),
+  ('/slides/slide-4-coupon.jpg', 4),
+  ('/slides/slide-5-service.jpg', 5)
+) AS seed(image, sort_order)
+WHERE NOT EXISTS (SELECT 1 FROM public.banners);
+
 DROP POLICY IF EXISTS "Anyone can view banners" ON public.banners;
 DROP POLICY IF EXISTS "Admins can insert banners" ON public.banners;
 DROP POLICY IF EXISTS "Admins can update banners" ON public.banners;

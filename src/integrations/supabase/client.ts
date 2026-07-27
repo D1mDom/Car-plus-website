@@ -10,7 +10,10 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    // sessionStorage (not localStorage) so a login lasts only for the current
+    // browser session: it survives page reloads/navigation, but the user must
+    // sign in again after they close the tab/browser and reopen the site.
+    storage: sessionStorage,
     persistSession: true,
     autoRefreshToken: true,
     // Parse the recovery/confirmation token from the URL after an email link,
