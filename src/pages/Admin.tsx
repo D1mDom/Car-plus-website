@@ -1,18 +1,17 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Navigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useCars, useDeleteCar, getStatusLabel } from "@/hooks/useCars";
-import { useTeam, isRealTeamMember } from "@/hooks/useTeam";
-import { useBanners } from "@/hooks/useBanners";
-import { useContact } from "@/hooks/useContact";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Car, Loader2, Phone, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Car, Loader2, Phone, Download, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import CarFormDialog from "@/components/admin/CarFormDialog";
@@ -33,76 +32,87 @@ const Admin = () => {
   const { isAdmin, isLoading: adminLoading } = useAdmin();
   const { data: cars, isLoading: carsLoading } = useCars();
   const deleteCar = useDeleteCar();
-  const { data: teamData = [] } = useTeam();
-  const { data: bannersData = [] } = useBanners();
-  const { data: contactData } = useContact();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingCar, setEditingCar] = useState<CarType | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [carToDelete, setCarToDelete] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
 
-  // One-click backup: download all editable content as a restorable .sql file.
-  // Paste it into the Supabase SQL Editor (on a database that already has the
-  // schema from supabase_setup.sql) to restore the data.
-  const handleBackup = () => {
-    // Format any value as a SQL literal, escaping quotes and building text[] arrays.
-    const sql = (v: unknown): string => {
-      if (v === null || v === undefined) return "NULL";
-      if (typeof v === "number") return String(v);
-      if (typeof v === "boolean") return v ? "true" : "false";
-      if (Array.isArray(v)) {
-        return `ARRAY[${v.map((x) => `'${String(x).replace(/'/g, "''")}'`).join(", ")}]::text[]`;
+  // team_members/banners/contact_info aren't in the generated Supabase types.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any;
+
+  // Export all editable data as a JSON backup file. It can be restored from the
+  // website via the Import button below (or into any Car Plus database).
+  const handleBackup = async () => {
+    try {
+      const [carsRes, teamRes, bannersRes, contactRes] = await Promise.all([
+        supabase.from("cars").select("*"),
+        db.from("team_members").select("*"),
+        db.from("banners").select("*"),
+        db.from("contact_info").select("*").eq("id", 1).maybeSingle(),
+      ]);
+      const backup = {
+        exported_at: new Date().toISOString(),
+        version: 1,
+        cars: carsRes.data ?? [],
+        team_members: teamRes.data ?? [],
+        banners: bannersRes.data ?? [],
+        contact_info: contactRes.data ?? null,
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `carplus-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Backup downloaded");
+    } catch (err) {
+      toast.error("Backup failed: " + (err instanceof Error ? err.message : "error"));
+    }
+  };
+
+  // Restore data from a JSON backup file. Uses upsert, so it merges by id
+  // without creating duplicates, and updates rows that already exist.
+  const handleImport = async (file: File) => {
+    setImporting(true);
+    try {
+      const backup = JSON.parse(await file.text());
+      const fail = (e: unknown) => { if (e) throw e; };
+
+      if (Array.isArray(backup.cars) && backup.cars.length) {
+        fail((await supabase.from("cars").upsert(backup.cars, { onConflict: "id" })).error);
       }
-      return `'${String(v).replace(/'/g, "''")}'`;
-    };
+      if (Array.isArray(backup.team_members) && backup.team_members.length) {
+        fail((await db.from("team_members").upsert(backup.team_members, { onConflict: "id" })).error);
+      }
+      if (Array.isArray(backup.banners) && backup.banners.length) {
+        fail((await db.from("banners").upsert(backup.banners, { onConflict: "id" })).error);
+      }
+      if (backup.contact_info) {
+        // contact_info only allows UPDATE (single seeded row id=1), not insert.
+        const { id: _id, ...contact } = backup.contact_info;
+        fail((await db.from("contact_info").update(contact).eq("id", 1)).error);
+      }
 
-    const realCarsData = (cars ?? []).filter((c) => !String(c.id).startsWith("mock-"));
-    const lines: string[] = [
-      `-- Car Plus data backup — ${new Date().toISOString()}`,
-      `-- Restore: run supabase_setup.sql first (schema), then paste this in the SQL Editor.`,
-      "",
-    ];
-
-    for (const c of realCarsData) {
-      lines.push(
-        `INSERT INTO public.cars (id, code, name, model, year, price, status, viewers, image, images, body_type, tax_status, condition, fuel_type, color, description, is_active) VALUES (` +
-        [c.id, c.code, c.name, c.model, c.year, c.price, c.status, c.viewers, c.image, c.images, c.bodyType, c.taxStatus, c.condition, c.fuelType, c.color, c.description, c.isActive ?? true].map(sql).join(", ") +
-        `) ON CONFLICT (id) DO NOTHING;`
-      );
+      queryClient.invalidateQueries();
+      toast.success("Data imported successfully");
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message
+          : err && typeof err === "object" && "message" in err ? String((err as { message: unknown }).message)
+          : "Invalid backup file";
+      toast.error("Import failed: " + msg);
+    } finally {
+      setImporting(false);
+      if (importInputRef.current) importInputRef.current.value = "";
     }
-    for (const m of teamData.filter((t) => isRealTeamMember(t.id))) {
-      lines.push(
-        `INSERT INTO public.team_members (id, name, role, image, sort_order) VALUES (` +
-        [m.id, m.name, m.role, m.image, m.sort_order].map(sql).join(", ") +
-        `) ON CONFLICT (id) DO NOTHING;`
-      );
-    }
-    for (const b of bannersData) {
-      lines.push(
-        `INSERT INTO public.banners (id, image, sort_order) VALUES (` +
-        [b.id, b.image, b.sort_order].map(sql).join(", ") +
-        `) ON CONFLICT (id) DO NOTHING;`
-      );
-    }
-    if (contactData) {
-      lines.push(
-        `INSERT INTO public.contact_info (id, phone, telegram, facebook, address, email, map_link) VALUES (1, ` +
-        [contactData.phone, contactData.telegram, contactData.facebook, contactData.address, contactData.email, contactData.map_link].map(sql).join(", ") +
-        `) ON CONFLICT (id) DO UPDATE SET phone=EXCLUDED.phone, telegram=EXCLUDED.telegram, facebook=EXCLUDED.facebook, address=EXCLUDED.address, email=EXCLUDED.email, map_link=EXCLUDED.map_link;`
-      );
-    }
-
-    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `carplus-backup-${new Date().toISOString().slice(0, 10)}.sql`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    toast.success("Backup downloaded (SQL)");
   };
 
   if (authLoading || adminLoading) {
@@ -186,6 +196,17 @@ const Admin = () => {
               <Button variant="outline" onClick={handleBackup}>
                 <Download className="h-4 w-4 mr-2" />
                 Backup
+              </Button>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept="application/json,.json"
+                className="hidden"
+                onChange={(e) => { if (e.target.files?.[0]) handleImport(e.target.files[0]); }}
+              />
+              <Button variant="outline" onClick={() => importInputRef.current?.click()} disabled={importing}>
+                {importing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                Import
               </Button>
               <Button variant="outline" asChild>
                 <Link to="/admin/contact">
