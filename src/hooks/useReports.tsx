@@ -24,7 +24,9 @@ export const useReports = () =>
       const orders: any[] = error ? [] : data ?? [];
 
       const totalOrders = orders.length;
-      const totalRevenue = orders.reduce((s, o) => s + Number(o.total_amount || 0), 0);
+      // Revenue excludes cancelled orders so it reflects real sales.
+      const paid = orders.filter((o) => o.status !== "cancelled");
+      const totalRevenue = paid.reduce((s, o) => s + Number(o.total_amount || 0), 0);
       const pendingOrders = orders.filter((o) => o.status === "pending").length;
       const completedOrders = orders.filter(
         (o) => o.status === "completed" || o.status === "delivered"
@@ -36,7 +38,7 @@ export const useReports = () =>
       for (let i = 5; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const label = `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-        const revenue = orders
+        const revenue = paid
           .filter((o) => {
             const od = new Date(o.created_at);
             return od.getFullYear() === d.getFullYear() && od.getMonth() === d.getMonth();

@@ -10,6 +10,7 @@ import CarDetail from "./pages/CarDetail";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Wishlist from "./pages/Wishlist";
+import Orders from "./pages/Orders";
 import Admin from "./pages/Admin";
 import AdminContact from "./pages/AdminContact";
 import AdminOrders from "./pages/AdminOrders";
@@ -33,6 +34,7 @@ const App = () => {
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/wishlist" element={<Wishlist />} />
+                <Route path="/orders" element={<Orders />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/admin/contact" element={<AdminContact />} />
                 <Route path="/admin/orders" element={<AdminOrders />} />

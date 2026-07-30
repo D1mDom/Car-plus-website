@@ -3,9 +3,10 @@ import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Car, getStatusLabel } from "@/hooks/useCars";
-import { Images, Calendar, Fuel, Car as CarIcon, MessageCircle, Pencil, Trash2 } from "lucide-react";
+import { Images, Calendar, Fuel, Car as CarIcon, MessageCircle, Pencil, Trash2, ShoppingCart, Loader2 } from "lucide-react";
 import WishlistButton from "@/components/WishlistButton";
 import { useContact } from "@/hooks/useContact";
+import { usePlaceOrder } from "@/hooks/usePlaceOrder";
 import { onImgError } from "@/lib/imageFallback";
 
 interface CarCardProps {
@@ -17,6 +18,7 @@ interface CarCardProps {
 
 const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
   const { data: contact } = useContact();
+  const placeOrder = usePlaceOrder();
   const adminMode = Boolean(onEdit || onDelete);
   const telegram = (contact?.telegram || "@Carplus777").replace(/^@/, "");
 
@@ -61,8 +63,25 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
               {active + 1}/{images.length}
             </div>
           )}
-          {/* Wishlist - top right */}
-          <div className="absolute right-3 top-3">
+          {/* Wishlist + place order - top right */}
+          <div className="absolute right-3 top-3 flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!placeOrder.isPending) placeOrder.mutate(car);
+              }}
+              aria-label="បញ្ជាទិញ"
+              title="បញ្ជាទិញ (Place order)"
+              className="rounded-full bg-white/95 p-2 text-primary shadow-md transition-colors hover:bg-white"
+            >
+              {placeOrder.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ShoppingCart className="h-4 w-4" />
+              )}
+            </button>
             <WishlistButton carId={car.id} />
           </div>
           {/* Admin inline controls */}

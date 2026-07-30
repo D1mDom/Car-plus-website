@@ -1,0 +1,54 @@
+<mxfile host="app.diagrams.net" version="24.0.0">
+  <diagram name="Car Plus DB" id="carplus-db">
+    <mxGraphModel dx="1050" dy="720" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Car Plus — Database Schema" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=22;fontStyle=1;fontColor=#0F172A;" vertex="1" parent="1">
+          <mxGeometry x="40" y="30" width="520" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="Supabase · Postgres — 5 content tables + auth" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=13;fontColor=#FF6B00;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="40" y="64" width="520" height="22" as="geometry" />
+        </mxCell>
+
+        <mxCell id="auth_users" value="&lt;b&gt;auth.users&lt;/b&gt;&lt;br&gt;&lt;i&gt;Supabase-managed login&lt;/i&gt;&lt;hr size=&quot;1&quot;&gt;id  [PK]  uuid&lt;br&gt;email  text&lt;br&gt;user_metadata  jsonb" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10;spacingRight=10;fillColor=#F1F5F9;strokeColor=#94A3B8;fontColor=#0F172A;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="40" y="120" width="240" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="admin_users" value="&lt;b&gt;admin_users&lt;/b&gt;&lt;br&gt;&lt;i&gt;Who has admin access&lt;/i&gt;&lt;hr size=&quot;1&quot;&gt;id  [PK]  uuid&lt;br&gt;user_id  [FK] [UK]  uuid&lt;br&gt;created_at  timestamptz" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10;spacingRight=10;fillColor=#FFFFFF;strokeColor=#CBD5E1;fontColor=#0F172A;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="40" y="300" width="240" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rel" value="user_id → id  (unique)" style="edgeStyle=entityRelationEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;startArrow=ERone;startFill=0;endArrow=ERone;endFill=0;strokeColor=#FF6B00;fontColor=#FF6B00;fontSize=11;" edge="1" parent="1" source="admin_users" target="auth_users">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cars" value="&lt;b&gt;cars&lt;/b&gt;&lt;br&gt;&lt;i&gt;Vehicle inventory&lt;/i&gt;&lt;hr size=&quot;1&quot;&gt;id  [PK]  uuid&lt;br&gt;code  [UK]  text&lt;br&gt;name · model  text&lt;br&gt;year  int&lt;br&gt;price  numeric&lt;br&gt;status  enum&lt;br&gt;viewers  int&lt;br&gt;image  text&lt;br&gt;images  text[]&lt;br&gt;body_type  text&lt;br&gt;tax_status  text&lt;br&gt;condition  text&lt;br&gt;fuel_type  text&lt;br&gt;color  text&lt;br&gt;description  text[]&lt;br&gt;is_active  bool" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10;spacingRight=10;fillColor=#FFFFFF;strokeColor=#FF6B00;fontColor=#0F172A;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="360" y="120" width="250" height="380" as="geometry" />
+        </mxCell>
+
+        <mxCell id="banners" value="&lt;b&gt;banners&lt;/b&gt;&lt;br&gt;&lt;i&gt;Hero slider images&lt;/i&gt;&lt;hr size=&quot;1&quot;&gt;id  [PK]  uuid&lt;br&gt;image  text&lt;br&gt;sort_order  int" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10;spacingRight=10;fillColor=#FFFFFF;strokeColor=#CBD5E1;fontColor=#0F172A;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="690" y="120" width="240" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="team_members" value="&lt;b&gt;team_members&lt;/b&gt;&lt;br&gt;&lt;i&gt;Meet-our-team cards&lt;/i&gt;&lt;hr size=&quot;1&quot;&gt;id  [PK]  uuid&lt;br&gt;name  text&lt;br&gt;role  text&lt;br&gt;image  text&lt;br&gt;sort_order  int" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10;spacingRight=10;fillColor=#FFFFFF;strokeColor=#CBD5E1;fontColor=#0F172A;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="690" y="260" width="240" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="contact_info" value="&lt;b&gt;contact_info&lt;/b&gt;&lt;br&gt;&lt;i&gt;Single row · id = 1&lt;/i&gt;&lt;hr size=&quot;1&quot;&gt;id  [PK]  int (=1)&lt;br&gt;phone  text&lt;br&gt;telegram  text&lt;br&gt;facebook  text&lt;br&gt;address  text&lt;br&gt;email  text&lt;br&gt;map_link  text" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10;spacingRight=10;fillColor=#FFFFFF;strokeColor=#CBD5E1;fontColor=#0F172A;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="690" y="440" width="240" height="180" as="geometry" />
+        </mxCell>
+
+        <mxCell id="note" value="Content tables (cars · banners · team_members · contact_info) have NO foreign keys between them — each is edited on its own.&#10;Photos are URLs into the &lt;b&gt;car-images&lt;/b&gt; storage bucket (a soft link by string, not a DB key).&#10;RLS: anyone reads · only admins write.  The wishlist is browser localStorage, not a table." style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;fillColor=#FFF7ED;strokeColor=#FFD7B0;fontColor=#5B4636;fontSize=12;spacingLeft=12;spacingTop=10;rounded=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="360" y="540" width="570" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend" value="[PK] primary key    [FK] foreign key    [UK] unique" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontColor=#7C8BA1;fontFamily=Courier New;" vertex="1" parent="1">
+          <mxGeometry x="40" y="450" width="240" height="24" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

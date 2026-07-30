@@ -65,7 +65,7 @@ const AdminOrders = () => {
       customer_name: form.customer_name || "Walk-in customer",
       phone: form.phone,
       status: form.status,
-      total_amount: Number(form.total) || (car ? car.price : 0),
+      total_amount: form.total !== "" ? Number(form.total) : (car ? car.price : 0),
       notes: form.notes,
       items: car ? [{ car_id: car.id, car_name: car.name, price: car.price }] : [],
     }, {
