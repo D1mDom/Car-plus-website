@@ -48,7 +48,7 @@ const Header = () => {
       <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
         {/* Dynamic Global Promotion Banner */}
         {promotionText && (
-          <div className="w-full bg-gradient-to-r from-primary to-orange-500 text-primary-foreground py-2 px-4 shadow-md flex items-center justify-center animate-fade-in origin-top">
+          <div className="w-full bg-gradient-to-r from-primary to-sky-400 text-primary-foreground py-2 px-4 shadow-md flex items-center justify-center animate-fade-in origin-top">
             <Megaphone className="h-4 w-4 mr-2 animate-bounce" />
             <p className="text-sm font-bold tracking-wide text-center">
               {promotionText}

@@ -256,6 +256,68 @@ CREATE POLICY "Admins can delete banners" ON public.banners FOR DELETE USING (pu
 CREATE OR REPLACE TRIGGER update_banners_updated_at BEFORE UPDATE ON public.banners FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- ============================================================================
+-- 4e. Orders (sales) & order items
+--
+-- Records a car sale. Orders can be created two ways: a logged-in customer
+-- placing one (user_id = their id), or an admin recording a walk-in sale
+-- (user_id NULL, customer_name filled). Admins manage everything; customers
+-- see only their own. Sales reports aggregate from these tables.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.orders (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  customer_name TEXT,
+  phone TEXT,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending','confirmed','processing','delivered','completed','cancelled')),
+  total_amount NUMERIC NOT NULL DEFAULT 0 CHECK (total_amount >= 0),
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.order_items (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  order_id UUID NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
+  car_id TEXT,
+  car_name TEXT,
+  price NUMERIC NOT NULL DEFAULT 0 CHECK (price >= 0),
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their own orders" ON public.orders;
+DROP POLICY IF EXISTS "Users can create their own orders" ON public.orders;
+DROP POLICY IF EXISTS "Admins can view all orders" ON public.orders;
+DROP POLICY IF EXISTS "Admins can insert orders" ON public.orders;
+DROP POLICY IF EXISTS "Admins can update orders" ON public.orders;
+DROP POLICY IF EXISTS "Admins can delete orders" ON public.orders;
+
+CREATE POLICY "Users can view their own orders" ON public.orders FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can create their own orders" ON public.orders FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Admins can view all orders" ON public.orders FOR SELECT USING (public.is_admin(auth.uid()));
+CREATE POLICY "Admins can insert orders" ON public.orders FOR INSERT WITH CHECK (public.is_admin(auth.uid()));
+CREATE POLICY "Admins can update orders" ON public.orders FOR UPDATE USING (public.is_admin(auth.uid()));
+CREATE POLICY "Admins can delete orders" ON public.orders FOR DELETE USING (public.is_admin(auth.uid()));
+
+DROP POLICY IF EXISTS "View order items of accessible orders" ON public.order_items;
+DROP POLICY IF EXISTS "Admins manage order items" ON public.order_items;
+DROP POLICY IF EXISTS "Users create their order items" ON public.order_items;
+
+CREATE POLICY "View order items of accessible orders" ON public.order_items FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.orders o WHERE o.id = order_items.order_id
+                 AND (o.user_id = auth.uid() OR public.is_admin(auth.uid()))));
+CREATE POLICY "Users create their order items" ON public.order_items FOR INSERT
+  WITH CHECK (EXISTS (SELECT 1 FROM public.orders o WHERE o.id = order_items.order_id AND o.user_id = auth.uid()));
+CREATE POLICY "Admins manage order items" ON public.order_items FOR ALL
+  USING (public.is_admin(auth.uid())) WITH CHECK (public.is_admin(auth.uid()));
+
+CREATE OR REPLACE TRIGGER update_orders_updated_at BEFORE UPDATE ON public.orders FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- ============================================================================
 -- 5. Indexes
 --
 -- Every one of these backs a query the app actually runs. Without them each
@@ -267,6 +329,10 @@ CREATE INDEX IF NOT EXISTS idx_cars_status           ON public.cars(status);
 CREATE INDEX IF NOT EXISTS idx_admin_users_user_id   ON public.admin_users(user_id);
 CREATE INDEX IF NOT EXISTS idx_team_members_sort      ON public.team_members(sort_order);
 CREATE INDEX IF NOT EXISTS idx_banners_sort           ON public.banners(sort_order);
+CREATE INDEX IF NOT EXISTS idx_orders_user_id         ON public.orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_orders_status          ON public.orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_created_at      ON public.orders(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id   ON public.order_items(order_id);
 
 -- ============================================================================
 -- 6. Upgrades for databases created before this script

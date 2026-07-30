@@ -18,7 +18,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 25 100% 50%;
+    --primary: 200 100% 50%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 40% 96%;
@@ -28,39 +28,39 @@
     --muted-foreground: 215 19% 38%;
 
     /* Warm orange tint (#FFF7ED) for pill badges, hover states, icon bubbles */
-    --accent: 33 100% 96%;
-    --accent-foreground: 21 90% 42%;
+    --accent: 200 100% 96%;
+    --accent-foreground: 200 90% 45%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 25 100% 50%;
+    --ring: 200 100% 50%;
 
     --radius: 0.625rem;
 
     /* CTA + status tokens */
-    --cta: 24 95% 53%;
+    --cta: 200 95% 52%;
     --cta-foreground: 0 0% 100%;
-    --cta-hover: 24 95% 47%;
+    --cta-hover: 200 95% 46%;
     --success: 142 68% 38%;
     --success-foreground: 0 0% 100%;
     --info: 211 100% 45%;
     --info-foreground: 0 0% 100%;
 
     /* Brand tokens (kept so existing components stay wired) */
-    --ocean: 26 100% 50%;
-    --ocean-light: 34 100% 58%;
-    --ocean-dark: 22 100% 42%;
+    --ocean: 200 100% 50%;
+    --ocean-light: 200 100% 62%;
+    --ocean-dark: 216 90% 42%;
     --teal: 208 70% 45%;
     --teal-light: 205 65% 58%;
     --surface: 210 40% 96%;
     --surface-hover: 210 40% 93%;
-    --text-border: 26 100% 45%;
+    --text-border: 200 100% 45%;
 
     /* Gradients */
-    --gradient-ocean: linear-gradient(135deg, hsl(26 100% 50%), hsl(36 100% 56%));
+    --gradient-ocean: linear-gradient(135deg, hsl(200 100% 50%), hsl(200 100% 55%));
     --gradient-light: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 20% 96%));
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(210 20% 98%));
 
@@ -72,13 +72,13 @@
 
     --sidebar-background: 216 60% 16%;
     --sidebar-foreground: 210 20% 92%;
-    --sidebar-primary: 24 95% 53%;
+    --sidebar-primary: 200 95% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 216 45% 24%;
     --sidebar-accent-foreground: 210 20% 92%;
     --sidebar-border: 216 40% 26%;
-    --sidebar-ring: 24 95% 53%;
-    --chart-1: 26 100% 50%;
+    --sidebar-ring: 200 95% 52%;
+    --chart-1: 200 100% 50%;
     --chart-2: 216 65% 30%;
     --chart-3: 142 68% 40%;
     --chart-4: 211 100% 45%;
@@ -107,7 +107,7 @@
     --card-foreground: 210 20% 96%;
     --popover: 222 40% 11%;
     --popover-foreground: 210 20% 96%;
-    --primary: 26 100% 56%;
+    --primary: 200 100% 60%;
     --primary-foreground: 222 47% 8%;
     --secondary: 217 30% 18%;
     --secondary-foreground: 210 20% 92%;
@@ -119,35 +119,35 @@
     --destructive-foreground: 0 0% 100%;
     --border: 217 30% 22%;
     --input: 217 30% 22%;
-    --ring: 26 100% 56%;
-    --cta: 24 95% 55%;
+    --ring: 200 100% 60%;
+    --cta: 200 95% 58%;
     --cta-foreground: 0 0% 100%;
-    --cta-hover: 24 95% 49%;
+    --cta-hover: 200 95% 52%;
     --success: 142 62% 45%;
     --success-foreground: 0 0% 100%;
     --info: 211 95% 55%;
     --info-foreground: 0 0% 100%;
-    --ocean: 26 100% 56%;
-    --ocean-light: 34 100% 64%;
-    --ocean-dark: 22 90% 45%;
+    --ocean: 200 100% 60%;
+    --ocean-light: 200 100% 66%;
+    --ocean-dark: 216 90% 48%;
     --teal: 208 70% 50%;
     --teal-light: 205 65% 62%;
     --surface: 222 40% 11%;
     --surface-hover: 217 30% 16%;
-    --chart-1: 26 100% 56%;
+    --chart-1: 200 100% 60%;
     --chart-2: 210 85% 60%;
     --chart-3: 142 62% 48%;
     --chart-4: 211 95% 58%;
     --chart-5: 262 60% 65%;
     --sidebar: 222 45% 9%;
     --sidebar-foreground: 210 20% 92%;
-    --sidebar-primary: 24 95% 55%;
+    --sidebar-primary: 200 95% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 217 30% 18%;
     --sidebar-accent-foreground: 210 20% 92%;
     --sidebar-border: 217 30% 22%;
-    --sidebar-ring: 24 95% 55%;
-    --text-border: 28 100% 60%;
+    --sidebar-ring: 200 95% 58%;
+    --text-border: 200 100% 60%;
     --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.1);
     --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.15);
     --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.2), 0 1px 2px -1px hsl(0 0% 0% / 0.15);

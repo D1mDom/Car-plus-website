@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Car, Loader2, Phone, Download, Upload } from "lucide-react";
+import { Plus, Pencil, Trash2, Car, Loader2, Phone, Download, Upload, Package, BarChart3 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import CarFormDialog from "@/components/admin/CarFormDialog";
@@ -207,6 +207,18 @@ const Admin = () => {
               <Button variant="outline" onClick={() => importInputRef.current?.click()} disabled={importing}>
                 {importing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
                 Import
+              </Button>
+              <Button variant="outline" asChild>
+                <Link to="/admin/orders">
+                  <Package className="h-4 w-4 mr-2" />
+                  Orders
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link to="/admin/reports">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Reports
+                </Link>
               </Button>
               <Button variant="outline" asChild>
                 <Link to="/admin/contact">
