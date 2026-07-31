@@ -8,15 +8,15 @@ export default {
   theme: {
   	container: {
   		center: true,
-  		padding: '2rem',
+  		padding: '10px',
   		screens: {
   			'2xl': '1600px'
   		}
   	},
   	extend: {
 		fontFamily: {
-			sans: ['Inter', 'Battambang', 'sans-serif'],
-			heading: ['Poppins', 'Inter', 'Battambang', 'sans-serif']
+			sans: ['Sora', 'Battambang', 'sans-serif'],
+			heading: ['Sora', 'Battambang', 'sans-serif']
 		},
   		colors: {
   			border: 'hsl(var(--border))',

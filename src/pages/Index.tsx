@@ -11,23 +11,12 @@ import FilterPanel, { FilterState, defaultFilters } from "@/components/FilterPan
 import InventoryToolbar, { SortOption, ViewMode } from "@/components/InventoryToolbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useCars, useDeleteCar, type CarStatus, type Car } from "@/hooks/useCars";
-import { useAdmin } from "@/hooks/useAdmin";
-import CarFormDialog from "@/components/admin/CarFormDialog";
-import AdminToolbar from "@/components/admin/AdminToolbar";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Loader2, Search, SlidersHorizontal, Plus } from "lucide-react";
+import { useCars, type CarStatus } from "@/hooks/useCars";
+import { useLanguage } from "@/hooks/useLanguage";
+import { Loader2, Search, SlidersHorizontal } from "lucide-react";
 
 const Index = () => {
+  const { t } = useLanguage();
   const { data: carsData = [], isLoading } = useCars();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<CarStatus | "all">("all");
@@ -36,29 +25,12 @@ const Index = () => {
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
-  // Inline admin mode: manage cars right from the public page.
-  const { isAdmin } = useAdmin();
-  const deleteCar = useDeleteCar();
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingCar, setEditingCar] = useState<Car | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-
-  const handleAdd = () => { setEditingCar(null); setFormOpen(true); };
-  const handleEdit = (car: Car) => { setEditingCar(car); setFormOpen(true); };
-  const handleDelete = (car: Car) => setDeleteId(car.id);
-  const handleFormClose = () => { setFormOpen(false); setEditingCar(null); };
-  const confirmDelete = () => {
-    if (deleteId) { deleteCar.mutate(deleteId); setDeleteId(null); }
-  };
-
   const priceRange = useMemo(() => {
     if (carsData.length === 0) return { min: 0, max: 100000 };
     const prices = carsData.map((c) => c.price);
     return { min: Math.min(...prices), max: Math.max(...prices) };
   }, [carsData]);
 
-  // Once cars load, widen the price filter to the real range so nothing is
-  // hidden by the default $100k cap (unless the user has already changed it).
   useEffect(() => {
     if (carsData.length === 0) return;
     setFilters((f) =>
@@ -93,47 +65,41 @@ const Index = () => {
     return result;
   }, [carsData, searchQuery, activeCategory, filters, sortBy]);
 
-  const handleFilterClick = () => {
-    setFilterPanelOpen(true);
-  };
-
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen overflow-x-hidden bg-background bg-mesh">
       <Header />
       <main>
-        {isAdmin && <AdminToolbar cars={carsData} />}
-        <div className="container mx-auto px-4 pt-4">
-          <HeroSection />
-        </div>
+        <HeroSection />
 
-        <section id="inventory" className="py-6">
-          <div className="container mx-auto px-4">
-            {/* Search + filter row (full width, below the banner) */}
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="ស្វែងរកតាមឈ្មោះ ឬម៉ូដែល..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-12 border-border bg-background pl-12"
-                />
-              </div>
-              <Button size="lg" variant="outline" className="h-12 gap-2 px-6" onClick={handleFilterClick}>
-                <SlidersHorizontal className="h-5 w-5" />
-                តម្រង
-              </Button>
-              {isAdmin && (
-                <Button size="lg" className="h-12 gap-2 px-6" onClick={handleAdd}>
-                  <Plus className="h-5 w-5" />
-                  បន្ថែមឡាន
-                </Button>
-              )}
+        <section id="inventory" className="relative mx-auto scroll-mt-20 py-10 sm:py-14">
+          <div className="container mx-auto max-w-7xl px-[10px]">
+            <div className="mb-5 max-w-2xl animate-slide-up sm:mb-6 mx-auto">
+
+              <h2 className="font-heading text-2xl font-bold tracking-tight text-foreground sm:text-3xl text-center">
+                {t("inventory.title")}
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground sm:text-base text-center">
+                {t("inventory.subtitle")}
+              </p>
             </div>
 
-            {/* Category chips (left-aligned) */}
-            <div className="mb-4">
+            <div className="mb-4 rounded-2xl border border-border/70 bg-card p-[10px] shadow-sm">
+              <div className="mb-3 flex flex-col gap-2.5 sm:flex-row">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3.5 top-1/2 h-4.5 w-4.5 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder={t("inventory.search")}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-11 border-border bg-background pl-11"
+                  />
+                </div>
+                <Button size="lg" variant="outline" className="h-11 shrink-0 gap-2 px-5" onClick={() => setFilterPanelOpen(true)}>
+                  <SlidersHorizontal className="h-4 w-4" />
+                  {t("inventory.filter")}
+                </Button>
+              </div>
               <CategoryFilter activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
             </div>
 
@@ -148,43 +114,47 @@ const Index = () => {
             />
 
             {isLoading ? (
-              <div className="flex justify-center py-16">
+              <div className="flex justify-center py-20">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : filteredAndSortedCars.length > 0 ? (
               viewMode === "grid" ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
                   {filteredAndSortedCars.map((car, index) => (
-                    <div key={car.id} className="animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
-                      <CarCard
-                        car={car}
-                        onEdit={isAdmin ? handleEdit : undefined}
-                        onDelete={isAdmin ? handleDelete : undefined}
-                      />
+                    <div
+                      key={car.id}
+                      className="animate-slide-up"
+                      style={{ animationDelay: `${Math.min(index, 12) * 45}ms` }}
+                    >
+                      <CarCard car={car} />
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="space-y-4">
                   {filteredAndSortedCars.map((car, index) => (
-                    <div key={car.id} className="animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
+                    <div
+                      key={car.id}
+                      className="animate-slide-up"
+                      style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
+                    >
                       <CarListItem car={car} />
                     </div>
                   ))}
                 </div>
               )
             ) : (
-              <div className="text-center py-16">
-                <p className="text-muted-foreground text-lg">រកមិនឃើញឡានដែលត្រូវនឹងលក្ខណៈវិនិច្ឆ័យរបស់អ្នក។</p>
+              <div className="rounded-2xl border border-dashed border-border bg-card/50 py-16 text-center">
+                <p className="text-lg text-muted-foreground">{t("inventory.empty")}</p>
                 <button
                   onClick={() => {
                     setSearchQuery("");
                     setActiveCategory("all");
                     setFilters({ ...defaultFilters, priceMin: priceRange.min, priceMax: priceRange.max });
                   }}
-                  className="mt-4 text-primary hover:underline"
+                  className="mt-4 font-medium text-primary hover:underline"
                 >
-                  សម្អាតតម្រងទាំងអស់
+                  {t("inventory.clearFilters")}
                 </button>
               </div>
             )}
@@ -196,26 +166,6 @@ const Index = () => {
       </main>
       <Footer />
       <FilterPanel open={filterPanelOpen} onOpenChange={setFilterPanelOpen} filters={filters} onFiltersChange={setFilters} />
-
-      {isAdmin && (
-        <>
-          <CarFormDialog open={formOpen} onOpenChange={handleFormClose} car={editingCar} />
-          <AlertDialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>លុបឡាន</AlertDialogTitle>
-                <AlertDialogDescription>
-                  តើអ្នកប្រាកដទេថាចង់លុបឡាននេះ? សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>បោះបង់</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmDelete}>លុប</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </>
-      )}
     </div>
   );
 };

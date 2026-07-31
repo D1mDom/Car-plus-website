@@ -5,6 +5,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CAR PLUS</title>
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("carplus-theme");
+        var dark = t === "dark" || (t !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        if (dark) document.documentElement.classList.add("dark");
+        var lang = localStorage.getItem("carplus-lang");
+        if (lang === "en" || lang === "km") document.documentElement.lang = lang;
+      } catch (e) {}
+    })();
+  </script>
   <link rel="icon" type="image/png" href="/logo.png" />
   <link rel="apple-touch-icon" href="/logo.png" />
   <meta name="description"
@@ -14,7 +25,7 @@
   <link rel="canonical" href="https://domcarstore.com" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Battambang:wght@300;400;700;900&family=Poppins:wght@400;500;600;700;800&display=swap"
+  <link href="https://fonts.googleapis.com/css2?family=Battambang:wght@300;400;700;900&family=Sora:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
 
   <meta property="og:title" content="Car Plus - រថយន្តគុណភាពនៅភ្នំពេញ" />
@@ -37,9 +48,12 @@
       align-items: center;
       justify-content: center;
       gap: 22px;
-      background: #f8fafc; /* matches the app's slate background */
+      background: #f8fafc;
       z-index: 9999;
       transition: opacity 0.5s ease;
+    }
+    html.dark #app-loader {
+      background: #0b1220;
     }
     #app-loader.app-loader--hidden {
       opacity: 0;
