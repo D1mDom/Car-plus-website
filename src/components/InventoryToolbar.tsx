@@ -2,6 +2,7 @@ import { LayoutGrid, List, ArrowUpDown, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CarStatus } from "@/hooks/useCars";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export type SortOption = "newest" | "price-asc" | "price-desc" | "year-desc" | "year-asc";
 export type ViewMode = "grid" | "list";
@@ -17,39 +18,41 @@ interface InventoryToolbarProps {
 }
 
 const InventoryToolbar = ({ totalCars, filteredCount, activeCategory, sortBy, onSortChange, viewMode, onViewModeChange }: InventoryToolbarProps) => {
+  const { t } = useLanguage();
+
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 p-4 bg-card rounded-xl border-2 border-border">
+    <div className="mb-6 flex flex-col items-start justify-between gap-4 rounded-xl border border-border bg-card p-[10px] sm:flex-row sm:items-center sm:p-4">
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Car className="h-5 w-5 text-primary" />
           <span className="text-sm font-medium text-foreground">
-            {filteredCount} ក្នុង {totalCars} ឡាន
+            {t("inventory.count", { filtered: filteredCount, total: totalCars })}
           </span>
         </div>
         {activeCategory !== "all" && (
-          <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="w-1 h-1 rounded-full bg-muted-foreground" />
-            <span className="capitalize">{activeCategory}</span>
+          <div className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex">
+            <span className="h-1 w-1 rounded-full bg-muted-foreground" />
+            <span className="capitalize">{t(`status.${activeCategory}` as "status.ready")}</span>
           </div>
         )}
       </div>
 
-      <div className="flex items-center gap-3 w-full sm:w-auto">
+      <div className="flex w-full items-center gap-3 sm:w-auto">
         <Select value={sortBy} onValueChange={(value) => onSortChange(value as SortOption)}>
-          <SelectTrigger className="w-full sm:w-[180px] bg-background">
-            <ArrowUpDown className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="តម្រៀប" />
+          <SelectTrigger className="w-full bg-background sm:w-[200px]">
+            <ArrowUpDown className="mr-2 h-4 w-4" />
+            <SelectValue placeholder={t("inventory.sort")} />
           </SelectTrigger>
-          <SelectContent className="bg-card border-border">
-            <SelectItem value="newest">ថ្មីបំផុត</SelectItem>
-            <SelectItem value="price-asc">តម្លៃ: ទាបទៅខ្ពស់</SelectItem>
-            <SelectItem value="price-desc">តម្លៃ: ខ្ពស់ទៅទាប</SelectItem>
-            <SelectItem value="year-desc">ឆ្នាំ: ថ្មីបំផុត</SelectItem>
-            <SelectItem value="year-asc">ឆ្នាំ: ចាស់បំផុត</SelectItem>
+          <SelectContent className="border-border bg-card">
+            <SelectItem value="newest">{t("inventory.sort.newest")}</SelectItem>
+            <SelectItem value="price-asc">{t("inventory.sort.priceAsc")}</SelectItem>
+            <SelectItem value="price-desc">{t("inventory.sort.priceDesc")}</SelectItem>
+            <SelectItem value="year-desc">{t("inventory.sort.yearDesc")}</SelectItem>
+            <SelectItem value="year-asc">{t("inventory.sort.yearAsc")}</SelectItem>
           </SelectContent>
         </Select>
 
-        <div className="flex items-center border-2 border-border rounded-lg overflow-hidden">
+        <div className="flex items-center overflow-hidden rounded-lg border border-border">
           <Button variant={viewMode === "grid" ? "default" : "ghost"} size="icon" className="h-9 w-9 rounded-none" onClick={() => onViewModeChange("grid")}>
             <LayoutGrid className="h-4 w-4" />
           </Button>

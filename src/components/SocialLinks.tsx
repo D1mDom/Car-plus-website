@@ -1,6 +1,7 @@
 import { Facebook, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useContact } from "@/hooks/useContact";
+import { useLanguage } from "@/hooks/useLanguage";
 
 const TikTokIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -10,10 +11,9 @@ const TikTokIcon = ({ className }: { className?: string }) => (
 
 const SocialLinks = () => {
   const { data: contact } = useContact();
+  const { t } = useLanguage();
   const telegramHandle = (contact?.telegram || "@Carplus777").replace(/^@/, "");
 
-  // Facebook and Telegram come from the admin contact settings so they stay in
-  // sync everywhere; TikTok has no field yet so it stays a static link.
   const socialLinks = [
     { name: "Facebook", icon: Facebook, url: contact?.facebook || "https://facebook.com/CarPlus", color: "hover:bg-[#1877F2] hover:text-white" },
     { name: "Telegram", icon: MessageCircle, url: `https://t.me/${telegramHandle}`, color: "hover:bg-[#0088cc] hover:text-white" },
@@ -21,7 +21,7 @@ const SocialLinks = () => {
 
   return (
     <div className="space-y-4">
-      <h3 className="font-semibold text-foreground">តាមដានយើង</h3>
+      <h3 className="font-semibold text-foreground">{t("contact.follow")}</h3>
       <div className="flex flex-wrap gap-3">
         {socialLinks.map((social) => (
           <Button key={social.name} variant="outline" size="lg" className={`gap-2 ${social.color} transition-all duration-300`} asChild>
@@ -31,7 +31,7 @@ const SocialLinks = () => {
             </a>
           </Button>
         ))}
-        <Button variant="outline" size="lg" className="gap-2 hover:bg-black hover:text-white transition-all duration-300" asChild>
+        <Button variant="outline" size="lg" className="gap-2 transition-all duration-300 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black" asChild>
           <a href="https://tiktok.com/@carplus" target="_blank" rel="noopener noreferrer">
             <TikTokIcon className="h-5 w-5" />
             TikTok

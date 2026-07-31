@@ -37,12 +37,7 @@ const AdminToolbar = ({ cars }: AdminToolbarProps) => {
             <Stat label="តម្លៃសរុប" value={`$${value.toLocaleString()}`} />
           </div>
         </div>
-        <Button size="sm" className="gap-1.5" asChild>
-          <Link to="/admin">
-            <LayoutDashboard className="h-4 w-4" />
-            ផ្ទាំងគ្រប់គ្រង
-          </Link>
-        </Button>
+        
       </div>
     </div>
   );

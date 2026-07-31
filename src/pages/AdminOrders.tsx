@@ -1,10 +1,6 @@
 import { useState } from "react";
-import { Navigate, Link } from "react-router-dom";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import { useAuth } from "@/hooks/useAuth";
-import { useAdmin } from "@/hooks/useAdmin";
 import { useCars } from "@/hooks/useCars";
+import { useLanguage } from "@/hooks/useLanguage";
 import {
   useAdminOrders, useUpdateOrderStatus, useCreateOrder, useDeleteOrder, ORDER_STATUSES,
 } from "@/hooks/useAdminOrders";
@@ -16,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Loader2, Plus, Trash2, Package } from "lucide-react";
+import { Loader2, Plus, Trash2, Package } from "lucide-react";
 
 const statusVariant = (s: string): "default" | "secondary" | "outline" | "destructive" =>
   s === "completed" || s === "delivered" ? "default"
@@ -24,8 +20,7 @@ const statusVariant = (s: string): "default" | "secondary" | "outline" | "destru
     : s === "pending" ? "outline" : "secondary";
 
 const AdminOrders = () => {
-  const { user, loading: authLoading } = useAuth();
-  const { isAdmin, isLoading: adminLoading } = useAdmin();
+  const { t } = useLanguage();
   const { data: orders = [], isLoading } = useAdminOrders();
   const { data: cars = [] } = useCars();
   const updateStatus = useUpdateOrderStatus();
@@ -35,21 +30,6 @@ const AdminOrders = () => {
   const realCars = cars.filter((c) => !String(c.id).startsWith("mock-"));
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ customer_name: "", phone: "", carId: "", total: "", status: "pending", notes: "" });
-
-  if (authLoading || adminLoading) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-  }
-  if (!user) return <Navigate to="/auth" replace />;
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-background"><Header />
-        <main className="pt-24 pb-16"><div className="container mx-auto px-4 text-center">
-          <h1 className="text-3xl font-bold text-destructive mb-4">Access Denied</h1>
-          <Button asChild><Link to="/">Go Home</Link></Button>
-        </div></main><Footer />
-      </div>
-    );
-  }
 
   const count = (s: string) => orders.filter((o) => o.status === s).length;
   const money = (n: number) => `$${Number(n).toLocaleString()}`;
@@ -74,73 +54,64 @@ const AdminOrders = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4">
-          <Link to="/admin" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6">
-            <ArrowLeft className="h-4 w-4" />Back to Admin
-          </Link>
-          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold sm:text-3xl">Order Management</h1>
-              <p className="text-muted-foreground">View and manage customer orders</p>
-            </div>
-            <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-2" />New Order</Button>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {[["Total Orders", orders.length], ["Pending", count("pending")], ["Processing", count("processing")], ["Completed", count("completed") + count("delivered")]].map(([l, v]) => (
-              <Card key={l as string}><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{l}</CardTitle></CardHeader>
-                <CardContent><div className="text-2xl font-bold">{v as number}</div></CardContent></Card>
-            ))}
-          </div>
-
-          <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><Package className="h-5 w-5" />All Orders</CardTitle></CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-              ) : orders.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground">
-                  <Package className="h-12 w-12 mx-auto mb-3 opacity-50" /><p>No orders yet</p>
-                  <Button className="mt-4" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-2" />Create first order</Button>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader><TableRow>
-                      <TableHead>Customer</TableHead><TableHead>Date</TableHead><TableHead>Items</TableHead>
-                      <TableHead>Total</TableHead><TableHead>Status</TableHead><TableHead>Update</TableHead><TableHead className="text-right">Actions</TableHead>
-                    </TableRow></TableHeader>
-                    <TableBody>
-                      {orders.map((o) => (
-                        <TableRow key={o.id}>
-                          <TableCell className="font-medium">{o.customer_name || "—"}<div className="text-xs text-muted-foreground">{o.phone}</div></TableCell>
-                          <TableCell className="text-sm">{new Date(o.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell className="text-sm">{o.order_items?.length ? o.order_items.map((i) => i.car_name).join(", ") : "—"}</TableCell>
-                          <TableCell className="font-semibold">{money(o.total_amount)}</TableCell>
-                          <TableCell><Badge variant={statusVariant(o.status)}>{o.status}</Badge></TableCell>
-                          <TableCell>
-                            <Select value={o.status} onValueChange={(v) => updateStatus.mutate({ id: o.id, status: v })}>
-                              <SelectTrigger className="h-8 w-[130px]"><SelectValue /></SelectTrigger>
-                              <SelectContent>{ORDER_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button size="sm" variant="destructive" onClick={() => deleteOrder.mutate(o.id)}><Trash2 className="h-4 w-4" /></Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">{t("admin.orders.title")}</h1>
+          <p className="text-muted-foreground">{t("admin.orders.subtitle")}</p>
         </div>
-      </main>
-      <Footer />
+        <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-2" />New Order</Button>
+      </div>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[["Total Orders", orders.length], ["Pending", count("pending")], ["Processing", count("processing")], ["Completed", count("completed") + count("delivered")]].map(([l, v]) => (
+          <Card key={l as string}><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{l}</CardTitle></CardHeader>
+            <CardContent><div className="text-2xl font-bold">{v as number}</div></CardContent></Card>
+        ))}
+      </div>
+
+      <Card>
+        <CardHeader><CardTitle className="flex items-center gap-2"><Package className="h-5 w-5" />All Orders</CardTitle></CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+          ) : orders.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground">
+              <Package className="h-12 w-12 mx-auto mb-3 opacity-50" /><p>No orders yet</p>
+              <Button className="mt-4" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-2" />Create first order</Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader><TableRow>
+                  <TableHead>Customer</TableHead><TableHead>Date</TableHead><TableHead>Items</TableHead>
+                  <TableHead>Total</TableHead><TableHead>Status</TableHead><TableHead>Update</TableHead><TableHead className="text-right">Actions</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {orders.map((o) => (
+                    <TableRow key={o.id}>
+                      <TableCell className="font-medium">{o.customer_name || "—"}<div className="text-xs text-muted-foreground">{o.phone}</div></TableCell>
+                      <TableCell className="text-sm">{new Date(o.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-sm">{o.order_items?.length ? o.order_items.map((i) => i.car_name).join(", ") : "—"}</TableCell>
+                      <TableCell className="font-semibold">{money(o.total_amount)}</TableCell>
+                      <TableCell><Badge variant={statusVariant(o.status)}>{o.status}</Badge></TableCell>
+                      <TableCell>
+                        <Select value={o.status} onValueChange={(v) => updateStatus.mutate({ id: o.id, status: v })}>
+                          <SelectTrigger className="h-8 w-[130px]"><SelectValue /></SelectTrigger>
+                          <SelectContent>{ORDER_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="destructive" onClick={() => deleteOrder.mutate(o.id)}><Trash2 className="h-4 w-4" /></Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">

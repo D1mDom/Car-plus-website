@@ -1,15 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* Car Plus - Corporate Automotive Theme (Navy / White / Orange) */
-    /* Page background is a soft slate (#F8FAFC); cards stay pure white and
-       lift off it with a 1px border rather than heavy shadows. */
-    --background: 210 40% 98%;
+    /* Car Plus — premium automotive: cool slate + electric cyan */
+    --background: 210 28% 97%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
@@ -18,57 +14,54 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 200 100% 50%;
+    --primary: 199 100% 44%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 40% 20%;
+    --secondary: 210 30% 94%;
+    --secondary-foreground: 222 40% 18%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 19% 38%;
+    --muted: 210 24% 94%;
+    --muted-foreground: 215 16% 40%;
 
-    /* Warm orange tint (#FFF7ED) for pill badges, hover states, icon bubbles */
-    --accent: 200 100% 96%;
-    --accent-foreground: 200 90% 45%;
+    --accent: 199 90% 95%;
+    --accent-foreground: 199 90% 32%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 200 100% 50%;
+    --border: 214 28% 88%;
+    --input: 214 28% 88%;
+    --ring: 199 100% 44%;
 
-    --radius: 0.625rem;
+    --radius: 0.75rem;
 
-    /* CTA + status tokens */
-    --cta: 200 95% 52%;
+    --cta: 199 95% 44%;
     --cta-foreground: 0 0% 100%;
-    --cta-hover: 200 95% 46%;
+    --cta-hover: 199 95% 38%;
     --success: 142 68% 38%;
     --success-foreground: 0 0% 100%;
     --info: 211 100% 45%;
     --info-foreground: 0 0% 100%;
 
-    /* Brand tokens (kept so existing components stay wired) */
-    --ocean: 200 100% 50%;
-    --ocean-light: 200 100% 62%;
-    --ocean-dark: 216 90% 42%;
-    --teal: 208 70% 45%;
-    --teal-light: 205 65% 58%;
-    --surface: 210 40% 96%;
-    --surface-hover: 210 40% 93%;
-    --text-border: 200 100% 45%;
+    --ocean: 199 100% 44%;
+    --ocean-light: 199 100% 58%;
+    --ocean-dark: 216 90% 36%;
+    --teal: 198 72% 40%;
+    --teal-light: 198 65% 55%;
+    --surface: 210 28% 95%;
+    --surface-hover: 210 28% 91%;
+    --text-border: 199 100% 40%;
 
-    /* Gradients */
-    --gradient-ocean: linear-gradient(135deg, hsl(200 100% 50%), hsl(200 100% 55%));
-    --gradient-light: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 20% 96%));
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(210 20% 98%));
+    --gradient-ocean: linear-gradient(135deg, hsl(199 100% 44%), hsl(205 90% 52%));
+    --gradient-light: linear-gradient(180deg, hsl(210 40% 99%), hsl(210 28% 94%));
+    --gradient-card: linear-gradient(160deg, hsl(0 0% 100%), hsl(210 30% 98%));
+    --gradient-hero: linear-gradient(105deg, hsl(216 55% 12% / 0.82) 0%, hsl(216 45% 16% / 0.45) 45%, hsl(216 40% 20% / 0.15) 100%);
+    --gradient-mesh: radial-gradient(ellipse 70% 50% at 10% 0%, hsl(199 100% 44% / 0.08), transparent 55%),
+      radial-gradient(ellipse 50% 40% at 90% 10%, hsl(216 70% 40% / 0.06), transparent 50%);
 
-    /* Shadows */
-    --shadow-card: 0 4px 20px -4px hsl(216 45% 20% / 0.15);
-    /* Card hover lift: a soft dark elevation, not an orange glow. */
-    --shadow-glow: 0 12px 30px -8px hsl(216 45% 20% / 0.22);
-    --shadow-button: 0 4px 14px -2px hsl(216 65% 20% / 0.35);
+    --shadow-card: 0 8px 28px -10px hsl(216 45% 20% / 0.14);
+    --shadow-glow: 0 14px 36px -12px hsl(216 45% 20% / 0.2);
+    --shadow-button: 0 6px 18px -4px hsl(199 80% 30% / 0.35);
 
     --sidebar-background: 216 60% 16%;
     --sidebar-foreground: 210 20% 92%;
@@ -84,8 +77,8 @@
     --chart-4: 211 100% 45%;
     --chart-5: 262 55% 55%;
     --sidebar: 216 60% 16%;
-    --font-sans: 'Inter', 'Battambang', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    --font-heading: 'Poppins', 'Inter', 'Battambang', ui-sans-serif, system-ui, sans-serif;
+    --font-sans: 'Sora', 'Battambang', ui-sans-serif, system-ui, sans-serif;
+    --font-heading: 'Sora', 'Battambang', ui-sans-serif, system-ui, sans-serif;
     --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     --shadow-2xs: 0 1px 3px 0px hsl(216 40% 22% / 0.05);
@@ -112,13 +105,13 @@
     --secondary: 217 30% 18%;
     --secondary-foreground: 210 20% 92%;
     --muted: 217 30% 18%;
-    --muted-foreground: 215 20% 65%;
+    --muted-foreground: 215 16% 72%;
     --accent: 217 30% 20%;
     --accent-foreground: 210 20% 96%;
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 217 30% 22%;
-    --input: 217 30% 22%;
+    --border: 217 28% 26%;
+    --input: 217 28% 18%;
     --ring: 200 100% 60%;
     --cta: 200 95% 58%;
     --cta-foreground: 0 0% 100%;
@@ -134,6 +127,14 @@
     --teal-light: 205 65% 62%;
     --surface: 222 40% 11%;
     --surface-hover: 217 30% 16%;
+    --gradient-ocean: linear-gradient(135deg, hsl(200 100% 55%), hsl(205 90% 48%));
+    --gradient-light: linear-gradient(180deg, hsl(222 40% 11%), hsl(222 47% 8%));
+    --gradient-card: linear-gradient(160deg, hsl(222 38% 13%), hsl(222 40% 10%));
+    --gradient-mesh: radial-gradient(ellipse 70% 50% at 10% 0%, hsl(199 100% 50% / 0.12), transparent 55%),
+      radial-gradient(ellipse 50% 40% at 90% 10%, hsl(216 70% 40% / 0.1), transparent 50%);
+    --shadow-card: 0 8px 28px -10px hsl(0 0% 0% / 0.45);
+    --shadow-glow: 0 14px 36px -12px hsl(0 0% 0% / 0.5);
+    --shadow-button: 0 6px 18px -4px hsl(199 80% 30% / 0.4);
     --chart-1: 200 100% 60%;
     --chart-2: 210 85% 60%;
     --chart-3: 142 62% 48%;
@@ -172,6 +173,7 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    overflow-x: hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -228,6 +230,14 @@
   .bg-gradient-card {
     background-image: var(--gradient-card);
   }
+
+  .bg-gradient-hero {
+    background-image: var(--gradient-hero);
+  }
+
+  .bg-mesh {
+    background-image: var(--gradient-mesh);
+  }
   
   .shadow-card {
     box-shadow: var(--shadow-card);
@@ -242,31 +252,33 @@
   }
   
   .animate-fade-in {
-    animation: fadeIn 0.5s ease-out forwards;
+    animation: fadeIn 0.6s ease-out forwards;
   }
   
   .animate-slide-up {
-    animation: slideUp 0.6s ease-out forwards;
+    animation: slideUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    opacity: 0;
   }
   
   .animate-scale-in {
-    animation: scaleIn 0.4s ease-out forwards;
+    animation: scaleIn 0.5s ease-out forwards;
+  }
+
+  .animate-hero-in {
+    animation: heroIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    opacity: 0;
   }
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(24px);
   }
   to {
     opacity: 1;
@@ -277,10 +289,21 @@
 @keyframes scaleIn {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.96);
   }
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes heroIn {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
