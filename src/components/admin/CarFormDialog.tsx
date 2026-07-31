@@ -203,27 +203,39 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
   };
 
   // Upload one or more files, appending each resulting URL to the images array.
+  // Each file is handled independently so one failure doesn't abandon the rest,
+  // and the real storage error is surfaced instead of a generic message.
   const handleFiles = async (files: FileList | File[]) => {
     const arr = Array.from(files);
     setIsUploading(true);
+    let uploaded = 0;
     try {
       for (const file of arr) {
         if (!file.type.startsWith("image/")) {
-          toast.error("Please select an image file");
+          toast.error(`${file.name}: not an image file`);
           continue;
         }
         if (file.size > MAX_UPLOAD_BYTES) {
-          toast.error("Image must be less than 50MB");
+          toast.error(`${file.name}: must be less than 50MB`);
           continue;
         }
-        const publicUrl = await uploadImage(file);
-        const current = form.getValues("images") || [];
-        form.setValue("images", [...current, publicUrl], { shouldValidate: true });
+        try {
+          const publicUrl = await uploadImage(file);
+          const current = form.getValues("images") || [];
+          form.setValue("images", [...current, publicUrl], { shouldValidate: true });
+          uploaded++;
+        } catch (err) {
+          // Supabase storage errors are plain objects with a `message`.
+          const message =
+            err && typeof err === "object" && "message" in err
+              ? String((err as { message: unknown }).message)
+              : "upload failed";
+          toast.error(`${file.name}: ${message}`);
+        }
       }
-      toast.success("Image uploaded successfully");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to upload image";
-      toast.error(message);
+      if (uploaded > 0) {
+        toast.success(`${uploaded} image${uploaded > 1 ? "s" : ""} uploaded successfully`);
+      }
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";

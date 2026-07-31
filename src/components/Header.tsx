@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Heart, Megaphone, Menu, Package } from "lucide-react";
+import { Heart, Megaphone, Menu, ShoppingCart } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import logo from "@/assets/logo.png";
 import UserMenu from "@/components/UserMenu";
@@ -115,7 +115,7 @@ const Header = () => {
               <div className="flex items-center gap-3">
                 <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" asChild>
                   <Link to="/orders" aria-label="ការបញ្ជាទិញរបស់ខ្ញុំ" title="My Orders">
-                    <Package className="h-5 w-5" />
+                    <ShoppingCart className="h-5 w-5" />
                   </Link>
                 </Button>
                 <Button variant="ghost" size="icon" className="relative rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary" asChild>

@@ -16,7 +16,7 @@ export const usePlaceOrder = () => {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (car: Car) => {
+    mutationFn: async ({ car, phone }: { car: Car; phone: string }) => {
       if (!user) throw new Error("login-required");
       const name =
         (user.user_metadata?.full_name as string) || user.email || "Customer";
@@ -25,6 +25,7 @@ export const usePlaceOrder = () => {
         .insert({
           user_id: user.id,
           customer_name: name,
+          phone,
           status: "pending",
           total_amount: car.price,
         })
@@ -37,7 +38,12 @@ export const usePlaceOrder = () => {
         car_name: car.name,
         price: car.price,
       });
-      if (e2) throw e2;
+      if (e2) {
+        // Roll back the order row so a failed item insert never leaves an
+        // empty, revenue-counted order behind.
+        await db.from("orders").delete().eq("id", order.id);
+        throw e2;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-orders"] });

@@ -3,11 +3,13 @@ import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Car, getStatusLabel } from "@/hooks/useCars";
-import { Images, Calendar, Fuel, Car as CarIcon, MessageCircle, Pencil, Trash2, ShoppingCart, Loader2 } from "lucide-react";
+import { Images, Calendar, Fuel, Car as CarIcon, MessageCircle, Pencil, Trash2, ShoppingCart } from "lucide-react";
 import WishlistButton from "@/components/WishlistButton";
 import { useContact } from "@/hooks/useContact";
-import { usePlaceOrder } from "@/hooks/usePlaceOrder";
+import { useAuth } from "@/hooks/useAuth";
+import PlaceOrderDialog from "@/components/PlaceOrderDialog";
 import { onImgError } from "@/lib/imageFallback";
+import { toast } from "sonner";
 
 interface CarCardProps {
   car: Car;
@@ -18,7 +20,8 @@ interface CarCardProps {
 
 const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
   const { data: contact } = useContact();
-  const placeOrder = usePlaceOrder();
+  const { user } = useAuth();
+  const [orderCar, setOrderCar] = useState<Car | null>(null);
   const adminMode = Boolean(onEdit || onDelete);
   const telegram = (contact?.telegram || "@Carplus777").replace(/^@/, "");
 
@@ -46,6 +49,7 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
   ];
 
   return (
+    <>
     <Card className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card transition-colors duration-300 hover:border-primary/40">
       <Link to={`/car/${car.id}`} className="group block">
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
@@ -63,25 +67,24 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
               {active + 1}/{images.length}
             </div>
           )}
-          {/* Wishlist + place order - top right */}
+          {/* Wishlist + place order - top right (order button hidden in admin mode) */}
           <div className="absolute right-3 top-3 flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (!placeOrder.isPending) placeOrder.mutate(car);
-              }}
-              aria-label="បញ្ជាទិញ"
-              title="បញ្ជាទិញ (Place order)"
-              className="rounded-full bg-white/95 p-2 text-primary shadow-md transition-colors hover:bg-white"
-            >
-              {placeOrder.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
+            {!adminMode && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!user) { toast.error("សូមចូលគណនីជាមុនសិន"); return; }
+                  setOrderCar(car);
+                }}
+                aria-label="បញ្ជាទិញ"
+                title="បញ្ជាទិញ (Place order)"
+                className="rounded-full bg-white/95 p-2 text-primary shadow-md transition-colors hover:bg-white"
+              >
                 <ShoppingCart className="h-4 w-4" />
-              )}
-            </button>
+              </button>
+            )}
             <WishlistButton carId={car.id} />
           </div>
           {/* Admin inline controls */}
@@ -173,6 +176,8 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
         </Button>
       </div>
     </Card>
+    <PlaceOrderDialog car={orderCar} onOpenChange={(o) => { if (!o) setOrderCar(null); }} />
+    </>
   );
 };
 
