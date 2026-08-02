@@ -1,125 +1,87 @@
 <title>Car Plus — Database Schema (Slide)</title>
 <style>
   :root {
-    --ink: #0f172a;
-    --ink-soft: #475569;
-    --muted: #7c8ba1;
-    --paper: #ffffff;
-    --board: #f4f7fb;
-    --line: #e2e8f0;
-    --line-2: #cbd5e1;
-    --accent: #ff6b00;
-    --accent-soft: #fff3e8;
-    --accent-line: #ffcfa3;
-    --fk: #2563eb;
-    --uk: #7c3aed;
+    --ink: #0f172a; --ink-soft: #475569; --muted: #7c8ba1; --faint: #94a3b8;
+    --paper: #ffffff; --board: #f4f7fb; --line: #e2e8f0; --line-2: #cbd5e1;
+    --accent: #00a6ff; --accent-soft: #e8f6ff; --accent-line: #a3ddff;
+    --sale: #7c3aed; --sale-soft: #f3ecff; --sale-line: #d6c2ff;
+    --user: #16a34a; --user-soft: #ecfbf1; --user-line: #b6e8c8;
     --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body {
-    background:
-      radial-gradient(1200px 600px at 82% -8%, #fff6ee 0%, transparent 55%),
-      #eef2f7;
-    font-family: var(--sans);
-    color: var(--ink);
-    display: grid;
-    place-items: center;
-    padding: 3vmin;
+    background: radial-gradient(1200px 600px at 82% -8%, #eef8ff 0%, transparent 55%), #eef2f7;
+    font-family: var(--sans); color: var(--ink);
+    display: grid; place-items: center; padding: 3vmin;
   }
-
-  /* 16:9 stage that scales to the viewport */
   .stage {
     width: min(96vw, calc(94vh * 16 / 9));
-    aspect-ratio: 16 / 9;
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: 18px;
+    aspect-ratio: 16 / 9; background: var(--paper);
+    border: 1px solid var(--line); border-radius: 18px;
     box-shadow: 0 24px 60px -24px rgba(15, 23, 42, 0.28);
-    padding: 3.4cqw;
-    container-type: inline-size;
-    display: flex;
-    flex-direction: column;
-    gap: 2.4cqw;
-    overflow: hidden;
+    padding: 2.8cqw; container-type: inline-size;
+    display: flex; flex-direction: column; gap: 1.8cqw; overflow: hidden;
   }
-
-  /* Header */
   .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 2cqw; }
-  .eyebrow {
-    font-family: var(--mono); font-size: 1.35cqw; letter-spacing: 0.18em;
-    text-transform: uppercase; color: var(--accent); margin-bottom: 0.6cqw;
-  }
-  h1 { font-size: 4.2cqw; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
+  .eyebrow { font-family: var(--mono); font-size: 1.25cqw; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: .5cqw; }
+  h1 { font-size: 3.6cqw; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
   h1 span { color: var(--accent); }
-  .legend { display: flex; gap: 1cqw; }
-  .badge {
-    font-family: var(--mono); font-size: 1.35cqw; font-weight: 700; letter-spacing: 0.04em;
-    color: #fff; padding: 0.4cqw 0.9cqw; border-radius: 0.6cqw;
-  }
+  .legend { display: flex; gap: .8cqw; }
+  .badge { font-family: var(--mono); font-size: 1.15cqw; font-weight: 700;
+    color: #fff; padding: .35cqw .8cqw; border-radius: .55cqw; }
   .badge.pk { background: var(--accent); }
-  .badge.fk { background: var(--fk); }
-  .badge.uk { background: var(--uk); }
+  .badge.fk { background: var(--sale); }
+  .badge.uk { background: var(--user); }
 
-  /* Board */
-  .board { flex: 1; display: grid; grid-template-columns: 1.05fr 2.4fr; gap: 2.6cqw; min-height: 0; }
-  .zone { display: flex; flex-direction: column; min-height: 0; }
-  .zone-label {
-    font-family: var(--mono); font-size: 1.4cqw; letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--muted); margin-bottom: 1.1cqw; display: flex; align-items: center; gap: 0.8cqw;
-  }
+  .board { flex: 1; display: grid; grid-template-columns: 1fr 1.15fr 1.5fr; gap: 1.6cqw; min-height: 0; }
+  .zone { display: flex; flex-direction: column; min-height: 0; gap: .9cqw; }
+  .zone-label { font-family: var(--mono); font-size: 1.2cqw; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: .7cqw; }
   .zone-label::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 
-  .auth-zone { justify-content: flex-start; }
-  .auth-stack { display: flex; flex-direction: column; align-items: stretch; gap: 0; }
-
-  /* Entity card */
-  .entity { background: var(--paper); border: 1px solid var(--line-2); border-radius: 1cqw; overflow: hidden; }
-  .entity > .name {
-    font-family: var(--mono); font-weight: 700; font-size: 1.9cqw; color: var(--ink);
-    padding: 0.9cqw 1.1cqw; background: var(--board); border-bottom: 1px solid var(--line);
-    display: flex; align-items: center; gap: 0.7cqw;
-  }
-  .entity > .name::before { content: ""; width: 0.8cqw; height: 0.8cqw; border-radius: 2px; background: var(--accent); }
-  .rows { padding: 0.5cqw 1.1cqw 0.8cqw; }
-  .row { display: flex; align-items: baseline; gap: 0.7cqw; padding: 0.42cqw 0; font-size: 1.5cqw; border-top: 1px dashed var(--line); }
+  .entity { background: var(--paper); border: 1.5px solid var(--line-2); border-radius: .9cqw; overflow: hidden; }
+  .entity.accent { border-color: var(--accent); }
+  .entity.sale { border-color: var(--sale); }
+  .entity.user { border-color: var(--user); }
+  .entity > .name { font-family: var(--mono); font-weight: 700; font-size: 1.55cqw;
+    padding: .6cqw .85cqw; background: var(--board); border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: .55cqw; }
+  .entity.accent > .name { background: var(--accent-soft); }
+  .entity.sale > .name { background: var(--sale-soft); }
+  .entity.user > .name { background: var(--user-soft); }
+  .rows { padding: .35cqw .85cqw .6cqw; }
+  .row { display: flex; align-items: baseline; gap: .5cqw; padding: .28cqw 0;
+    font-size: 1.2cqw; border-top: 1px dashed var(--line); }
   .row:first-child { border-top: none; }
   .row .k { font-family: var(--mono); font-weight: 600; }
-  .row .t { font-family: var(--mono); font-size: 1.25cqw; color: var(--muted); margin-left: auto; }
-  .key { font-family: var(--mono); font-size: 1.05cqw; font-weight: 700; color: #fff; padding: 0.1cqw 0.5cqw; border-radius: 0.4cqw; }
+  .row .t { font-family: var(--mono); font-size: 1.02cqw; color: var(--muted); margin-left: auto; }
+  .key { font-family: var(--mono); font-size: .92cqw; font-weight: 700; color: #fff;
+    padding: .05cqw .4cqw; border-radius: .35cqw; }
   .key.pk { background: var(--accent); }
-  .key.fk { background: var(--fk); }
-  .key.uk { background: var(--uk); }
+  .key.fk { background: var(--sale); }
+  .key.uk { background: var(--user); }
 
-  /* Connector between auth.users and admin_users */
-  .connector { display: flex; flex-direction: column; align-items: center; padding: 0.2cqw 0; }
-  .connector .rail { width: 2px; height: 2.2cqw; background: var(--accent-line); }
-  .connector .tag {
-    font-family: var(--mono); font-size: 1.2cqw; color: var(--accent);
+  .link { display: flex; flex-direction: column; align-items: center; gap: .25cqw; padding: .1cqw 0; }
+  .link .rail { width: 2px; height: 1.5cqw; background: var(--accent-line); }
+  .link .tag { font-family: var(--mono); font-size: 1cqw; color: var(--accent);
     background: var(--accent-soft); border: 1px solid var(--accent-line);
-    padding: 0.35cqw 0.8cqw; border-radius: 0.6cqw; white-space: nowrap;
-  }
-  .connector .arrow { width: 0; height: 0; border-left: 0.6cqw solid transparent; border-right: 0.6cqw solid transparent; border-top: 0.7cqw solid var(--accent-line); }
+    padding: .25cqw .65cqw; border-radius: .5cqw; white-space: nowrap; }
+  .link.sale .rail { background: var(--sale-line); }
+  .link.sale .tag { color: var(--sale); background: var(--sale-soft); border-color: var(--sale-line); }
 
-  /* Content grid */
-  .content-grid { flex: 1; display: grid; grid-template-columns: 1.35fr 1fr; grid-template-rows: auto auto; gap: 1.5cqw; min-height: 0; }
-  .content-grid .entity.cars { grid-row: span 2; }
-
-  /* Footer facts */
-  .foot { display: flex; gap: 1.4cqw; flex-wrap: wrap; }
-  .fact {
-    font-size: 1.4cqw; color: var(--ink-soft); background: var(--board);
-    border: 1px solid var(--line); border-radius: 0.7cqw; padding: 0.7cqw 1.1cqw;
-    display: flex; align-items: center; gap: 0.7cqw;
-  }
+  .facts { display: flex; gap: 1cqw; flex-wrap: wrap; }
+  .fact { font-size: 1.2cqw; color: var(--ink-soft); background: var(--board);
+    border: 1px solid var(--line); border-radius: .6cqw; padding: .55cqw .9cqw; }
   .fact b { color: var(--accent); font-family: var(--mono); }
 </style>
 
 <div class="stage">
   <div class="head">
     <div>
-      <p class="eyebrow">Supabase · Postgres · 5 tables + auth</p>
+      <p class="eyebrow">Supabase · Postgres · 8 tables + auth</p>
       <h1>Car<span>Plus</span> — Database Schema</h1>
     </div>
     <div class="legend">
@@ -130,84 +92,107 @@
   </div>
 
   <div class="board">
-    <!-- Authentication zone -->
-    <section class="zone auth-zone">
-      <p class="zone-label">Authentication</p>
-      <div class="auth-stack">
-        <div class="entity">
-          <div class="name">auth.users</div>
-          <div class="rows">
-            <div class="row"><span class="k">id</span><span class="key pk">PK</span><span class="t">uuid</span></div>
-            <div class="row"><span class="k">email</span><span class="t">text</span></div>
-            <div class="row"><span class="k">user_metadata</span><span class="t">jsonb</span></div>
-          </div>
+    <!-- Identity -->
+    <section class="zone">
+      <p class="zone-label">Identity</p>
+      <div class="entity user">
+        <div class="name">auth.users</div>
+        <div class="rows">
+          <div class="row"><span class="k">id</span><span class="key pk">PK</span><span class="t">uuid</span></div>
+          <div class="row"><span class="k">email</span><span class="t">text</span></div>
+          <div class="row"><span class="k">user_metadata</span><span class="t">jsonb</span></div>
         </div>
-        <div class="connector">
-          <div class="rail"></div>
-          <div class="tag">unique · is_admin()</div>
-          <div class="rail"></div>
-          <div class="arrow"></div>
+      </div>
+      <div class="link"><div class="rail"></div><div class="tag">unique · is_admin()</div><div class="rail"></div></div>
+      <div class="entity">
+        <div class="name">admin_users</div>
+        <div class="rows">
+          <div class="row"><span class="k">id</span><span class="key pk">PK</span><span class="t">uuid</span></div>
+          <div class="row"><span class="k">user_id</span><span class="key fk">FK</span><span class="key uk">UK</span><span class="t">uuid</span></div>
         </div>
-        <div class="entity">
-          <div class="name">admin_users</div>
-          <div class="rows">
-            <div class="row"><span class="k">id</span><span class="key pk">PK</span><span class="t">uuid</span></div>
-            <div class="row"><span class="k">user_id</span><span class="key fk">FK</span><span class="key uk">UK</span><span class="t">uuid</span></div>
-            <div class="row"><span class="k">created_at</span><span class="t">timestamptz</span></div>
-          </div>
+      </div>
+      <div class="entity">
+        <div class="name">profiles</div>
+        <div class="rows">
+          <div class="row"><span class="k">id</span><span class="key pk">PK</span><span class="t">uuid</span></div>
+          <div class="row"><span class="k">user_id</span><span class="key fk">FK</span><span class="key uk">UK</span><span class="t">uuid</span></div>
+          <div class="row"><span class="k">full_name · phone</span><span class="t">text</span></div>
+          <div class="row"><span class="k">address</span><span class="t">text</span></div>
         </div>
       </div>
     </section>
 
-    <!-- Content zone -->
-    <section class="zone content-zone">
-      <p class="zone-label">Content — independent tables</p>
-      <div class="content-grid">
-        <div class="entity cars">
-          <div class="name">cars</div>
-          <div class="rows">
-            <div class="row"><span class="k">id</span><span class="key pk">PK</span><span class="t">uuid</span></div>
-            <div class="row"><span class="k">code</span><span class="key uk">UK</span><span class="t">text</span></div>
-            <div class="row"><span class="k">name · model</span><span class="t">text</span></div>
-            <div class="row"><span class="k">year · price</span><span class="t">num</span></div>
-            <div class="row"><span class="k">status</span><span class="t">enum</span></div>
-            <div class="row"><span class="k">images</span><span class="t">text[]</span></div>
-            <div class="row"><span class="k">description</span><span class="t">text[]</span></div>
-            <div class="row"><span class="k">is_active</span><span class="t">bool</span></div>
-          </div>
+    <!-- Sales -->
+    <section class="zone">
+      <p class="zone-label">Sales</p>
+      <div class="entity sale">
+        <div class="name">orders</div>
+        <div class="rows">
+          <div class="row"><span class="k">id</span><span class="key pk">PK</span><span class="t">uuid</span></div>
+          <div class="row"><span class="k">user_id</span><span class="key fk">FK</span><span class="t">null ok</span></div>
+          <div class="row"><span class="k">customer_name</span><span class="t">text</span></div>
+          <div class="row"><span class="k">phone</span><span class="t">text</span></div>
+          <div class="row"><span class="k">status</span><span class="t">enum</span></div>
+          <div class="row"><span class="k">total_amount</span><span class="t">numeric</span></div>
+          <div class="row"><span class="k">notes</span><span class="t">text</span></div>
         </div>
-        <div class="entity">
-          <div class="name">banners</div>
-          <div class="rows">
-            <div class="row"><span class="k">id</span><span class="key pk">PK</span><span class="t">uuid</span></div>
-            <div class="row"><span class="k">image</span><span class="t">text</span></div>
-            <div class="row"><span class="k">sort_order</span><span class="t">int</span></div>
-          </div>
+      </div>
+      <div class="link sale"><div class="rail"></div><div class="tag">1 → many · cascade</div><div class="rail"></div></div>
+      <div class="entity sale">
+        <div class="name">order_items</div>
+        <div class="rows">
+          <div class="row"><span class="k">id</span><span class="key pk">PK</span><span class="t">uuid</span></div>
+          <div class="row"><span class="k">order_id</span><span class="key fk">FK</span><span class="t">uuid</span></div>
+          <div class="row"><span class="k">car_id</span><span class="t">text · soft</span></div>
+          <div class="row"><span class="k">car_name · price</span><span class="t">snapshot</span></div>
         </div>
-        <div class="entity">
-          <div class="name">team_members</div>
-          <div class="rows">
-            <div class="row"><span class="k">id</span><span class="key pk">PK</span><span class="t">uuid</span></div>
-            <div class="row"><span class="k">name · role</span><span class="t">text</span></div>
-            <div class="row"><span class="k">image</span><span class="t">text</span></div>
-            <div class="row"><span class="k">sort_order</span><span class="t">int</span></div>
-          </div>
+      </div>
+    </section>
+
+    <!-- Content -->
+    <section class="zone">
+      <p class="zone-label">Content — independent, admin-edited</p>
+      <div class="entity accent">
+        <div class="name">cars</div>
+        <div class="rows">
+          <div class="row"><span class="k">id</span><span class="key pk">PK</span><span class="t">uuid</span></div>
+          <div class="row"><span class="k">code</span><span class="key uk">UK</span><span class="t">text</span></div>
+          <div class="row"><span class="k">name · model · year</span><span class="t">—</span></div>
+          <div class="row"><span class="k">price · status</span><span class="t">num · enum</span></div>
+          <div class="row"><span class="k">image · images</span><span class="t">text[]</span></div>
+          <div class="row"><span class="k">body · fuel · color</span><span class="t">text</span></div>
+          <div class="row"><span class="k">description · is_active</span><span class="t">text[] · bool</span></div>
         </div>
-        <div class="entity">
-          <div class="name">contact_info</div>
-          <div class="rows">
-            <div class="row"><span class="k">id</span><span class="key pk">PK</span><span class="t">= 1</span></div>
-            <div class="row"><span class="k">phone · telegram</span><span class="t">text</span></div>
-            <div class="row"><span class="k">facebook · map_link</span><span class="t">text</span></div>
-          </div>
+      </div>
+      <div class="entity">
+        <div class="name">banners</div>
+        <div class="rows">
+          <div class="row"><span class="k">id</span><span class="key pk">PK</span><span class="t">uuid</span></div>
+          <div class="row"><span class="k">image · sort_order</span><span class="t">text · int</span></div>
+        </div>
+      </div>
+      <div class="entity">
+        <div class="name">team_members</div>
+        <div class="rows">
+          <div class="row"><span class="k">id</span><span class="key pk">PK</span><span class="t">uuid</span></div>
+          <div class="row"><span class="k">name · role · image</span><span class="t">text</span></div>
+        </div>
+      </div>
+      <div class="entity">
+        <div class="name">contact_info</div>
+        <div class="rows">
+          <div class="row"><span class="k">id</span><span class="key pk">PK</span><span class="t">= 1</span></div>
+          <div class="row"><span class="k">phone · telegram</span><span class="t">text</span></div>
+          <div class="row"><span class="k">facebook · map_link</span><span class="t">text</span></div>
         </div>
       </div>
     </section>
   </div>
 
-  <div class="foot">
-    <span class="fact"><b>Photos</b> → car-images storage (by URL)</span>
-    <span class="fact"><b>RLS</b> → public reads · admins write</span>
-    <span class="fact"><b>Wishlist</b> → browser localStorage (no table)</span>
+  <div class="facts">
+    <span class="fact"><b>Orders</b> → customer places one, or admin records a walk-in (user_id null)</span>
+    <span class="fact"><b>car_id</b> → soft text link, so sales history survives a deleted listing</span>
+    <span class="fact"><b>Photos</b> → URLs into the car-images bucket</span>
+    <span class="fact"><b>RLS</b> → public reads · admins write · users see only their own</span>
   </div>
 </div>

@@ -318,6 +318,37 @@ CREATE POLICY "Admins manage order items" ON public.order_items FOR ALL
 CREATE OR REPLACE TRIGGER update_orders_updated_at BEFORE UPDATE ON public.orders FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- ============================================================================
+-- 4f. Profiles
+--
+-- Optional customer details (name, phone, address) edited from the Profile
+-- page. One row per user; each user reads and writes only their own.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name TEXT,
+  phone TEXT,
+  address TEXT,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
+
+CREATE POLICY "Users can view their own profile" ON public.profiles FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert their own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update their own profile" ON public.profiles FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Admins can view all profiles" ON public.profiles FOR SELECT USING (public.is_admin(auth.uid()));
+
+CREATE OR REPLACE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- ============================================================================
 -- 5. Indexes
 --
 -- Every one of these backs a query the app actually runs. Without them each
@@ -333,6 +364,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_user_id         ON public.orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status          ON public.orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at      ON public.orders(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id   ON public.order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_user_id       ON public.profiles(user_id);
 
 -- ============================================================================
 -- 6. Upgrades for databases created before this script
