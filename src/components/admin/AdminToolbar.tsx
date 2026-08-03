@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, LayoutDashboard } from "lucide-react";
 import type { Car } from "@/hooks/useCars";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface AdminToolbarProps {
   cars: Car[];
@@ -17,6 +18,7 @@ const Stat = ({ label, value }: { label: string; value: string | number }) => (
 const AdminToolbar = ({ cars }: AdminToolbarProps) => {
   // Only count real (database) cars, not the demo fallback.
   const real = cars.filter((c) => !String(c.id).startsWith("mock-"));
+  const { t } = useLanguage();
   const total = real.length;
   const active = real.filter((c) => c.isActive).length;
   const value = real.reduce((sum, c) => sum + c.price, 0);
@@ -30,11 +32,11 @@ const AdminToolbar = ({ cars }: AdminToolbarProps) => {
             ADMIN
           </span>
           <div className="ml-1 flex items-center gap-4">
-            <Stat label="ឡានសរុប" value={total} />
+            <Stat label={t("toolbar.totalCars")} value={total} />
             <div className="h-7 w-px bg-border" />
-            <Stat label="បង្ហាញ" value={active} />
+            <Stat label={t("toolbar.visible")} value={active} />
             <div className="h-7 w-px bg-border" />
-            <Stat label="តម្លៃសរុប" value={`$${value.toLocaleString()}`} />
+            <Stat label={t("toolbar.totalValue")} value={`$${value.toLocaleString()}`} />
           </div>
         </div>
         

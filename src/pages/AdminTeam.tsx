@@ -42,7 +42,7 @@ const AdminTeam = () => {
         </div>
         <Button onClick={handleAdd} className="gap-1.5">
           <Plus className="h-4 w-4" />
-          បន្ថែមសមាជិក
+          {t("team.add")}
         </Button>
       </div>
 
@@ -50,7 +50,7 @@ const AdminTeam = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Users className="h-5 w-5" />
-            សមាជិកទាំងអស់
+            {t("team.all")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -61,10 +61,10 @@ const AdminTeam = () => {
           ) : teamMembers.length === 0 ? (
             <div className="py-10 text-center text-muted-foreground">
               <Users className="mx-auto mb-3 h-12 w-12 opacity-40" />
-              <p>មិនទាន់មានសមាជិកទេ</p>
+              <p>{t("team.none")}</p>
               <Button className="mt-4" onClick={handleAdd}>
                 <Plus className="mr-2 h-4 w-4" />
-                បន្ថែមសមាជិកដំបូង
+                {t("team.addFirst")}
               </Button>
             </div>
           ) : (
@@ -107,14 +107,14 @@ const AdminTeam = () => {
       <AlertDialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>លុបសមាជិកក្រុម</AlertDialogTitle>
+            <AlertDialogTitle>{t("team.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              តើអ្នកប្រាកដទេថាចង់លុបសមាជិកនេះ? សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។
+              {t("team.deleteBody")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>បោះបង់</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>លុប</AlertDialogAction>
+            <AlertDialogCancel>{t("form.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>{t("common.delete")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

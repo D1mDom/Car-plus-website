@@ -16,6 +16,7 @@ import {
   type Banner,
 } from "@/hooks/useBanners";
 import { uploadImage, MAX_UPLOAD_BYTES } from "@/lib/imageUpload";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface BannerManagerDialogProps {
   open: boolean;
@@ -28,6 +29,7 @@ const BannerManagerDialog = ({ open, onOpenChange }: BannerManagerDialogProps) =
   const deleteBanner = useDeleteBanner();
   const reorder = useUpdateBannerOrder();
   const [isUploading, setIsUploading] = useState(false);
+  const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const nextSortOrder = banners.reduce((max, b) => Math.max(max, b.sort_order), 0) + 1;
@@ -67,7 +69,7 @@ const BannerManagerDialog = ({ open, onOpenChange }: BannerManagerDialogProps) =
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>គ្រប់គ្រងបដា</DialogTitle>
+          <DialogTitle>{t("banner.manage")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -89,20 +91,18 @@ const BannerManagerDialog = ({ open, onOpenChange }: BannerManagerDialogProps) =
             ) : (
               <>
                 <Upload className="h-6 w-6 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">បញ្ចូលរូបបដា (អាចដាក់ច្រើន)</p>
+                <p className="text-sm text-muted-foreground">{t("banner.upload")}</p>
               </>
             )}
           </div>
 
           <div className="rounded-lg bg-muted/50 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-            <span className="font-medium text-foreground">ទំហំរូបបដាដែលសមស្រប៖</span> ប្រើរូបផ្តេក (landscape) ប្រហែល{" "}
-            <span className="font-medium text-foreground">1920 × 640 px</span> (សមាមាត្រ 3:1)។
-            ដាក់អក្សរ/ឡូហ្គោនៅចំកណ្តាល។ PNG, JPG, WEBP។
+            <span className="font-medium text-foreground">{t("banner.sizeLabel")}</span> {t("banner.sizeHint")} PNG, JPG, WEBP.
           </div>
 
           {banners.length === 0 ? (
             <p className="py-4 text-center text-sm text-muted-foreground">
-              មិនទាន់មានបដាទេ។ បើទទេ គេហទំព័របង្ហាញបដាដើមរបស់ប្រព័ន្ធ។
+              {t("banner.empty")}
             </p>
           ) : (
             <div className="space-y-3">
@@ -111,13 +111,13 @@ const BannerManagerDialog = ({ open, onOpenChange }: BannerManagerDialogProps) =
                   <img src={banner.image} alt="" className="h-14 w-24 shrink-0 rounded object-cover" />
                   <span className="text-sm text-muted-foreground">#{i + 1}</span>
                   <div className="ml-auto flex items-center gap-1">
-                    <Button type="button" size="icon" variant="ghost" disabled={i === 0} onClick={() => move(i, -1)} aria-label="ឡើងលើ">
+                    <Button type="button" size="icon" variant="ghost" disabled={i === 0} onClick={() => move(i, -1)} aria-label={t("banner.up")}>
                       <ArrowUp className="h-4 w-4" />
                     </Button>
-                    <Button type="button" size="icon" variant="ghost" disabled={i === banners.length - 1} onClick={() => move(i, 1)} aria-label="ចុះក្រោម">
+                    <Button type="button" size="icon" variant="ghost" disabled={i === banners.length - 1} onClick={() => move(i, 1)} aria-label={t("banner.down")}>
                       <ArrowDown className="h-4 w-4" />
                     </Button>
-                    <Button type="button" size="icon" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => deleteBanner.mutate(banner.id)} aria-label="លុប">
+                    <Button type="button" size="icon" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => deleteBanner.mutate(banner.id)} aria-label={t("banner.delete")}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -127,7 +127,7 @@ const BannerManagerDialog = ({ open, onOpenChange }: BannerManagerDialogProps) =
           )}
 
           <div className="flex justify-end pt-2">
-            <Button type="button" onClick={() => onOpenChange(false)}>រួចរាល់</Button>
+            <Button type="button" onClick={() => onOpenChange(false)}>{t("banner.done")}</Button>
           </div>
         </div>
       </DialogContent>

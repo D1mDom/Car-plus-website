@@ -7,12 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
+// Label is a translation key (or a literal for brand names that never translate).
 const FIELDS: [keyof ContactInfo, string, string][] = [
-  ["phone", "ទូរស័ព្ទ", "+855 12 345 678"],
+  ["phone", "contact.phone", "+855 12 345 678"],
   ["telegram", "Telegram", "@Carplus777"],
   ["facebook", "Facebook", "https://facebook.com/..."],
-  ["address", "អាសយដ្ឋាន", "ភ្នំពេញ, កម្ពុជា"],
-  ["email", "អ៊ីមែល", "you@example.com"],
+  ["address", "contact.address", "Phnom Penh, Cambodia"],
+  ["email", "contact.email", "you@example.com"],
   ["map_link", "Google Maps Link", "https://maps.google.com/..."],
 ];
 
@@ -47,7 +48,7 @@ const AdminContact = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {FIELDS.map(([key, label, placeholder]) => (
                 <div className="space-y-2" key={key}>
-                  <Label htmlFor={key}>{label}</Label>
+                  <Label htmlFor={key}>{label.includes(".") ? t(label as TranslationKey) : label}</Label>
                   <Input
                     id={key}
                     value={form[key] ?? ""}
@@ -62,7 +63,7 @@ const AdminContact = () => {
                 </div>
               ))}
               <Button type="submit" className="w-full" disabled={updateContact.isPending}>
-                {updateContact.isPending ? "កំពុងរក្សាទុក..." : "រក្សាទុក"}
+                {updateContact.isPending ? t("form.saving") : t("form.save")}
               </Button>
             </form>
           )}
