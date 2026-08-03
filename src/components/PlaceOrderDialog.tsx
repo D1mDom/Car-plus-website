@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePlaceOrder } from "@/hooks/usePlaceOrder";
+import { useProfile } from "@/hooks/useProfile";
 import type { Car } from "@/hooks/useCars";
 
 interface PlaceOrderDialogProps {
@@ -22,6 +23,13 @@ const PlaceOrderDialog = ({ car, onOpenChange }: PlaceOrderDialogProps) => {
   const [phone, setPhone] = useState("");
   const [touched, setTouched] = useState(false);
   const placeOrder = usePlaceOrder();
+  const { data: profile } = useProfile();
+
+  // Pre-fill from the saved profile each time the dialog opens, so repeat
+  // customers don't retype their number — they can still edit it here.
+  useEffect(() => {
+    if (car) setPhone(profile?.phone ?? "");
+  }, [car, profile?.phone]);
 
   const cleanPhone = (v: string) => v.replace(/[^0-9+\-\s()]/g, "");
   const isValid = phone.trim().replace(/[^0-9]/g, "").length >= 8;
