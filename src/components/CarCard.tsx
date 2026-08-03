@@ -77,7 +77,7 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (!user) { toast.error("សូមចូលគណនីជាមុនសិន"); return; }
+                    if (!user) { toast.error(t("order.loginRequired")); return; }
                     setOrderCar(car);
                   }}
                   aria-label={t("card.order")}

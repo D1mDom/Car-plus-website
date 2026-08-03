@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePlaceOrder } from "@/hooks/usePlaceOrder";
 import { useProfile } from "@/hooks/useProfile";
+import { useLanguage } from "@/hooks/useLanguage";
 import type { Car } from "@/hooks/useCars";
 
 interface PlaceOrderDialogProps {
@@ -24,6 +25,7 @@ const PlaceOrderDialog = ({ car, onOpenChange }: PlaceOrderDialogProps) => {
   const [touched, setTouched] = useState(false);
   const placeOrder = usePlaceOrder();
   const { data: profile } = useProfile();
+  const { t } = useLanguage();
 
   // Pre-fill from the saved profile each time the dialog opens, so repeat
   // customers don't retype their number — they can still edit it here.
@@ -46,7 +48,7 @@ const PlaceOrderDialog = ({ car, onOpenChange }: PlaceOrderDialogProps) => {
     <Dialog open={!!car} onOpenChange={(o) => { if (!o) close(); }}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>បញ្ជាទិញ</DialogTitle>
+          <DialogTitle>{t("order.dialog.title")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           {car && (
@@ -56,7 +58,7 @@ const PlaceOrderDialog = ({ car, onOpenChange }: PlaceOrderDialogProps) => {
             </div>
           )}
           <div className="space-y-1.5">
-            <Label htmlFor="order-phone">លេខទូរស័ព្ទ (ដើម្បីឲ្យយើងទាក់ទងអ្នក)</Label>
+            <Label htmlFor="order-phone">{t("order.dialog.phoneLabel")}</Label>
             <Input
               id="order-phone"
               value={phone}
@@ -65,13 +67,13 @@ const PlaceOrderDialog = ({ car, onOpenChange }: PlaceOrderDialogProps) => {
               autoFocus
             />
             {touched && !isValid && (
-              <p className="text-xs text-destructive">សូមបញ្ចូលលេខទូរស័ព្ទត្រឹមត្រូវ</p>
+              <p className="text-xs text-destructive">{t("order.dialog.phoneInvalid")}</p>
             )}
           </div>
           <div className="flex justify-end gap-2 pt-1">
-            <Button variant="outline" onClick={close}>បោះបង់</Button>
+            <Button variant="outline" onClick={close}>{t("auth.cancel")}</Button>
             <Button onClick={submit} disabled={placeOrder.isPending}>
-              {placeOrder.isPending ? "កំពុងបញ្ជូន..." : "បញ្ជាទិញ"}
+              {placeOrder.isPending ? t("order.dialog.submitting") : t("order.dialog.submit")}
             </Button>
           </div>
         </div>
