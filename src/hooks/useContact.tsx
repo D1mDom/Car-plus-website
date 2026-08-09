@@ -6,6 +6,7 @@ export interface ContactInfo {
   phone: string;
   telegram: string;
   facebook: string;
+  tiktok: string;
   address: string;
   email: string;
   map_link: string;
@@ -16,6 +17,7 @@ export const DEFAULT_CONTACT: ContactInfo = {
   phone: "+855 12 345 678",
   telegram: "@Carplus777",
   facebook: "https://facebook.com/CarPlus",
+  tiktok: "https://tiktok.com/@carplus",
   address: "ភ្នំពេញ, កម្ពុជា",
   email: "",
   map_link: "",
@@ -46,6 +48,7 @@ export const useContact = () => {
         phone: data.phone ?? "",
         telegram: data.telegram ?? "",
         facebook: data.facebook ?? "",
+        tiktok: data.tiktok ?? "",
         address: data.address ?? "",
         email: data.email ?? "",
         map_link: data.map_link ?? "",

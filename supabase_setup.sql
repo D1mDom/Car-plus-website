@@ -149,6 +149,7 @@ CREATE TABLE IF NOT EXISTS public.contact_info (
   phone TEXT,
   telegram TEXT,
   facebook TEXT,
+  tiktok TEXT,
   address TEXT,
   email TEXT,
   map_link TEXT,
@@ -157,6 +158,9 @@ CREATE TABLE IF NOT EXISTS public.contact_info (
 );
 
 ALTER TABLE public.contact_info ENABLE ROW LEVEL SECURITY;
+
+-- Existing databases: CREATE TABLE IF NOT EXISTS skips the new column.
+ALTER TABLE public.contact_info ADD COLUMN IF NOT EXISTS tiktok TEXT;
 
 -- Seed the single row with the current hardcoded values (only if empty)
 INSERT INTO public.contact_info (id, phone, telegram, facebook, address, email, map_link)

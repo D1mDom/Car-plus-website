@@ -12,6 +12,7 @@ const FIELDS: [keyof ContactInfo, string, string][] = [
   ["phone", "contact.phone", "+855 12 345 678"],
   ["telegram", "Telegram", "@Carplus777"],
   ["facebook", "Facebook", "https://facebook.com/..."],
+  ["tiktok", "TikTok", "https://tiktok.com/@..."],
   ["address", "contact.address", "Phnom Penh, Cambodia"],
   ["email", "contact.email", "you@example.com"],
   ["map_link", "Google Maps Link", "https://maps.google.com/..."],

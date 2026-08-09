@@ -32,7 +32,7 @@ const SocialLinks = () => {
           </Button>
         ))}
         <Button variant="outline" size="lg" className="gap-2 transition-all duration-300 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black" asChild>
-          <a href="https://tiktok.com/@carplus" target="_blank" rel="noopener noreferrer">
+          <a href={contact?.tiktok || "https://tiktok.com/@carplus"} target="_blank" rel="noopener noreferrer">
             <TikTokIcon className="h-5 w-5" />
             TikTok
           </a>
