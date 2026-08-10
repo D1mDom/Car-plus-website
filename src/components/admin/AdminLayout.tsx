@@ -1,4 +1,4 @@
-import { NavLink, Outlet, Link, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Package,
@@ -6,6 +6,7 @@ import {
   Phone,
   Image,
   Users,
+  Tag,
   LogOut,
   ExternalLink,
   Menu,
@@ -18,40 +19,89 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useEffect, useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useEffect, useMemo, useState } from "react";
 import logo from "@/assets/logo.png";
 import { cn } from "@/lib/utils";
 import type { TranslationKey } from "@/i18n/translations";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+
+type NavItem = { to: string; end: boolean; labelKey: TranslationKey; icon: typeof Car };
+
+const SALES_NAV: NavItem[] = [
+  { to: "/admin", end: true, labelKey: "admin.nav.cars", icon: Car },
+  { to: "/admin/orders", end: false, labelKey: "admin.nav.orders", icon: Package },
+  { to: "/admin/reports", end: false, labelKey: "admin.nav.reports", icon: BarChart3 },
+];
+
+const WEBSITE_NAV: NavItem[] = [
+  { to: "/admin/banners", end: false, labelKey: "admin.nav.banners", icon: Image },
+  { to: "/admin/brands", end: false, labelKey: "admin.nav.brands", icon: Tag },
+  { to: "/admin/team", end: false, labelKey: "admin.nav.team", icon: Users },
+  { to: "/admin/contact", end: false, labelKey: "admin.nav.contact", icon: Phone },
+];
+
+const PAGE_META: { match: (path: string) => boolean; title: TranslationKey; sub: TranslationKey }[] = [
+  { match: (p) => p === "/admin" || p === "/admin/", title: "admin.cars.title", sub: "admin.cars.subtitle" },
+  { match: (p) => p.startsWith("/admin/orders"), title: "admin.orders.title", sub: "admin.orders.subtitle" },
+  { match: (p) => p.startsWith("/admin/reports"), title: "admin.reports.title", sub: "admin.reports.subtitle" },
+  { match: (p) => p.startsWith("/admin/banners"), title: "admin.banners.title", sub: "admin.banners.subtitle" },
+  { match: (p) => p.startsWith("/admin/brands"), title: "admin.brands.title", sub: "admin.brands.subtitle" },
+  { match: (p) => p.startsWith("/admin/team"), title: "admin.team.title", sub: "admin.team.subtitle" },
+  { match: (p) => p.startsWith("/admin/contact"), title: "admin.contact.title", sub: "admin.contact.subtitle" },
+];
 
 const AdminLayout = () => {
   const { user, signOut } = useAuth();
-  const { t, lang, toggleLang } = useLanguage();
+  const { t } = useLanguage();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const email = user?.email ?? "";
   const isDark = (resolvedTheme ?? theme) === "dark";
 
   useEffect(() => setMounted(true), []);
 
-  const NAV: { to: string; end: boolean; labelKey: TranslationKey; icon: typeof Car }[] = [
-    { to: "/admin", end: true, labelKey: "admin.nav.cars", icon: Car },
-    { to: "/admin/orders", end: false, labelKey: "admin.nav.orders", icon: Package },
-    { to: "/admin/reports", end: false, labelKey: "admin.nav.reports", icon: BarChart3 },
-    { to: "/admin/banners", end: false, labelKey: "admin.nav.banners", icon: Image },
-    { to: "/admin/team", end: false, labelKey: "admin.nav.team", icon: Users },
-    { to: "/admin/contact", end: false, labelKey: "admin.nav.contact", icon: Phone },
-  ];
+  const page = useMemo(
+    () => PAGE_META.find((m) => m.match(pathname)) ?? PAGE_META[0],
+    [pathname]
+  );
 
   const handleSignOut = async () => {
+    setLoggingOut(true);
     await signOut();
+    setLoggingOut(false);
+    setLogoutOpen(false);
     navigate("/admin/login", { replace: true });
   };
 
-  const NavItems = ({ onNavigate }: { onNavigate?: () => void }) => (
-    <nav className="flex flex-col gap-1 px-3">
-      {NAV.map(({ to, end, labelKey, icon: Icon }) => (
+  const NavGroup = ({
+    label,
+    items,
+    onNavigate,
+  }: {
+    label: string;
+    items: NavItem[];
+    onNavigate?: () => void;
+  }) => (
+    <div className="space-y-1">
+      <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--sidebar-foreground))]/40">
+        {label}
+      </p>
+      {items.map(({ to, end, labelKey, icon: Icon }) => (
         <NavLink
           key={to}
           to={to}
@@ -61,8 +111,8 @@ const AdminLayout = () => {
             cn(
               "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
               isActive
-                ? "bg-[hsl(var(--sidebar-primary))] text-[hsl(var(--sidebar-primary-foreground))]"
-                : "text-[hsl(var(--sidebar-foreground))]/75 hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]"
+                ? "bg-[hsl(350_70%_52%)] text-white shadow-sm"
+                : "text-[hsl(var(--sidebar-foreground))]/75 hover:bg-[hsl(350_70%_52%/0.14)] hover:text-white"
             )
           }
         >
@@ -70,7 +120,7 @@ const AdminLayout = () => {
           {t(labelKey)}
         </NavLink>
       ))}
-    </nav>
+    </div>
   );
 
   const SidebarBody = ({ onNavigate }: { onNavigate?: () => void }) => (
@@ -86,8 +136,9 @@ const AdminLayout = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-4">
-        <NavItems onNavigate={onNavigate} />
+      <div className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
+        <NavGroup label={t("admin.nav.group.sales")} items={SALES_NAV} onNavigate={onNavigate} />
+        <NavGroup label={t("admin.nav.group.website")} items={WEBSITE_NAV} onNavigate={onNavigate} />
       </div>
 
       <div className="space-y-2 border-t border-[hsl(var(--sidebar-border))] p-4">
@@ -96,7 +147,7 @@ const AdminLayout = () => {
           target="_blank"
           rel="noopener noreferrer"
           onClick={onNavigate}
-          className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-[hsl(var(--sidebar-foreground))]/60 transition-colors hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]"
+          className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-[hsl(var(--sidebar-foreground))]/60 transition-colors hover:bg-[hsl(350_70%_52%/0.14)] hover:text-white"
         >
           <ExternalLink className="h-3.5 w-3.5" />
           {t("admin.viewWebsite")}
@@ -105,8 +156,8 @@ const AdminLayout = () => {
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start gap-2 text-[hsl(var(--sidebar-foreground))]/70 hover:bg-[hsl(var(--sidebar-accent))] hover:text-destructive"
-          onClick={handleSignOut}
+          className="w-full justify-start gap-2 text-[hsl(var(--sidebar-foreground))]/70 hover:bg-[hsl(350_70%_52%/0.14)] hover:text-white"
+          onClick={() => setLogoutOpen(true)}
         >
           <LogOut className="h-4 w-4" />
           {t("admin.logout")}
@@ -116,13 +167,13 @@ const AdminLayout = () => {
   );
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-[hsl(210_28%_96%)] dark:bg-background">
       <aside className="hidden w-60 shrink-0 bg-[hsl(var(--sidebar-background))] lg:fixed lg:inset-y-0 lg:flex lg:flex-col">
         <SidebarBody />
       </aside>
 
       <div className="flex min-h-screen flex-1 flex-col lg:pl-60">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-background/90 px-[10px] backdrop-blur-md sm:gap-3 lg:px-8">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border/80 bg-background/85 px-[10px] backdrop-blur-md sm:gap-3 lg:px-8">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild className="lg:hidden">
               <Button variant="ghost" size="icon" aria-label={t("nav.openMenu")}>
@@ -135,21 +186,13 @@ const AdminLayout = () => {
           </Sheet>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-foreground">{t("admin.dashboard")}</p>
-            <p className="truncate text-xs text-muted-foreground">{t("admin.dashboardSub")}</p>
+            <p className="truncate text-sm font-semibold text-foreground">{t(page.title)}</p>
+            <p className="truncate text-xs text-muted-foreground">{t(page.sub)}</p>
           </div>
 
           {mounted && (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 gap-1.5 px-2.5"
-                onClick={toggleLang}
-                title={lang === "km" ? "EN" : "ខ្មែរ"}
-              >
-                <span className="text-xs font-bold">{lang === "km" ? "EN" : "ខ្មែរ"}</span>
-              </Button>
+              <LanguageSwitcher />
               <Button
                 variant="outline"
                 size="icon"
@@ -174,6 +217,28 @@ const AdminLayout = () => {
           <Outlet />
         </main>
       </div>
+
+      <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <AlertDialogContent className="sm:rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("auth.logoutTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("auth.logoutDesc")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loggingOut}>{t("auth.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void handleSignOut();
+              }}
+              disabled={loggingOut}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {loggingOut ? t("auth.loggingOut") : t("auth.logoutConfirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

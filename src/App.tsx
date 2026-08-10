@@ -8,6 +8,9 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { WishlistProvider } from "@/hooks/useWishlist";
 import { LanguageProvider } from "@/hooks/useLanguage";
 import Index from "./pages/Index";
+import Cars from "./pages/Cars";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
 import CarDetail from "./pages/CarDetail";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -21,6 +24,7 @@ import AdminOrders from "./pages/AdminOrders";
 import AdminReports from "./pages/AdminReports";
 import AdminBanners from "./pages/AdminBanners";
 import AdminTeam from "./pages/AdminTeam";
+import AdminBrands from "./pages/AdminBrands";
 import AdminGuard from "./components/admin/AdminGuard";
 import AdminLayout from "./components/admin/AdminLayout";
 import NotFound from "./pages/NotFound";
@@ -40,6 +44,9 @@ const App = () => {
                   <Sonner />
                   <Routes>
                     <Route path="/" element={<Index />} />
+                    <Route path="/cars" element={<Cars />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/contact" element={<Contact />} />
                     <Route path="/car/:id" element={<CarDetail />} />
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
@@ -55,6 +62,7 @@ const App = () => {
                         <Route path="reports" element={<AdminReports />} />
                         <Route path="contact" element={<AdminContact />} />
                         <Route path="banners" element={<AdminBanners />} />
+                        <Route path="brands" element={<AdminBrands />} />
                         <Route path="team" element={<AdminTeam />} />
                       </Route>
                     </Route>

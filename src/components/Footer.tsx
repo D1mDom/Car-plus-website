@@ -29,9 +29,9 @@ const Footer = () => {
             <ul className="space-y-2.5">
               {[
                 ["/", t("nav.home")],
-                ["/#inventory", t("footer.viewCars")],
-                ["/#about", t("nav.about")],
-                ["/#contact", t("nav.contact")],
+                ["/cars", t("nav.inventory")],
+                ["/about", t("nav.about")],
+                ["/contact", t("nav.contact")],
               ].map(([to, label]) => (
                 <li key={to}>
                   <Link to={to} className="text-sm text-white/65 transition-colors hover:text-white">

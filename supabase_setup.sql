@@ -187,10 +187,18 @@ CREATE TABLE IF NOT EXISTS public.team_members (
   name TEXT NOT NULL,
   role TEXT NOT NULL,
   image TEXT NOT NULL DEFAULT '',
+  phone TEXT NOT NULL DEFAULT '',
+  telegram TEXT NOT NULL DEFAULT '',
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
+
+-- Existing databases created before phone/telegram existed
+ALTER TABLE public.team_members
+  ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.team_members
+  ADD COLUMN IF NOT EXISTS telegram TEXT NOT NULL DEFAULT '';
 
 ALTER TABLE public.team_members ENABLE ROW LEVEL SECURITY;
 
@@ -258,6 +266,40 @@ CREATE POLICY "Admins can update banners" ON public.banners FOR UPDATE USING (pu
 CREATE POLICY "Admins can delete banners" ON public.banners FOR DELETE USING (public.is_admin(auth.uid()));
 
 CREATE OR REPLACE TRIGGER update_banners_updated_at BEFORE UPDATE ON public.banners FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- ============================================================================
+-- 4d2. Popular brands (admin-editable logos on home page)
+--
+-- Shown in the "Popular brands" section. Everyone can read active brands;
+-- only admins can add/edit/reorder. Logos live in the car-images bucket.
+-- If empty, the site falls back to auto-detected brands from car names.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.brands (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  logo TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.brands ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can view active brands" ON public.brands;
+DROP POLICY IF EXISTS "Admins can view all brands" ON public.brands;
+DROP POLICY IF EXISTS "Admins can insert brands" ON public.brands;
+DROP POLICY IF EXISTS "Admins can update brands" ON public.brands;
+DROP POLICY IF EXISTS "Admins can delete brands" ON public.brands;
+
+CREATE POLICY "Anyone can view active brands" ON public.brands FOR SELECT USING (is_active = true);
+CREATE POLICY "Admins can view all brands" ON public.brands FOR SELECT USING (public.is_admin(auth.uid()));
+CREATE POLICY "Admins can insert brands" ON public.brands FOR INSERT WITH CHECK (public.is_admin(auth.uid()));
+CREATE POLICY "Admins can update brands" ON public.brands FOR UPDATE USING (public.is_admin(auth.uid()));
+CREATE POLICY "Admins can delete brands" ON public.brands FOR DELETE USING (public.is_admin(auth.uid()));
+
+CREATE OR REPLACE TRIGGER update_brands_updated_at BEFORE UPDATE ON public.brands FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- ============================================================================
 -- 4e. Orders (sales) & order items
@@ -364,6 +406,8 @@ CREATE INDEX IF NOT EXISTS idx_cars_status           ON public.cars(status);
 CREATE INDEX IF NOT EXISTS idx_admin_users_user_id   ON public.admin_users(user_id);
 CREATE INDEX IF NOT EXISTS idx_team_members_sort      ON public.team_members(sort_order);
 CREATE INDEX IF NOT EXISTS idx_banners_sort           ON public.banners(sort_order);
+CREATE INDEX IF NOT EXISTS idx_brands_sort            ON public.brands(sort_order);
+CREATE INDEX IF NOT EXISTS idx_brands_active          ON public.brands(is_active);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id         ON public.orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status          ON public.orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at      ON public.orders(created_at DESC);
@@ -389,6 +433,21 @@ BEGIN
     ALTER TABLE public.admin_users ADD CONSTRAINT admin_users_user_id_fkey
       FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
   END IF;
+END $$;
+
+-- Realtime for orders (admin + customer pages update live)
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.orders;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.order_items;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
 END $$;
 
 -- ============================================================================

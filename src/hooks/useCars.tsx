@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { dedupeCars } from "@/lib/carUtils";
 
 export type CarStatus = "ready" | "onroad" | "luxury" | "plate";
 
@@ -375,7 +376,7 @@ export const useCars = () => {
         return MOCK_CARS;
       }
 
-      const cars = (data as DbCar[]).map(mapDbCarToCar);
+      const cars = dedupeCars((data as DbCar[]).map(mapDbCarToCar));
       if (cars.length === 0) {
         return MOCK_CARS;
       }

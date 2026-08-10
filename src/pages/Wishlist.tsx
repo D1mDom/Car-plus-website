@@ -39,7 +39,7 @@ const Wishlist = () => {
           <div className="text-center py-16">
             <Heart className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
             <p className="text-muted-foreground mb-6">រក្សាទុកឡានដែលអ្នកចាប់អារម្មណ៍ដើម្បីមើលពេលក្រោយ</p>
-            <Button asChild><Link to="/#inventory">មើលឡាន</Link></Button>
+            <Button asChild><Link to="/cars">មើលឡាន</Link></Button>
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

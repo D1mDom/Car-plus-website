@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Car, Loader2, Download, Upload } from "lucide-react";
+import { Plus, Pencil, Trash2, Car, Loader2, Download, Upload, Sparkles, CircleDollarSign, BadgeCheck } from "lucide-react";
 import { toast } from "sonner";
 import CarFormDialog from "@/components/admin/CarFormDialog";
 import {
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { Car as CarType, CarStatus } from "@/hooks/useCars";
 import type { TranslationKey } from "@/i18n/translations";
+import { cn } from "@/lib/utils";
 
 const Admin = () => {
   const { t } = useLanguage();
@@ -171,50 +172,32 @@ const Admin = () => {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.cars.total")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{realCars.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.cars.ready")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {realCars.filter((c) => c.status === "ready").length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.cars.luxury")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {realCars.filter((c) => c.status === "luxury").length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.cars.value")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${realCars.reduce((sum, c) => sum + c.price, 0).toLocaleString()}
-            </div>
-          </CardContent>
-        </Card>
+        {[
+          { label: t("admin.cars.total"), value: realCars.length, icon: Car, tone: "text-[hsl(350_70%_48%)] bg-[hsl(350_70%_52%/0.12)]" },
+          { label: t("admin.cars.ready"), value: realCars.filter((c) => c.status === "ready").length, icon: BadgeCheck, tone: "text-emerald-600 bg-emerald-500/10" },
+          { label: t("admin.cars.luxury"), value: realCars.filter((c) => c.status === "luxury").length, icon: Sparkles, tone: "text-amber-600 bg-amber-500/10" },
+          { label: t("admin.cars.value"), value: `$${realCars.reduce((sum, c) => sum + c.price, 0).toLocaleString()}`, icon: CircleDollarSign, tone: "text-sky-600 bg-sky-500/10" },
+        ].map((s) => (
+          <Card key={s.label} className="border-border/70 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center justify-between text-sm font-medium text-muted-foreground">
+                {s.label}
+                <span className={cn("inline-flex h-8 w-8 items-center justify-center rounded-lg", s.tone)}>
+                  <s.icon className="h-4 w-4" />
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold tracking-tight">{s.value}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      <Card>
+      <Card className="border-border/70 shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Car className="h-5 w-5" />
+            <Car className="h-5 w-5 text-[hsl(350_70%_48%)]" />
             {t("admin.cars.list")}
           </CardTitle>
         </CardHeader>

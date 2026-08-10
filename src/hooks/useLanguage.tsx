@@ -39,10 +39,12 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   }, [lang]);
 
   const t = useCallback((key: TranslationKey, vars?: Record<string, string | number>) => {
-    let text: string = translations[lang][key] ?? translations.km[key] ?? key;
+    const dict = translations[lang] as Record<TranslationKey, string>;
+    const fallback = translations.km as Record<TranslationKey, string>;
+    let text = dict[key] ?? fallback[key] ?? key;
     if (vars) {
       for (const [k, v] of Object.entries(vars)) {
-        text = text.replace(`{${k}}`, String(v));
+        text = text.replaceAll(`{${k}}`, String(v));
       }
     }
     return text;

@@ -2,12 +2,24 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Car } from "@/hooks/useCars";
-import { Images, Calendar, Fuel, Car as CarIcon, MessageCircle, Pencil, Trash2, ShoppingCart } from "lucide-react";
+import {
+  Images,
+  Calendar,
+  Fuel,
+  Car as CarIcon,
+  MessageCircle,
+  Pencil,
+  Trash2,
+  ShoppingCart,
+  MapPin,
+  Star,
+} from "lucide-react";
 import WishlistButton from "@/components/WishlistButton";
 import { useContact } from "@/hooks/useContact";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 import PlaceOrderDialog from "@/components/PlaceOrderDialog";
+import CarDetailDialog from "@/components/CarDetailDialog";
 import { onImgError } from "@/lib/imageFallback";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -17,15 +29,15 @@ interface CarCardProps {
   car: Car;
   onEdit?: (car: Car) => void;
   onDelete?: (car: Car) => void;
+  featured?: boolean;
 }
 
-const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
+const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
   const { data: contact } = useContact();
   const { user } = useAuth();
   const { t } = useLanguage();
-  // Ordering asks for a phone number first, so the card opens a dialog instead
-  // of placing the order directly.
   const [orderCar, setOrderCar] = useState<Car | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const adminMode = Boolean(onEdit || onDelete);
   const telegram = (contact?.telegram || "@Carplus777").replace(/^@/, "");
 
@@ -43,6 +55,11 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
     setActive(index);
   };
 
+  const openPreview = () => {
+    if (adminMode) return;
+    setDetailOpen(true);
+  };
+
   const specs = [
     { icon: Calendar, value: car.year },
     { icon: Fuel, value: car.fuelType },
@@ -53,9 +70,25 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
 
   return (
     <>
-      <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-card">
-        <Link to={`/car/${car.id}`} className="block">
-          <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+      <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/35 hover:shadow-lg">
+        <div className="block w-full text-left">
+          {/* Tap / click image → preview popup */}
+          <button
+            type="button"
+            onClick={openPreview}
+            disabled={adminMode}
+            className={cn(
+              "relative block aspect-[4/3] w-full overflow-hidden bg-muted text-left",
+              !adminMode && "cursor-pointer"
+            )}
+            aria-label={t("card.preview")}
+          >
+            {featured && (
+              <span className="absolute left-3 top-3 z-10 inline-flex items-center gap-1 rounded-lg bg-amber-500 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm">
+                <Star className="h-3 w-3 fill-white" />
+                {t("card.featured")}
+              </span>
+            )}
             <img
               src={images[active] || car.image}
               alt={car.name}
@@ -69,15 +102,20 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
                 {active + 1}/{images.length}
               </div>
             )}
-            <div className="absolute right-3 top-3 flex items-center gap-1.5">
-              {/* Hidden in admin mode so managing stock can't create a real order. */}
+            <div
+              className="absolute right-3 top-3 z-10 flex items-center gap-1.5"
+              onClick={(e) => e.stopPropagation()}
+            >
               {!adminMode && (
                 <button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (!user) { toast.error(t("order.loginRequired")); return; }
+                    if (!user) {
+                      toast.error(t("order.loginRequired"));
+                      return;
+                    }
                     setOrderCar(car);
                   }}
                   aria-label={t("card.order")}
@@ -90,11 +128,18 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
               <WishlistButton carId={car.id} />
             </div>
             {adminMode && (
-              <div className="absolute bottom-3 right-3 flex gap-1.5">
+              <div
+                className="absolute bottom-3 right-3 z-10 flex gap-1.5"
+                onClick={(e) => e.stopPropagation()}
+              >
                 {onEdit && (
                   <button
                     type="button"
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(car); }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onEdit(car);
+                    }}
                     aria-label="កែសម្រួល"
                     className="rounded-xl bg-white/95 p-2 text-primary shadow-sm"
                   >
@@ -104,7 +149,11 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
                 {onDelete && (
                   <button
                     type="button"
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(car); }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onDelete(car);
+                    }}
                     aria-label="លុប"
                     className="rounded-xl bg-white/95 p-2 text-destructive shadow-sm"
                   >
@@ -116,7 +165,10 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
             {hasMultiple && (
               <>
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/45 to-transparent" />
-                <div className="absolute inset-x-0 bottom-2.5 flex justify-center gap-1.5">
+                <div
+                  className="absolute inset-x-0 bottom-2.5 z-10 flex justify-center gap-1.5"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {images.map((_, i) => (
                     <button
                       key={i}
@@ -133,7 +185,7 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
                 </div>
               </>
             )}
-          </div>
+          </button>
 
           <div className="p-4 pb-3">
             <p className="inline-block rounded-md border border-border px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
@@ -144,6 +196,10 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
             </h3>
             <p className="mt-1.5 font-heading text-xl font-bold text-primary sm:text-2xl">
               ${car.price.toLocaleString()}
+            </p>
+            <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5 shrink-0" />
+              {t("card.location")}
             </p>
 
             <div className="mt-3 flex flex-wrap gap-1.5">
@@ -161,7 +217,7 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
               ))}
             </div>
           </div>
-        </Link>
+        </div>
 
         <div className="mt-auto flex gap-2 border-t border-border/70 p-[10px]">
           <Button asChild size="sm" className="flex-1">
@@ -177,6 +233,7 @@ const CarCard = ({ car, onEdit, onDelete }: CarCardProps) => {
       </article>
 
       <PlaceOrderDialog car={orderCar} onOpenChange={(o) => { if (!o) setOrderCar(null); }} />
+      <CarDetailDialog car={car} open={detailOpen} onOpenChange={setDetailOpen} />
     </>
   );
 };

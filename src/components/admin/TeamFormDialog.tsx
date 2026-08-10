@@ -31,6 +31,8 @@ import { useLanguage } from "@/hooks/useLanguage";
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   role: z.string().min(1, "Role is required"),
+  phone: z.string().default(""),
+  telegram: z.string().default(""),
   image: z.string(),
   sort_order: z.coerce.number().min(0).default(0),
 });
@@ -53,16 +55,30 @@ const TeamFormDialog = ({ open, onOpenChange, member, nextSortOrder }: TeamFormD
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: "", role: "", image: "", sort_order: nextSortOrder },
+    defaultValues: { name: "", role: "", phone: "", telegram: "", image: "", sort_order: nextSortOrder },
   });
 
   const image = form.watch("image");
 
   useEffect(() => {
     if (member) {
-      form.reset({ name: member.name, role: member.role, image: member.image, sort_order: member.sort_order });
+      form.reset({
+        name: member.name,
+        role: member.role,
+        phone: member.phone ?? "",
+        telegram: member.telegram ?? "",
+        image: member.image,
+        sort_order: member.sort_order,
+      });
     } else {
-      form.reset({ name: "", role: "", image: "", sort_order: nextSortOrder });
+      form.reset({
+        name: "",
+        role: "",
+        phone: "",
+        telegram: "",
+        image: "",
+        sort_order: nextSortOrder,
+      });
     }
   }, [member, nextSortOrder, form]);
 
@@ -89,16 +105,21 @@ const TeamFormDialog = ({ open, onOpenChange, member, nextSortOrder }: TeamFormD
   };
 
   const onSubmit = (values: FormValues) => {
+    const payload = {
+      name: values.name,
+      role: values.role,
+      phone: values.phone.trim(),
+      telegram: values.telegram.trim(),
+      image: values.image,
+      sort_order: values.sort_order,
+    };
     if (member) {
       updateMember.mutate(
-        { id: member.id, name: values.name, role: values.role, image: values.image, sort_order: values.sort_order },
+        { id: member.id, ...payload },
         { onSuccess: () => onOpenChange(false) },
       );
     } else {
-      createMember.mutate(
-        { name: values.name, role: values.role, image: values.image, sort_order: values.sort_order },
-        { onSuccess: () => onOpenChange(false) },
-      );
+      createMember.mutate(payload, { onSuccess: () => onOpenChange(false) });
     }
   };
 
@@ -192,6 +213,41 @@ const TeamFormDialog = ({ open, onOpenChange, member, nextSortOrder }: TeamFormD
                   <FormControl>
                     <Input placeholder={t("team.form.rolePlaceholder")} {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("team.form.phone")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="tel"
+                      inputMode="tel"
+                      placeholder={t("team.form.phonePlaceholder")}
+                      {...field}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">{t("team.form.phoneHint")}</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="telegram"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("team.form.telegram")}</FormLabel>
+                  <FormControl>
+                    <Input placeholder={t("team.form.telegramPlaceholder")} {...field} />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">{t("team.form.telegramHint")}</p>
                   <FormMessage />
                 </FormItem>
               )}

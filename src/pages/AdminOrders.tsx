@@ -90,9 +90,17 @@ const AdminOrders = () => {
                 <TableBody>
                   {orders.map((o) => (
                     <TableRow key={o.id}>
-                      <TableCell className="font-medium">{o.customer_name || "—"}<div className="text-xs text-muted-foreground">{o.phone}</div></TableCell>
+                      <TableCell className="font-medium">
+                        {o.customer_name || o.notes?.split("\n")[0]?.trim() || "—"}
+                        <div className="text-xs text-muted-foreground">{o.phone}</div>
+                        {o.notes?.includes("Telegram:") && (
+                          <div className="text-xs text-[#229ED9]">
+                            {o.notes.split("\n").find((l) => l.startsWith("Telegram:"))}
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="text-sm">{new Date(o.created_at).toLocaleDateString()}</TableCell>
-                      <TableCell className="text-sm">{o.order_items?.length ? o.order_items.map((i) => i.car_name).join(", ") : "—"}</TableCell>
+                      <TableCell className="text-sm">{o.order_items?.length ? o.order_items.map((i) => i.car_name || i.car_id || "Car").join(", ") : (o.notes || "—")}</TableCell>
                       <TableCell className="font-semibold">{money(o.total_amount)}</TableCell>
                       <TableCell><Badge variant={statusVariant(o.status)}>{o.status}</Badge></TableCell>
                       <TableCell>

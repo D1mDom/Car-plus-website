@@ -16,14 +16,16 @@ const faqKeys: { q: TranslationKey; a: TranslationKey }[] = [
   { q: "faq.q6", a: "faq.a6" },
 ];
 
-const FAQSection = () => {
+const FAQSection = ({ hideTitle = false }: { hideTitle?: boolean }) => {
   const { t } = useLanguage();
 
   return (
     <div>
-      <h3 className="mb-4 font-heading text-lg font-semibold text-foreground">
-        {t("faq.title")}
-      </h3>
+      {!hideTitle && (
+        <h3 className="mb-4 font-heading text-lg font-semibold text-foreground">
+          {t("faq.title")}
+        </h3>
+      )}
       <Accordion type="single" collapsible className="w-full">
         {faqKeys.map((faq, index) => (
           <AccordionItem key={index} value={`item-${index}`} className="border-border/70">

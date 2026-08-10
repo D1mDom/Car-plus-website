@@ -1,8 +1,13 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, Plus, Users, Loader2 } from "lucide-react";
-import { useTeam, useDeleteTeamMember, isRealTeamMember, type TeamMember } from "@/hooks/useTeam";
+import { Pencil, Trash2, Plus, Users, Loader2, Phone, Send } from "lucide-react";
+import {
+  useTeam,
+  useDeleteTeamMember,
+  isRealTeamMember,
+  type TeamMember,
+} from "@/hooks/useTeam";
 import { useLanguage } from "@/hooks/useLanguage";
 import TeamFormDialog from "@/components/admin/TeamFormDialog";
 import { onImgError } from "@/lib/imageFallback";
@@ -27,10 +32,19 @@ const AdminTeam = () => {
 
   const nextSortOrder = teamMembers.reduce((max, m) => Math.max(max, m.sort_order), 0) + 1;
 
-  const handleAdd = () => { setEditingMember(null); setFormOpen(true); };
-  const handleEdit = (member: TeamMember) => { setEditingMember(member); setFormOpen(true); };
+  const handleAdd = () => {
+    setEditingMember(null);
+    setFormOpen(true);
+  };
+  const handleEdit = (member: TeamMember) => {
+    setEditingMember(member);
+    setFormOpen(true);
+  };
   const confirmDelete = () => {
-    if (deleteId) { deleteMember.mutate(deleteId); setDeleteId(null); }
+    if (deleteId) {
+      deleteMember.mutate(deleteId);
+      setDeleteId(null);
+    }
   };
 
   return (
@@ -73,23 +87,60 @@ const AdminTeam = () => {
                 <div key={member.id} className="relative rounded-xl border border-border bg-background p-4">
                   {isRealTeamMember(member.id) && (
                     <div className="absolute right-3 top-3 flex gap-1">
-                      <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => handleEdit(member)}>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8"
+                        onClick={() => handleEdit(member)}
+                      >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                      <Button size="icon" variant="destructive" className="h-8 w-8" onClick={() => setDeleteId(member.id)}>
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        className="h-8 w-8"
+                        onClick={() => setDeleteId(member.id)}
+                      >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   )}
                   {member.image ? (
-                    <img src={member.image} alt={member.name} onError={onImgError} className="mb-3 h-14 w-14 rounded-full object-cover" />
+                    <img
+                      src={member.image}
+                      alt={member.name}
+                      onError={onImgError}
+                      className="mb-3 h-14 w-14 rounded-full object-cover"
+                    />
                   ) : (
                     <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-muted text-lg font-semibold text-muted-foreground">
                       {member.name.charAt(0)}
                     </div>
                   )}
-                  <h4 className="font-semibold text-foreground">{member.name}</h4>
+                  <h4 className="pr-16 font-semibold text-foreground">{member.name}</h4>
                   <p className="text-sm text-muted-foreground">{member.role}</p>
+                  <div className="mt-2 space-y-1">
+                    {member.phone?.trim() && (
+                      <a
+                        href={`tel:${member.phone.replace(/\s+/g, "")}`}
+                        className="flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                      >
+                        <Phone className="h-3.5 w-3.5 shrink-0" />
+                        {member.phone}
+                      </a>
+                    )}
+                    {member.telegram?.trim() && (
+                      <a
+                        href={`https://t.me/${member.telegram.replace(/^@/, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-sm font-medium text-[#229ED9] hover:underline"
+                      >
+                        <Send className="h-3.5 w-3.5 shrink-0" />
+                        {member.telegram.startsWith("@") ? member.telegram : `@${member.telegram}`}
+                      </a>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -104,13 +155,16 @@ const AdminTeam = () => {
         nextSortOrder={nextSortOrder}
       />
 
-      <AlertDialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
+      <AlertDialog
+        open={!!deleteId}
+        onOpenChange={(o) => {
+          if (!o) setDeleteId(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("team.deleteTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("team.deleteBody")}
-            </AlertDialogDescription>
+            <AlertDialogDescription>{t("team.deleteBody")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t("form.cancel")}</AlertDialogCancel>

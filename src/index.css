@@ -231,6 +231,10 @@
     background-image: var(--gradient-card);
   }
 
+  .bg-gradient-market {
+    background: linear-gradient(145deg, hsl(244 58% 28%) 0%, hsl(248 52% 22%) 45%, hsl(252 48% 16%) 100%);
+  }
+
   .bg-gradient-hero {
     background-image: var(--gradient-hero);
   }

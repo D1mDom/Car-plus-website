@@ -28,7 +28,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateCar, useUpdateCar, type Car, type CarStatus } from "@/hooks/useCars";
-import { Upload, X, Loader2 } from "lucide-react";
+import { Upload, X, Loader2, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -121,6 +121,8 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
   const updateCar = useUpdateCar();
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
+  const [urlPreviewError, setUrlPreviewError] = useState(false);
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -185,7 +187,21 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
         isActive: true,
       });
     }
-  }, [car, form]);
+    setImageUrl("");
+    setUrlPreviewError(false);
+  }, [car, form, open]);
+
+  const previewUrl = (() => {
+    const url = imageUrl.trim();
+    if (!url) return "";
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "";
+      return url;
+    } catch {
+      return "";
+    }
+  })();
 
   // Uploads to the car-images bucket and returns its public URL. The image
   // column stores that URL, not the file itself — embedding base64 here would
@@ -267,6 +283,31 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
       current.filter((_, i) => i !== index),
       { shouldValidate: true }
     );
+  };
+
+  const addImageFromUrl = () => {
+    const url = imageUrl.trim();
+    if (!url) {
+      toast.error(t("form.imageUrlEmpty"));
+      return;
+    }
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        throw new Error("invalid");
+      }
+    } catch {
+      toast.error(t("form.imageUrlInvalid"));
+      return;
+    }
+    const current = form.getValues("images") || [];
+    if (current.includes(url)) {
+      toast.error(t("form.imageUrlDuplicate"));
+      return;
+    }
+    form.setValue("images", [...current, url], { shouldValidate: true });
+    setImageUrl("");
+    toast.success(t("form.imageUrlAdded"));
   };
 
   const onSubmit = (values: FormValues) => {
@@ -458,8 +499,62 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                             )}
                           </div>
                         </div>
+
+                        <div className="relative py-1">
+                          <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t border-border" />
+                          </div>
+                          <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">{t("form.orImageUrl")}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                          <Input
+                            type="url"
+                            value={imageUrl}
+                            onChange={(e) => {
+                              setImageUrl(e.target.value);
+                              setUrlPreviewError(false);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                addImageFromUrl();
+                              }
+                            }}
+                            placeholder={t("form.imageUrlPlaceholder")}
+                            className="flex-1"
+                          />
+                          <Button type="button" variant="outline" className="gap-1.5 shrink-0" onClick={addImageFromUrl}>
+                            <Link2 className="h-4 w-4" />
+                            {t("form.addImageUrl")}
+                          </Button>
+                        </div>
+
+                        {previewUrl ? (
+                          <div className="overflow-hidden rounded-lg border border-border bg-muted/30">
+                            {urlPreviewError ? (
+                              <div className="flex aspect-[16/9] max-h-48 items-center justify-center px-4 text-center text-sm text-muted-foreground">
+                                {t("form.imageUrlPreviewFail")}
+                              </div>
+                            ) : (
+                              <img
+                                src={previewUrl}
+                                alt={t("form.imageUrlPreview")}
+                                className="mx-auto max-h-48 w-full object-contain"
+                                onLoad={() => setUrlPreviewError(false)}
+                                onError={() => setUrlPreviewError(true)}
+                              />
+                            )}
+                            <p className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground">
+                              {t("form.imageUrlPreview")}
+                            </p>
+                          </div>
+                        ) : null}
+
                         <p className="text-xs text-muted-foreground">
-                          {t("form.coverHint")}
+                          {t("form.coverHint")} · {t("form.imageUrlHint")}
                         </p>
                       </div>
                     </FormControl>
