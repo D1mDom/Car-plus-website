@@ -1,13 +1,25 @@
 import { useState, useRef } from "react";
 import { useCars, useDeleteCar } from "@/hooks/useCars";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useCountUp } from "@/hooks/useCountUp";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Car, Loader2, Download, Upload, Sparkles, CircleDollarSign, BadgeCheck } from "lucide-react";
+import {
+  Pencil,
+  Trash2,
+  Car,
+  Loader2,
+  Download,
+  Upload,
+  Sparkles,
+  CircleDollarSign,
+  BadgeCheck,
+  type LucideIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import CarFormDialog from "@/components/admin/CarFormDialog";
 import {
@@ -20,9 +32,43 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { Car as CarType, CarStatus } from "@/hooks/useCars";
+import type { Car as CarType } from "@/hooks/useCars";
 import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/lib/utils";
+
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  tone,
+  prefix = "",
+}: {
+  label: string;
+  value: number;
+  icon: LucideIcon;
+  tone: string;
+  prefix?: string;
+}) {
+  const n = useCountUp(value);
+  return (
+    <Card className="admin-card-hover border-border/70 shadow-sm">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center justify-between text-sm font-medium text-muted-foreground">
+          {label}
+          <span className={cn("inline-flex h-8 w-8 items-center justify-center rounded-lg", tone)}>
+            <Icon className="h-4 w-4" />
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold tracking-tight tabular-nums">
+          {prefix}
+          {n.toLocaleString()}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 const Admin = () => {
   const { t } = useLanguage();
@@ -75,7 +121,9 @@ const Admin = () => {
     setImporting(true);
     try {
       const backup = JSON.parse(await file.text());
-      const fail = (e: unknown) => { if (e) throw e; };
+      const fail = (e: unknown) => {
+        if (e) throw e;
+      };
 
       if (Array.isArray(backup.cars) && backup.cars.length) {
         fail((await supabase.from("cars").upsert(backup.cars, { onConflict: "id" })).error);
@@ -95,9 +143,11 @@ const Admin = () => {
       toast.success("Data imported successfully");
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message
-          : err && typeof err === "object" && "message" in err ? String((err as { message: unknown }).message)
-          : "Invalid backup file";
+        err instanceof Error
+          ? err.message
+          : err && typeof err === "object" && "message" in err
+            ? String((err as { message: unknown }).message)
+            : "Invalid backup file";
       toast.error("Import failed: " + msg);
     } finally {
       setImporting(false);
@@ -140,6 +190,7 @@ const Admin = () => {
   };
 
   const realCars = (cars ?? []).filter((c) => !String(c.id).startsWith("mock-"));
+  const totalValue = realCars.reduce((sum, c) => sum + c.price, 0);
 
   return (
     <div className="space-y-5">
@@ -149,7 +200,7 @@ const Admin = () => {
           <p className="text-muted-foreground">{t("admin.cars.subtitle")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={handleBackup}>
+          <Button variant="outline" className="transition-transform active:scale-95" onClick={handleBackup}>
             <Download className="mr-2 h-4 w-4" />
             {t("admin.cars.backup")}
           </Button>
@@ -158,43 +209,51 @@ const Admin = () => {
             type="file"
             accept="application/json,.json"
             className="hidden"
-            onChange={(e) => { if (e.target.files?.[0]) handleImport(e.target.files[0]); }}
+            onChange={(e) => {
+              if (e.target.files?.[0]) handleImport(e.target.files[0]);
+            }}
           />
-          <Button variant="outline" onClick={() => importInputRef.current?.click()} disabled={importing}>
+          <Button
+            variant="outline"
+            className="transition-transform active:scale-95"
+            onClick={() => importInputRef.current?.click()}
+            disabled={importing}
+          >
             {importing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
             {t("admin.cars.import")}
-          </Button>
-          <Button onClick={() => setFormOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t("admin.cars.add")}
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { label: t("admin.cars.total"), value: realCars.length, icon: Car, tone: "text-[hsl(350_70%_48%)] bg-[hsl(350_70%_52%/0.12)]" },
-          { label: t("admin.cars.ready"), value: realCars.filter((c) => c.status === "ready").length, icon: BadgeCheck, tone: "text-emerald-600 bg-emerald-500/10" },
-          { label: t("admin.cars.luxury"), value: realCars.filter((c) => c.status === "luxury").length, icon: Sparkles, tone: "text-amber-600 bg-amber-500/10" },
-          { label: t("admin.cars.value"), value: `$${realCars.reduce((sum, c) => sum + c.price, 0).toLocaleString()}`, icon: CircleDollarSign, tone: "text-sky-600 bg-sky-500/10" },
-        ].map((s) => (
-          <Card key={s.label} className="border-border/70 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center justify-between text-sm font-medium text-muted-foreground">
-                {s.label}
-                <span className={cn("inline-flex h-8 w-8 items-center justify-center rounded-lg", s.tone)}>
-                  <s.icon className="h-4 w-4" />
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold tracking-tight">{s.value}</div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="admin-stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label={t("admin.cars.total")}
+          value={realCars.length}
+          icon={Car}
+          tone="text-[hsl(350_70%_48%)] bg-[hsl(350_70%_52%/0.12)]"
+        />
+        <StatCard
+          label={t("admin.cars.ready")}
+          value={realCars.filter((c) => c.status === "ready").length}
+          icon={BadgeCheck}
+          tone="text-emerald-600 bg-emerald-500/10"
+        />
+        <StatCard
+          label={t("admin.cars.luxury")}
+          value={realCars.filter((c) => c.status === "luxury").length}
+          icon={Sparkles}
+          tone="text-amber-600 bg-amber-500/10"
+        />
+        <StatCard
+          label={t("admin.cars.value")}
+          value={totalValue}
+          icon={CircleDollarSign}
+          tone="text-sky-600 bg-sky-500/10"
+          prefix="$"
+        />
       </div>
 
-      <Card className="border-border/70 shadow-sm">
+      <Card className="animate-admin-pop border-border/70 shadow-sm" style={{ animationDelay: "0.2s" }}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Car className="h-5 w-5 text-[hsl(350_70%_48%)]" />
@@ -222,10 +281,21 @@ const Admin = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {realCars.map((car) => (
-                    <TableRow key={car.id}>
+                  {realCars.map((car, i) => (
+                    <TableRow
+                      key={car.id}
+                      className="transition-colors hover:bg-muted/50"
+                      style={{
+                        animation: "adminRise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both",
+                        animationDelay: `${Math.min(i, 12) * 0.03 + 0.25}s`,
+                      }}
+                    >
                       <TableCell>
-                        <img src={car.image} alt={car.name} className="h-12 w-16 rounded object-cover" />
+                        <img
+                          src={car.image}
+                          alt={car.name}
+                          className="h-12 w-16 rounded object-cover transition-transform duration-300 hover:scale-105"
+                        />
                       </TableCell>
                       <TableCell className="font-medium">{car.name}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{car.code}</TableCell>
@@ -239,10 +309,20 @@ const Admin = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="outline" onClick={() => handleEdit(car)}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="transition-transform active:scale-90"
+                            onClick={() => handleEdit(car)}
+                          >
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="destructive" onClick={() => handleDelete(car.id)}>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="transition-transform active:scale-90"
+                            onClick={() => handleDelete(car.id)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -256,10 +336,6 @@ const Admin = () => {
             <div className="py-8 text-center text-muted-foreground">
               <Car className="mx-auto mb-4 h-12 w-12 opacity-50" />
               <p>{t("admin.cars.empty")}</p>
-              <Button className="mt-4" onClick={() => setFormOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("admin.cars.addFirst")}
-              </Button>
             </div>
           )}
         </CardContent>

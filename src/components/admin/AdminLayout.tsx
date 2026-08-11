@@ -11,6 +11,9 @@ import {
   ExternalLink,
   Menu,
   Car,
+  Plus,
+  FileText,
+  Settings,
   Sun,
   Moon,
 } from "lucide-react";
@@ -39,7 +42,9 @@ type NavItem = { to: string; end: boolean; labelKey: TranslationKey; icon: typeo
 
 const SALES_NAV: NavItem[] = [
   { to: "/admin", end: true, labelKey: "admin.nav.cars", icon: Car },
+  { to: "/admin/add-car", end: false, labelKey: "admin.nav.addCar", icon: Plus },
   { to: "/admin/orders", end: false, labelKey: "admin.nav.orders", icon: Package },
+  { to: "/admin/receipts", end: false, labelKey: "admin.nav.receipts", icon: FileText },
   { to: "/admin/reports", end: false, labelKey: "admin.nav.reports", icon: BarChart3 },
 ];
 
@@ -50,14 +55,21 @@ const WEBSITE_NAV: NavItem[] = [
   { to: "/admin/contact", end: false, labelKey: "admin.nav.contact", icon: Phone },
 ];
 
+const SYSTEM_NAV: NavItem[] = [
+  { to: "/admin/settings", end: false, labelKey: "admin.nav.settings", icon: Settings },
+];
+
 const PAGE_META: { match: (path: string) => boolean; title: TranslationKey; sub: TranslationKey }[] = [
+  { match: (p) => p.startsWith("/admin/add-car"), title: "admin.addCar.title", sub: "admin.addCar.subtitle" },
   { match: (p) => p === "/admin" || p === "/admin/", title: "admin.cars.title", sub: "admin.cars.subtitle" },
   { match: (p) => p.startsWith("/admin/orders"), title: "admin.orders.title", sub: "admin.orders.subtitle" },
+  { match: (p) => p.startsWith("/admin/receipts"), title: "admin.receipts.title", sub: "admin.receipts.subtitle" },
   { match: (p) => p.startsWith("/admin/reports"), title: "admin.reports.title", sub: "admin.reports.subtitle" },
   { match: (p) => p.startsWith("/admin/banners"), title: "admin.banners.title", sub: "admin.banners.subtitle" },
   { match: (p) => p.startsWith("/admin/brands"), title: "admin.brands.title", sub: "admin.brands.subtitle" },
   { match: (p) => p.startsWith("/admin/team"), title: "admin.team.title", sub: "admin.team.subtitle" },
   { match: (p) => p.startsWith("/admin/contact"), title: "admin.contact.title", sub: "admin.contact.subtitle" },
+  { match: (p) => p.startsWith("/admin/settings"), title: "admin.settings.title", sub: "admin.settings.subtitle" },
 ];
 
 const AdminLayout = () => {
@@ -109,15 +121,24 @@ const AdminLayout = () => {
           onClick={onNavigate}
           className={({ isActive }) =>
             cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+              "admin-nav-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
               isActive
-                ? "bg-[hsl(350_70%_52%)] text-white shadow-sm"
+                ? "admin-nav-active bg-[hsl(350_70%_52%)] text-white shadow-sm"
                 : "text-[hsl(var(--sidebar-foreground))]/75 hover:bg-[hsl(350_70%_52%/0.14)] hover:text-white"
             )
           }
         >
-          <Icon className="h-4 w-4 shrink-0" />
-          {t(labelKey)}
+          {({ isActive }) => (
+            <>
+              <Icon
+                className={cn(
+                  "h-4 w-4 shrink-0 transition-transform duration-200",
+                  isActive && "scale-110"
+                )}
+              />
+              <span className="truncate">{t(labelKey)}</span>
+            </>
+          )}
         </NavLink>
       ))}
     </div>
@@ -139,6 +160,7 @@ const AdminLayout = () => {
       <div className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
         <NavGroup label={t("admin.nav.group.sales")} items={SALES_NAV} onNavigate={onNavigate} />
         <NavGroup label={t("admin.nav.group.website")} items={WEBSITE_NAV} onNavigate={onNavigate} />
+        <NavGroup label={t("admin.nav.group.system")} items={SYSTEM_NAV} onNavigate={onNavigate} />
       </div>
 
       <div className="space-y-2 border-t border-[hsl(var(--sidebar-border))] p-4">
@@ -185,7 +207,7 @@ const AdminLayout = () => {
             </SheetContent>
           </Sheet>
 
-          <div className="min-w-0 flex-1">
+          <div key={pathname} className="min-w-0 flex-1 animate-admin-header">
             <p className="truncate text-sm font-semibold text-foreground">{t(page.title)}</p>
             <p className="truncate text-xs text-muted-foreground">{t(page.sub)}</p>
           </div>
@@ -196,16 +218,20 @@ const AdminLayout = () => {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-9 w-9"
+                className="h-9 w-9 transition-transform active:scale-95"
                 onClick={() => setTheme(isDark ? "light" : "dark")}
                 aria-label={isDark ? t("theme.light") : t("theme.dark")}
               >
-                {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                {isDark ? (
+                  <Sun key="sun" className="h-4 w-4 animate-admin-icon-swap" />
+                ) : (
+                  <Moon key="moon" className="h-4 w-4 animate-admin-icon-swap" />
+                )}
               </Button>
             </>
           )}
 
-          <Button variant="outline" size="sm" asChild className="hidden gap-1.5 sm:inline-flex">
+          <Button variant="outline" size="sm" asChild className="hidden gap-1.5 transition-transform hover:-translate-y-0.5 sm:inline-flex">
             <Link to="/" target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-3.5 w-3.5" />
               {t("admin.website")}
@@ -214,7 +240,9 @@ const AdminLayout = () => {
         </header>
 
         <main className="flex-1 px-[10px] py-6 lg:px-8 lg:py-8">
-          <Outlet />
+          <div key={pathname} className="animate-admin-page">
+            <Outlet />
+          </div>
         </main>
       </div>
 

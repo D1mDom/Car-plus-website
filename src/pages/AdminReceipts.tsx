@@ -1,0 +1,585 @@
+import { useMemo, useState } from "react";
+import { useLanguage } from "@/hooks/useLanguage";
+import { useCars } from "@/hooks/useCars";
+import { useContact, DEFAULT_CONTACT } from "@/hooks/useContact";
+import {
+  useReceipts,
+  useCreateReceipt,
+  useUpdateReceipt,
+  useDeleteReceipt,
+  receiptGrandTotal,
+  type PaymentMethod,
+  type Receipt,
+} from "@/hooks/useReceipts";
+import { printReceipt, type ReceiptPrintLabels } from "@/components/admin/receiptPrint";
+import ReceiptInvoicePreview from "@/components/admin/ReceiptInvoicePreview";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { FileText, Loader2, Plus, Printer, Trash2, Eye, Pencil } from "lucide-react";
+
+const PAYMENTS: PaymentMethod[] = ["cash", "transfer", "card", "other"];
+
+type FormState = {
+  customer_name: string;
+  phone: string;
+  carId: string;
+  description: string;
+  car_code: string;
+  year: string;
+  make: string;
+  model: string;
+  unit_price: string;
+  qty: string;
+  tax_rate: string;
+  payment_method: PaymentMethod;
+  bank_name: string;
+  account_no: string;
+  notes: string;
+};
+
+const emptyForm = (): FormState => ({
+  customer_name: "",
+  phone: "",
+  carId: "",
+  description: "",
+  car_code: "",
+  year: "",
+  make: "",
+  model: "",
+  unit_price: "",
+  qty: "1",
+  tax_rate: "0",
+  payment_method: "cash",
+  bank_name: "ABA Bank",
+  account_no: "",
+  notes: "",
+});
+
+const receiptToForm = (r: Receipt): FormState => ({
+  customer_name: r.customer_name || "",
+  phone: r.phone || "",
+  carId: "__custom__",
+  description: r.description || r.car_name || "",
+  car_code: r.car_code || "",
+  year: r.year || "",
+  make: r.make || "",
+  model: r.model || "",
+  unit_price: String(r.unit_price ?? r.amount ?? ""),
+  qty: String(r.qty || 1),
+  tax_rate: String(r.tax_rate || 0),
+  payment_method: r.payment_method || "cash",
+  bank_name: r.bank_name || "ABA Bank",
+  account_no: r.account_no || "",
+  notes: r.notes || "",
+});
+
+const AdminReceipts = () => {
+  const { t } = useLanguage();
+  const { data: receipts = [], isLoading } = useReceipts();
+  const { data: cars = [] } = useCars();
+  const { data: contact = DEFAULT_CONTACT } = useContact();
+  const createReceipt = useCreateReceipt();
+  const updateReceipt = useUpdateReceipt();
+  const deleteReceipt = useDeleteReceipt();
+
+  const realCars = cars.filter((c) => !String(c.id).startsWith("mock-"));
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Receipt | null>(null);
+  const [preview, setPreview] = useState<Receipt | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [form, setForm] = useState<FormState>(emptyForm());
+
+  const labels: ReceiptPrintLabels = useMemo(
+    () => ({
+      companyName: t("admin.receipts.companyName"),
+      invoice: t("admin.receipts.invoice"),
+      invoiceTo: t("admin.receipts.invoiceTo"),
+      invoiceDate: t("admin.receipts.invoiceDate"),
+      description: t("admin.receipts.description"),
+      price: t("admin.receipts.price"),
+      qty: t("admin.receipts.qty"),
+      total: t("admin.receipts.total"),
+      subtotal: t("admin.receipts.subtotal"),
+      tax: t("admin.receipts.tax"),
+      grandTotal: t("admin.receipts.grandTotal"),
+      carInfo: t("admin.receipts.carInfo"),
+      year: t("admin.receipts.year"),
+      make: t("admin.receipts.make"),
+      model: t("admin.receipts.model"),
+      paymentInfo: t("admin.receipts.paymentInfo"),
+      bankName: t("admin.receipts.bankName"),
+      accountNo: t("admin.receipts.accountNo"),
+      contactUs: t("admin.receipts.contactUs"),
+      paymentMethods: {
+        cash: t("admin.receipts.pay.cash"),
+        transfer: t("admin.receipts.pay.transfer"),
+        card: t("admin.receipts.pay.card"),
+        other: t("admin.receipts.pay.other"),
+      },
+      title: t("admin.receipts.docTitle"),
+      receiptNo: t("admin.receipts.no"),
+      date: t("admin.receipts.date"),
+      customer: t("admin.receipts.customer"),
+      phone: t("admin.receipts.phone"),
+      payment: t("admin.receipts.payment"),
+      item: t("admin.receipts.item"),
+      code: t("admin.receipts.code"),
+      amount: t("admin.receipts.amount"),
+      notes: t("admin.receipts.notes"),
+      customerSign: t("admin.receipts.customerSign"),
+      companySign: t("admin.receipts.companySign"),
+      thanks: t("admin.receipts.thanks"),
+    }),
+    [t]
+  );
+
+  const money = (n: number) => `$${Number(n || 0).toLocaleString()}`;
+  const saving = createReceipt.isPending || updateReceipt.isPending;
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm({ ...emptyForm(), account_no: contact.phone || "" });
+    setFormOpen(true);
+  };
+
+  const openEdit = (r: Receipt) => {
+    setEditing(r);
+    setForm(receiptToForm(r));
+    setFormOpen(true);
+    setPreview(null);
+  };
+
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditing(null);
+  };
+
+  const pickCar = (carId: string) => {
+    if (carId === "__custom__") {
+      setForm((f) => ({
+        ...f,
+        carId,
+        description: "",
+        car_code: "",
+        year: "",
+        make: "",
+        model: "",
+      }));
+      return;
+    }
+    const car = realCars.find((c) => c.id === carId);
+    if (!car) return;
+    const make = car.name.split(" ")[0] || "";
+    setForm((f) => ({
+      ...f,
+      carId,
+      description: car.name,
+      car_code: car.code || "",
+      year: String(car.year || ""),
+      make,
+      model: car.model || "",
+      unit_price: String(car.price),
+    }));
+  };
+
+  const submit = () => {
+    if (!form.customer_name.trim()) return;
+    const unit_price = form.unit_price !== "" ? Number(form.unit_price) : 0;
+    const qty = form.qty !== "" ? Number(form.qty) : 1;
+    const payload = {
+      customer_name: form.customer_name.trim(),
+      phone: form.phone.trim(),
+      description: form.description.trim() || undefined,
+      car_name: form.description.trim() || undefined,
+      car_code: form.car_code.trim() || undefined,
+      year: form.year.trim() || undefined,
+      make: form.make.trim() || undefined,
+      model: form.model.trim() || undefined,
+      unit_price,
+      qty,
+      tax_rate: form.tax_rate !== "" ? Number(form.tax_rate) : 0,
+      payment_method: form.payment_method,
+      bank_name: form.bank_name.trim() || undefined,
+      account_no: form.account_no.trim() || undefined,
+      notes: form.notes.trim() || undefined,
+    };
+
+    if (editing) {
+      updateReceipt.mutate(
+        { id: editing.id, ...payload },
+        {
+          onSuccess: (receipt) => {
+            closeForm();
+            setPreview(receipt);
+          },
+        }
+      );
+      return;
+    }
+
+    createReceipt.mutate(payload, {
+      onSuccess: (receipt) => {
+        closeForm();
+        setForm(emptyForm());
+        setPreview(receipt);
+      },
+    });
+  };
+
+  const handlePrint = (receipt: Receipt) => {
+    void printReceipt(receipt, contact, labels);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">{t("admin.receipts.title")}</h1>
+          <p className="text-muted-foreground">{t("admin.receipts.subtitle")}</p>
+        </div>
+        <Button onClick={openCreate} className="gap-1.5">
+          <Plus className="h-4 w-4" />
+          {t("admin.receipts.create")}
+        </Button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card className="border-border/70 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.receipts.statTotal")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{receipts.length}</div>
+          </CardContent>
+        </Card>
+        <Card className="border-border/70 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.receipts.statAmount")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {money(receipts.reduce((sum, r) => sum + receiptGrandTotal(r), 0))}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-border/70 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.receipts.statToday")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {
+                receipts.filter((r) => {
+                  const d = new Date(r.issued_at);
+                  const now = new Date();
+                  return d.toDateString() === now.toDateString();
+                }).length
+              }
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-border/70 shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FileText className="h-5 w-5 text-[hsl(350_70%_48%)]" />
+            {t("admin.receipts.list")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : receipts.length === 0 ? (
+            <div className="py-10 text-center text-muted-foreground">
+              <FileText className="mx-auto mb-3 h-12 w-12 opacity-50" />
+              <p>{t("admin.receipts.empty")}</p>
+              <Button className="mt-4 gap-1.5" onClick={openCreate}>
+                <Plus className="h-4 w-4" />
+                {t("admin.receipts.createFirst")}
+              </Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("admin.receipts.no")}</TableHead>
+                    <TableHead>{t("admin.receipts.customer")}</TableHead>
+                    <TableHead>{t("admin.receipts.description")}</TableHead>
+                    <TableHead>{t("admin.receipts.grandTotal")}</TableHead>
+                    <TableHead>{t("admin.receipts.date")}</TableHead>
+                    <TableHead className="text-right">{t("admin.receipts.actions")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {receipts.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-medium">{r.receipt_no}</TableCell>
+                      <TableCell>
+                        {r.customer_name}
+                        {r.phone ? <div className="text-xs text-muted-foreground">{r.phone}</div> : null}
+                      </TableCell>
+                      <TableCell className="text-sm">{r.description || r.car_name || "—"}</TableCell>
+                      <TableCell className="font-semibold">{money(receiptGrandTotal(r))}</TableCell>
+                      <TableCell className="text-sm">{new Date(r.issued_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1.5">
+                          <Button size="sm" variant="outline" onClick={() => setPreview(r)} title={t("admin.receipts.view")}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => openEdit(r)} title={t("admin.receipts.edit")}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handlePrint(r)} title={t("admin.receipts.print")}>
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => setDeleteId(r.id)} title={t("admin.receipts.delete")}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={formOpen}
+        onOpenChange={(open) => {
+          if (!open) closeForm();
+          else setFormOpen(true);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editing ? t("admin.receipts.edit") : t("admin.receipts.create")}
+            </DialogTitle>
+          </DialogHeader>
+          {editing ? (
+            <p className="text-xs text-muted-foreground">
+              {t("admin.receipts.no")}: <span className="font-medium text-foreground">{editing.receipt_no}</span>
+            </p>
+          ) : null}
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>{t("admin.receipts.invoiceTo")} *</Label>
+                <Input
+                  value={form.customer_name}
+                  onChange={(e) => setForm({ ...form, customer_name: e.target.value })}
+                  placeholder={t("admin.receipts.customer")}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t("admin.receipts.phone")}</Label>
+                <Input
+                  value={form.phone}
+                  onChange={(e) =>
+                    setForm({ ...form, phone: e.target.value.replace(/[^0-9+\-\s()]/g, "") })
+                  }
+                  placeholder="0xx xxx xxx"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>{t("admin.receipts.selectCar")}</Label>
+              <Select value={form.carId || undefined} onValueChange={pickCar}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("admin.receipts.selectCar")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__custom__">{t("admin.receipts.customItem")}</SelectItem>
+                  {realCars.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name} — ${c.price.toLocaleString()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>{t("admin.receipts.description")}</Label>
+              <Input
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder={t("admin.receipts.description")}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label>{t("admin.receipts.year")}</Label>
+                <Input value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t("admin.receipts.make")}</Label>
+                <Input value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t("admin.receipts.model")}</Label>
+                <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label>{t("admin.receipts.price")} ($)</Label>
+                <Input
+                  type="number"
+                  value={form.unit_price}
+                  onChange={(e) => setForm({ ...form, unit_price: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t("admin.receipts.qty")}</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={form.qty}
+                  onChange={(e) => setForm({ ...form, qty: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t("admin.receipts.tax")} %</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.tax_rate}
+                  onChange={(e) => setForm({ ...form, tax_rate: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>{t("admin.receipts.payment")}</Label>
+                <Select
+                  value={form.payment_method}
+                  onValueChange={(v) => setForm({ ...form, payment_method: v as PaymentMethod })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENTS.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {labels.paymentMethods[p]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t("admin.receipts.bankName")}</Label>
+                <Input
+                  value={form.bank_name}
+                  onChange={(e) => setForm({ ...form, bank_name: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>{t("admin.receipts.accountNo")}</Label>
+              <Input
+                value={form.account_no}
+                onChange={(e) => setForm({ ...form, account_no: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>{t("admin.receipts.notes")}</Label>
+              <Textarea
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                rows={2}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={closeForm}>
+                {t("form.cancel")}
+              </Button>
+              <Button onClick={submit} disabled={!form.customer_name.trim() || saving}>
+                {saving ? t("form.saving") : editing ? t("admin.receipts.update") : t("admin.receipts.save")}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{t("admin.receipts.preview")}</DialogTitle>
+          </DialogHeader>
+          {preview ? (
+            <div className="space-y-3">
+              <ReceiptInvoicePreview receipt={preview} contact={contact} labels={labels} />
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button variant="outline" onClick={() => setPreview(null)}>
+                  {t("form.cancel")}
+                </Button>
+                <Button variant="outline" className="gap-1.5" onClick={() => openEdit(preview)}>
+                  <Pencil className="h-4 w-4" />
+                  {t("admin.receipts.edit")}
+                </Button>
+                <Button className="gap-1.5" onClick={() => void handlePrint(preview)}>
+                  <Printer className="h-4 w-4" />
+                  {t("admin.receipts.printPdf")}
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("admin.receipts.deleteTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("admin.receipts.deleteDesc")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("form.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteId) deleteReceipt.mutate(deleteId);
+                setDeleteId(null);
+              }}
+            >
+              {t("admin.receipts.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+};
+
+export default AdminReceipts;

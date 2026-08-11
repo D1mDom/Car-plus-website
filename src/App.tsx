@@ -18,13 +18,16 @@ import Wishlist from "./pages/Wishlist";
 import Orders from "./pages/Orders";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
+import AdminAddCar from "./pages/AdminAddCar";
 import AdminLogin from "./pages/AdminLogin";
 import AdminContact from "./pages/AdminContact";
 import AdminOrders from "./pages/AdminOrders";
+import AdminReceipts from "./pages/AdminReceipts";
 import AdminReports from "./pages/AdminReports";
 import AdminBanners from "./pages/AdminBanners";
 import AdminTeam from "./pages/AdminTeam";
 import AdminBrands from "./pages/AdminBrands";
+import AdminSettings from "./pages/AdminSettings";
 import AdminGuard from "./components/admin/AdminGuard";
 import AdminLayout from "./components/admin/AdminLayout";
 import NotFound from "./pages/NotFound";
@@ -58,12 +61,15 @@ const App = () => {
                     <Route path="/admin" element={<AdminGuard />}>
                       <Route element={<AdminLayout />}>
                         <Route index element={<Admin />} />
+                        <Route path="add-car" element={<AdminAddCar />} />
                         <Route path="orders" element={<AdminOrders />} />
+                        <Route path="receipts" element={<AdminReceipts />} />
                         <Route path="reports" element={<AdminReports />} />
                         <Route path="contact" element={<AdminContact />} />
                         <Route path="banners" element={<AdminBanners />} />
                         <Route path="brands" element={<AdminBrands />} />
                         <Route path="team" element={<AdminTeam />} />
+                        <Route path="settings" element={<AdminSettings />} />
                       </Route>
                     </Route>
 

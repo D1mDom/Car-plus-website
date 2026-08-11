@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -114,15 +114,17 @@ interface CarFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   car: Car | null;
+  /** Render as a full page form instead of a modal dialog. */
+  variant?: "dialog" | "page";
 }
 
-const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
+const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog" }: CarFormDialogProps) => {
   const createCar = useCreateCar();
   const updateCar = useUpdateCar();
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
-  const [urlPreviewError, setUrlPreviewError] = useState(false);
+  const [failedDraftUrls, setFailedDraftUrls] = useState<Set<string>>(new Set());
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -188,20 +190,40 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
       });
     }
     setImageUrl("");
-    setUrlPreviewError(false);
+    setFailedDraftUrls(new Set());
   }, [car, form, open]);
 
-  const previewUrl = (() => {
-    const url = imageUrl.trim();
-    if (!url) return "";
-    try {
-      const parsed = new URL(url);
-      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "";
-      return url;
-    } catch {
-      return "";
+  const parseImageUrls = (raw: string): string[] => {
+    const seen = new Set<string>();
+    const urls: string[] = [];
+    for (const part of raw.split(/[\n,]+/)) {
+      const url = part.trim();
+      if (!url || seen.has(url)) continue;
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") continue;
+        seen.add(url);
+        urls.push(url);
+      } catch {
+        // skip invalid
+      }
     }
-  })();
+    return urls;
+  };
+
+  const draftUrls = parseImageUrls(imageUrl);
+
+  const mergePendingUrls = (): string[] => {
+    const pending = parseImageUrls(imageUrl);
+    const current = form.getValues("images") || [];
+    if (pending.length === 0) return current;
+    const currentSet = new Set(current);
+    const merged = [...current, ...pending.filter((url) => !currentSet.has(url))];
+    form.setValue("images", merged, { shouldValidate: true });
+    setImageUrl("");
+    setFailedDraftUrls(new Set());
+    return merged;
+  };
 
   // Uploads to the car-images bucket and returns its public URL. The image
   // column stores that URL, not the file itself — embedding base64 here would
@@ -286,28 +308,33 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
   };
 
   const addImageFromUrl = () => {
-    const url = imageUrl.trim();
-    if (!url) {
+    const raw = imageUrl.trim();
+    if (!raw) {
       toast.error(t("form.imageUrlEmpty"));
       return;
     }
-    try {
-      const parsed = new URL(url);
-      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-        throw new Error("invalid");
-      }
-    } catch {
+
+    const parsed = parseImageUrls(raw);
+    if (parsed.length === 0) {
       toast.error(t("form.imageUrlInvalid"));
       return;
     }
+
     const current = form.getValues("images") || [];
-    if (current.includes(url)) {
+    const currentSet = new Set(current);
+    const fresh = parsed.filter((url) => !currentSet.has(url));
+
+    if (fresh.length === 0) {
       toast.error(t("form.imageUrlDuplicate"));
       return;
     }
-    form.setValue("images", [...current, url], { shouldValidate: true });
-    setImageUrl("");
-    toast.success(t("form.imageUrlAdded"));
+
+    mergePendingUrls();
+    toast.success(
+      fresh.length === 1
+        ? t("form.imageUrlAdded")
+        : t("form.imageUrlAddedMany").replace("{count}", String(fresh.length))
+    );
   };
 
   const onSubmit = (values: FormValues) => {
@@ -331,17 +358,41 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
     }
   };
 
-  const isLoading = createCar.isPending || updateCar.isPending;
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Commit pasted URLs before zod validation so photos in the box count.
+    mergePendingUrls();
+    void form.handleSubmit(onSubmit)();
+  };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{car ? t("form.editCar") : t("form.newCar")}</DialogTitle>
-        </DialogHeader>
-        <div>
+  const isLoading = createCar.isPending || updateCar.isPending;
+  const isPage = variant === "page";
+
+  const Section = ({
+    title,
+    description,
+    children,
+  }: {
+    title: string;
+    description?: string;
+    children: ReactNode;
+  }) =>
+    isPage ? (
+      <section className="space-y-4 rounded-xl border border-border/70 bg-card p-5 shadow-sm sm:p-6">
+        <div className="space-y-0.5 border-b border-border/60 pb-3">
+          <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+          {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
+        </div>
+        {children}
+      </section>
+    ) : (
+      <div className="space-y-4">{children}</div>
+    );
+
+  const formBody = (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleFormSubmit} className={isPage ? "space-y-5" : "space-y-4"}>
+              <Section title={t("form.section.basic")} description={isPage ? t("form.section.basicHint") : undefined}>
               <div className="grid sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -438,13 +489,15 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                   )}
                 />
               </div>
+              </Section>
 
+              <Section title={t("form.section.photos")} description={isPage ? t("form.section.photosHint") : undefined}>
               <FormField
                 control={form.control}
                 name="images"
                 render={() => (
                   <FormItem>
-                    <FormLabel>{t("form.photos")}</FormLabel>
+                    {!isPage ? <FormLabel>{t("form.photos")}</FormLabel> : null}
                     <FormControl>
                       <div className="space-y-3">
                         <input
@@ -458,10 +511,10 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                           }}
                         />
 
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                           {images.map((url, i) => (
-                            <div key={i} className="group relative aspect-[4/3] overflow-hidden rounded-lg border-2 border-border">
-                              <img src={url} alt={`${t("form.photos")} ${i + 1}`} className="h-full w-full object-cover" />
+                            <div key={i} className="group relative aspect-[4/3] overflow-hidden rounded-lg border border-border">
+                              <img src={url} alt={`${t("form.photos")} ${i + 1}`} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                               {i === 0 && (
                                 <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
                                   {t("form.cover")}
@@ -500,61 +553,73 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                           </div>
                         </div>
 
-                        <div className="relative py-1">
-                          <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t border-border" />
+                        <div className="space-y-2 rounded-lg border border-border/70 bg-muted/20 p-3">
+                          <p className="text-xs font-medium text-foreground">{t("form.orImageUrl")}</p>
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                            <Textarea
+                              value={imageUrl}
+                              onChange={(e) => {
+                                setImageUrl(e.target.value);
+                                setFailedDraftUrls(new Set());
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                                  e.preventDefault();
+                                  addImageFromUrl();
+                                }
+                              }}
+                              placeholder={t("form.imageUrlPlaceholder")}
+                              className="min-h-[80px] flex-1 resize-y bg-background"
+                              rows={3}
+                            />
+                            <Button type="button" variant="outline" className="gap-1.5 shrink-0" onClick={addImageFromUrl}>
+                              <Link2 className="h-4 w-4" />
+                              {t("form.addImageUrl")}
+                            </Button>
                           </div>
-                          <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-background px-2 text-muted-foreground">{t("form.orImageUrl")}</span>
-                          </div>
-                        </div>
 
-                        <div className="flex flex-col gap-2 sm:flex-row">
-                          <Input
-                            type="url"
-                            value={imageUrl}
-                            onChange={(e) => {
-                              setImageUrl(e.target.value);
-                              setUrlPreviewError(false);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                addImageFromUrl();
-                              }
-                            }}
-                            placeholder={t("form.imageUrlPlaceholder")}
-                            className="flex-1"
-                          />
-                          <Button type="button" variant="outline" className="gap-1.5 shrink-0" onClick={addImageFromUrl}>
-                            <Link2 className="h-4 w-4" />
-                            {t("form.addImageUrl")}
-                          </Button>
-                        </div>
-
-                        {previewUrl ? (
-                          <div className="overflow-hidden rounded-lg border border-border bg-muted/30">
-                            {urlPreviewError ? (
-                              <div className="flex aspect-[16/9] max-h-48 items-center justify-center px-4 text-center text-sm text-muted-foreground">
-                                {t("form.imageUrlPreviewFail")}
+                          {draftUrls.length > 0 ? (
+                            <div className="space-y-2">
+                              <p className="text-xs text-muted-foreground">
+                                {t("form.imageUrlPreview")} ({draftUrls.length})
+                              </p>
+                              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                {draftUrls.map((url) => (
+                                  <div
+                                    key={url}
+                                    className="relative aspect-[4/3] overflow-hidden rounded-md border border-dashed border-border bg-background"
+                                  >
+                                    {failedDraftUrls.has(url) ? (
+                                      <div className="flex h-full items-center justify-center px-2 text-center text-[11px] text-muted-foreground">
+                                        {t("form.imageUrlPreviewFail")}
+                                      </div>
+                                    ) : (
+                                      <img
+                                        src={url}
+                                        alt={t("form.imageUrlPreview")}
+                                        className="h-full w-full object-cover"
+                                        referrerPolicy="no-referrer"
+                                        onError={() =>
+                                          setFailedDraftUrls((prev) => {
+                                            const next = new Set(prev);
+                                            next.add(url);
+                                            return next;
+                                          })
+                                        }
+                                      />
+                                    )}
+                                  </div>
+                                ))}
                               </div>
-                            ) : (
-                              <img
-                                src={previewUrl}
-                                alt={t("form.imageUrlPreview")}
-                                className="mx-auto max-h-48 w-full object-contain"
-                                onLoad={() => setUrlPreviewError(false)}
-                                onError={() => setUrlPreviewError(true)}
-                              />
-                            )}
-                            <p className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground">
-                              {t("form.imageUrlPreview")}
-                            </p>
-                          </div>
-                        ) : null}
+                            </div>
+                          ) : null}
+
+                          <p className="text-xs text-muted-foreground">{t("form.imageUrlHint")}</p>
+                        </div>
 
                         <p className="text-xs text-muted-foreground">
-                          {t("form.coverHint")} · {t("form.imageUrlHint")}
+                          {t("form.coverHint")}
+                          {images.length > 0 ? ` · ${t("form.imageCount").replace("{count}", String(images.length))}` : ""}
                         </p>
                       </div>
                     </FormControl>
@@ -562,7 +627,9 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                   </FormItem>
                 )}
               />
+              </Section>
 
+              <Section title={t("form.section.specs")} description={isPage ? t("form.section.specsHint") : undefined}>
               <div className="grid sm:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
@@ -673,7 +740,9 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                   )}
                 />
               </div>
+              </Section>
 
+              <Section title={t("form.section.more")} description={isPage ? t("form.section.moreHint") : undefined}>
               <FormField
                 control={form.control}
                 name="description"
@@ -696,7 +765,7 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                 control={form.control}
                 name="isActive"
                 render={({ field }) => (
-                  <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                  <FormItem className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/20 p-3">
                     <div className="space-y-0.5">
                       <FormLabel>{t("form.visible")}</FormLabel>
                       <p className="text-sm text-muted-foreground">
@@ -709,8 +778,9 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
                   </FormItem>
                 )}
               />
+              </Section>
 
-              <div className="flex justify-end gap-3 pt-4">
+              <div className={`flex justify-end gap-3 ${isPage ? "rounded-xl border border-border/70 bg-card px-5 py-4 shadow-sm" : "pt-4"}`}>
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   {t("form.cancel")}
                 </Button>
@@ -720,7 +790,19 @@ const CarFormDialog = ({ open, onOpenChange, car }: CarFormDialogProps) => {
               </div>
             </form>
           </Form>
-        </div>
+  );
+
+  if (variant === "page") {
+    return <div className="w-full">{formBody}</div>;
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{car ? t("form.editCar") : t("form.newCar")}</DialogTitle>
+        </DialogHeader>
+        <div>{formBody}</div>
       </DialogContent>
     </Dialog>
   );

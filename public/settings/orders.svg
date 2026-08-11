@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480" viewBox="0 0 800 480" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="800" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1a1f2e"/>
+      <stop offset="1" stop-color="#2d3548"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="480" fill="url(#bg)"/>
+  <rect x="48" y="56" width="704" height="368" rx="20" fill="#fff" fill-opacity="0.96"/>
+  <rect x="72" y="84" width="180" height="18" rx="6" fill="#E11D48" fill-opacity="0.85"/>
+  <rect x="72" y="118" width="280" height="12" rx="4" fill="#94A3B8" fill-opacity="0.35"/>
+  <g transform="translate(72,160)">
+    <rect width="656" height="56" rx="12" fill="#F1F5F9"/>
+    <circle cx="28" cy="28" r="14" fill="#E11D48" fill-opacity="0.2"/>
+    <rect x="56" y="16" width="160" height="10" rx="3" fill="#334155"/>
+    <rect x="56" y="32" width="100" height="8" rx="3" fill="#94A3B8"/>
+    <rect x="520" y="18" width="100" height="20" rx="10" fill="#22C55E" fill-opacity="0.2"/>
+  </g>
+  <g transform="translate(72,232)">
+    <rect width="656" height="56" rx="12" fill="#F1F5F9"/>
+    <circle cx="28" cy="28" r="14" fill="#E11D48" fill-opacity="0.2"/>
+    <rect x="56" y="16" width="140" height="10" rx="3" fill="#334155"/>
+    <rect x="56" y="32" width="120" height="8" rx="3" fill="#94A3B8"/>
+    <rect x="520" y="18" width="100" height="20" rx="10" fill="#F59E0B" fill-opacity="0.25"/>
+  </g>
+  <g transform="translate(72,304)">
+    <rect width="656" height="56" rx="12" fill="#F1F5F9"/>
+    <circle cx="28" cy="28" r="14" fill="#E11D48" fill-opacity="0.2"/>
+    <rect x="56" y="16" width="170" height="10" rx="3" fill="#334155"/>
+    <rect x="56" y="32" width="90" height="8" rx="3" fill="#94A3B8"/>
+    <rect x="520" y="18" width="100" height="20" rx="10" fill="#3B82F6" fill-opacity="0.2"/>
+  </g>
+</svg>

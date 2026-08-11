@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useCars } from "@/hooks/useCars";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useContact, DEFAULT_CONTACT } from "@/hooks/useContact";
 import {
   useAdminOrders, useUpdateOrderStatus, useCreateOrder, useDeleteOrder, ORDER_STATUSES,
+  type Order,
 } from "@/hooks/useAdminOrders";
+import { useCreateReceipt } from "@/hooks/useReceipts";
+import { printReceipt, type ReceiptPrintLabels } from "@/components/admin/receiptPrint";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Plus, Trash2, Package } from "lucide-react";
+import { Loader2, Plus, Trash2, Package, FileText } from "lucide-react";
 
 const statusVariant = (s: string): "default" | "secondary" | "outline" | "destructive" =>
   s === "completed" || s === "delivered" ? "default"
@@ -26,13 +30,97 @@ const AdminOrders = () => {
   const updateStatus = useUpdateOrderStatus();
   const createOrder = useCreateOrder();
   const deleteOrder = useDeleteOrder();
+  const createReceipt = useCreateReceipt();
+  const { data: contact = DEFAULT_CONTACT } = useContact();
 
   const realCars = cars.filter((c) => !String(c.id).startsWith("mock-"));
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ customer_name: "", phone: "", carId: "", total: "", status: "pending", notes: "" });
+  const [receiptBusyId, setReceiptBusyId] = useState<string | null>(null);
+
+  const receiptLabels: ReceiptPrintLabels = useMemo(
+    () => ({
+      companyName: t("admin.receipts.companyName"),
+      invoice: t("admin.receipts.invoice"),
+      invoiceTo: t("admin.receipts.invoiceTo"),
+      invoiceDate: t("admin.receipts.invoiceDate"),
+      description: t("admin.receipts.description"),
+      price: t("admin.receipts.price"),
+      qty: t("admin.receipts.qty"),
+      total: t("admin.receipts.total"),
+      subtotal: t("admin.receipts.subtotal"),
+      tax: t("admin.receipts.tax"),
+      grandTotal: t("admin.receipts.grandTotal"),
+      carInfo: t("admin.receipts.carInfo"),
+      year: t("admin.receipts.year"),
+      make: t("admin.receipts.make"),
+      model: t("admin.receipts.model"),
+      paymentInfo: t("admin.receipts.paymentInfo"),
+      bankName: t("admin.receipts.bankName"),
+      accountNo: t("admin.receipts.accountNo"),
+      contactUs: t("admin.receipts.contactUs"),
+      paymentMethods: {
+        cash: t("admin.receipts.pay.cash"),
+        transfer: t("admin.receipts.pay.transfer"),
+        card: t("admin.receipts.pay.card"),
+        other: t("admin.receipts.pay.other"),
+      },
+      title: t("admin.receipts.docTitle"),
+      receiptNo: t("admin.receipts.no"),
+      date: t("admin.receipts.date"),
+      customer: t("admin.receipts.customer"),
+      phone: t("admin.receipts.phone"),
+      payment: t("admin.receipts.payment"),
+      item: t("admin.receipts.item"),
+      code: t("admin.receipts.code"),
+      amount: t("admin.receipts.amount"),
+      notes: t("admin.receipts.notes"),
+      customerSign: t("admin.receipts.customerSign"),
+      companySign: t("admin.receipts.companySign"),
+      thanks: t("admin.receipts.thanks"),
+    }),
+    [t]
+  );
 
   const count = (s: string) => orders.filter((o) => o.status === s).length;
   const money = (n: number) => `$${Number(n).toLocaleString()}`;
+
+  const issueReceipt = (order: Order) => {
+    const item = order.order_items?.[0];
+    const matched = item?.car_id ? realCars.find((c) => c.id === item.car_id) : undefined;
+    const carName =
+      item?.car_name ||
+      matched?.name ||
+      order.order_items?.map((i) => i.car_name || "Car").filter(Boolean).join(", ") ||
+      "Vehicle";
+    const unit_price = Number(item?.price ?? order.total_amount) || 0;
+    setReceiptBusyId(order.id);
+    createReceipt.mutate(
+      {
+        order_id: order.id,
+        customer_name: order.customer_name || order.notes?.split("\n")[0]?.trim() || "Customer",
+        phone: order.phone || undefined,
+        description: carName,
+        car_name: carName,
+        year: matched ? String(matched.year) : undefined,
+        make: matched ? matched.name.split(" ")[0] : undefined,
+        model: matched?.model,
+        unit_price,
+        qty: 1,
+        tax_rate: 0,
+        payment_method: "cash",
+        bank_name: "ABA Bank",
+        account_no: contact.phone || undefined,
+        notes: order.notes || undefined,
+      },
+      {
+        onSuccess: (receipt) => {
+          printReceipt(receipt, contact, receiptLabels);
+        },
+        onSettled: () => setReceiptBusyId(null),
+      }
+    );
+  };
 
   const pickCar = (carId: string) => {
     const car = realCars.find((c) => c.id === carId);
@@ -110,7 +198,25 @@ const AdminOrders = () => {
                         </Select>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" variant="destructive" onClick={() => deleteOrder.mutate(o.id)}><Trash2 className="h-4 w-4" /></Button>
+                        <div className="flex justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1"
+                            disabled={receiptBusyId === o.id || createReceipt.isPending}
+                            onClick={() => issueReceipt(o)}
+                            title={t("admin.receipts.fromOrder")}
+                          >
+                            {receiptBusyId === o.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <FileText className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => deleteOrder.mutate(o.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

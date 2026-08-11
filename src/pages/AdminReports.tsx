@@ -65,9 +65,9 @@ const AdminReports = () => {
         </div>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="admin-stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {stats.map((s) => (
-              <Card key={s.label} className="border-border/70 shadow-sm">
+              <Card key={s.label} className="admin-card-hover border-border/70 shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center justify-between text-sm font-medium text-muted-foreground">
                     {s.label}
@@ -83,8 +83,8 @@ const AdminReports = () => {
             ))}
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card className="border-border/70 shadow-sm">
+          <div className="admin-stagger grid gap-6 lg:grid-cols-2">
+            <Card className="admin-card-hover border-border/70 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600">
@@ -106,7 +106,7 @@ const AdminReports = () => {
               </CardContent>
             </Card>
 
-            <Card className="border-border/70 shadow-sm">
+            <Card className="admin-card-hover border-border/70 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[hsl(350_70%_52%/0.12)] text-[hsl(350_70%_48%)]">

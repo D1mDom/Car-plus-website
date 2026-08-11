@@ -26,3 +26,6 @@ dist-ssr
 
 # Deployment
 .vercel
+
+# Vite cache
+.vite/
