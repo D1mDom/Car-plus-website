@@ -74,7 +74,7 @@ function LanguageGuideImage({ className }: { className?: string }) {
           </span>
         </div>
       </div>
-      <span className="absolute left-1/2 top-1/2 z-10 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[hsl(350_70%_48%)] text-xs font-bold text-white shadow-md sm:h-8 sm:w-8">
+      <span className="absolute left-1/2 top-1/2 z-10 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#174080] text-xs font-bold text-white shadow-md sm:h-8 sm:w-8">
         ⇄
       </span>
     </div>
@@ -334,15 +334,38 @@ const GROUPS: GuideGroup[] = [
   },
 ];
 
+const SETTINGS_WELCOME_KEY = "carplus-settings-welcome-seen";
+
 const AdminSettings = () => {
   const { t } = useLanguage();
-  const [welcomeOpen, setWelcomeOpen] = useState(true);
+  const [welcomeOpen, setWelcomeOpen] = useState(() => {
+    try {
+      return localStorage.getItem(SETTINGS_WELCOME_KEY) !== "1";
+    } catch {
+      return true;
+    }
+  });
+
+  const dismissWelcome = () => {
+    try {
+      localStorage.setItem(SETTINGS_WELCOME_KEY, "1");
+    } catch {
+      /* ignore */
+    }
+    setWelcomeOpen(false);
+  };
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-10">
-      <Dialog open={welcomeOpen} onOpenChange={setWelcomeOpen}>
+      <Dialog
+        open={welcomeOpen}
+        onOpenChange={(open) => {
+          if (!open) dismissWelcome();
+          else setWelcomeOpen(true);
+        }}
+      >
         <DialogContent className="max-w-md gap-0 overflow-hidden p-0 sm:rounded-2xl animate-admin-pop">
-          <div className="bg-[hsl(350_70%_48%)] px-6 pb-5 pt-6 text-white">
+          <div className="bg-[#174080] px-6 pb-5 pt-6 text-white">
             <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 animate-admin-icon-swap">
               <ListChecks className="h-5 w-5" />
             </div>
@@ -375,7 +398,7 @@ const AdminSettings = () => {
           </div>
 
           <DialogFooter className="border-t border-border/60 px-6 py-4">
-            <Button className="w-full sm:w-auto" onClick={() => setWelcomeOpen(false)}>
+            <Button className="w-full sm:w-auto" onClick={dismissWelcome}>
               {t("admin.settings.welcomeGotIt")}
             </Button>
           </DialogFooter>
@@ -408,7 +431,7 @@ const AdminSettings = () => {
       <section className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border border-border/60 bg-background p-4">
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Shield className="h-4 w-4 text-[hsl(350_70%_48%)]" />
+            <Shield className="h-4 w-4 text-[#174080]" />
             {t("admin.settings.roleAdminTitle")}
           </div>
           <p className="text-sm leading-relaxed text-muted-foreground">{t("admin.settings.roleAdminBody")}</p>

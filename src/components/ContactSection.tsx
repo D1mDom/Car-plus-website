@@ -47,7 +47,7 @@ const ContactSection = () => {
             label: t("contact.emailAction"),
             value: email,
             href: `mailto:${email}`,
-            accent: "bg-[hsl(28_90%_58%/0.14)] text-[hsl(24_80%_42%)]",
+            accent: "bg-[#174080]/14 text-[#174080]",
           },
         ]
       : []),
@@ -61,14 +61,11 @@ const ContactSection = () => {
           className="pointer-events-none absolute inset-0 opacity-40"
           style={{
             backgroundImage:
-              "radial-gradient(ellipse 55% 45% at 85% 15%, hsl(199 100% 55% / 0.28), transparent 60%), radial-gradient(ellipse 40% 50% at 10% 90%, hsl(28 90% 58% / 0.12), transparent 55%)",
+              "radial-gradient(ellipse 55% 45% at 85% 15%, hsl(199 100% 55% / 0.28), transparent 60%), radial-gradient(ellipse 40% 50% at 10% 90%, hsl(217 70% 38% / 0.12), transparent 55%)",
           }}
         />
         <div className="container relative mx-auto max-w-7xl px-[10px] py-14 sm:py-16">
           <div className="mx-auto max-w-3xl animate-slide-up text-center sm:mx-0 sm:text-left">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[hsl(199_90%_72%)]">
-              {t("contact.eyebrow")}
-            </p>
             <h1 className="font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl">
               {t("contact.title")}
             </h1>

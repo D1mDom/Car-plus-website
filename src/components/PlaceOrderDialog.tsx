@@ -121,7 +121,7 @@ const PlaceOrderDialog = ({ car, onOpenChange }: PlaceOrderDialogProps) => {
             </div>
             <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
-                <Phone className="h-3.5 w-3.5 text-[hsl(350_70%_48%)]" />
+                <Phone className="h-3.5 w-3.5 text-[#174080]" />
                 {t("order.dialog.viaPhone")}
               </span>
               <span className="inline-flex items-center gap-1.5">
@@ -232,7 +232,7 @@ const PlaceOrderDialog = ({ car, onOpenChange }: PlaceOrderDialogProps) => {
             </div>
 
             <div className="flex gap-2 rounded-lg border border-border/80 bg-muted/40 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-              <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[hsl(350_70%_48%)]" />
+              <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#174080]" />
               <p>{t("order.dialog.privacyNotice")}</p>
             </div>
 

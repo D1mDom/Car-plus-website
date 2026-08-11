@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 import ProfilePersonalForm from "@/components/ProfilePersonalForm";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile, type Profile } from "@/hooks/useProfile";
@@ -293,7 +292,7 @@ const Profile = () => {
                   type="button"
                   disabled={uploading}
                   onClick={() => fileRef.current?.click()}
-                  className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full bg-[hsl(28_90%_58%)] text-white shadow-md ring-2 ring-[hsl(216_45%_18%)] transition hover:bg-[hsl(28_85%_52%)] disabled:opacity-60"
+                  className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full bg-[#174080] text-white shadow-md ring-2 ring-[hsl(216_45%_18%)] transition hover:bg-[#143871] disabled:opacity-60"
                   aria-label={t("profile.avatarChange")}
                 >
                   {uploading ? (
@@ -311,7 +310,7 @@ const Profile = () => {
                 />
               </div>
               <div className="min-w-0">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-[hsl(199_90%_72%)]">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#5b8fd4]]">
                   {t("profile.settingsEyebrow")}
                 </p>
                 <h1 className="font-heading text-2xl font-bold tracking-tight text-white sm:text-3xl">
@@ -544,7 +543,6 @@ const Profile = () => {
                       <p className="text-sm font-medium text-foreground">{t("profile.language")}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">{t("profile.languageHint")}</p>
                     </div>
-                    <LanguageSwitcher />
                   </div>
                 </div>
               )}

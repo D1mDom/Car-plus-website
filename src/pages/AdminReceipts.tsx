@@ -31,7 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FileText, Loader2, Plus, Printer, Trash2, Eye, Pencil } from "lucide-react";
+import { FileText, Loader2, Plus, Printer, Trash2, Eye, Pencil, X } from "lucide-react";
 
 const PAYMENTS: PaymentMethod[] = ["cash", "transfer", "card", "other"];
 
@@ -104,6 +104,8 @@ const AdminReceipts = () => {
   const [preview, setPreview] = useState<Receipt | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
+  const [search, setSearch] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("all");
 
   const labels: ReceiptPrintLabels = useMemo(
     () => ({
@@ -151,6 +153,24 @@ const AdminReceipts = () => {
 
   const money = (n: number) => `$${Number(n || 0).toLocaleString()}`;
   const saving = createReceipt.isPending || updateReceipt.isPending;
+
+  const filteredReceipts = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return receipts.filter((r) => {
+      if (paymentFilter !== "all" && r.payment_method !== paymentFilter) return false;
+      if (q) {
+        const hay = `${r.customer_name ?? ""} ${r.phone ?? ""} ${r.receipt_no ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [receipts, search, paymentFilter]);
+
+  const hasFilters = search.trim() !== "" || paymentFilter !== "all";
+  const clearFilters = () => {
+    setSearch("");
+    setPaymentFilter("all");
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -246,21 +266,34 @@ const AdminReceipts = () => {
     void printReceipt(receipt, contact, labels);
   };
 
+  const rowActions = (r: Receipt) => (
+    <div className="flex justify-end gap-1.5">
+      <Button size="sm" variant="outline" onClick={() => setPreview(r)} title={t("admin.receipts.view")}>
+        <Eye className="h-4 w-4" />
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => openEdit(r)} title={t("admin.receipts.edit")}>
+        <Pencil className="h-4 w-4" />
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => handlePrint(r)} title={t("admin.receipts.print")}>
+        <Printer className="h-4 w-4" />
+      </Button>
+      <Button size="sm" variant="destructive" onClick={() => setDeleteId(r.id)} title={t("admin.receipts.delete")}>
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t("admin.receipts.title")}</h1>
-          <p className="text-muted-foreground">{t("admin.receipts.subtitle")}</p>
-        </div>
-        <Button onClick={openCreate} className="gap-1.5">
+    <div className="space-y-5">
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button onClick={openCreate} className="gap-1.5 transition-transform active:scale-95">
           <Plus className="h-4 w-4" />
           {t("admin.receipts.create")}
         </Button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Card className="border-border/70 shadow-sm">
+        <Card className="admin-card-hover border-border/70 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.receipts.statTotal")}</CardTitle>
           </CardHeader>
@@ -268,7 +301,7 @@ const AdminReceipts = () => {
             <div className="text-2xl font-bold">{receipts.length}</div>
           </CardContent>
         </Card>
-        <Card className="border-border/70 shadow-sm">
+        <Card className="admin-card-hover border-border/70 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.receipts.statAmount")}</CardTitle>
           </CardHeader>
@@ -278,7 +311,7 @@ const AdminReceipts = () => {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-border/70 shadow-sm">
+        <Card className="admin-card-hover border-border/70 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.receipts.statToday")}</CardTitle>
           </CardHeader>
@@ -297,11 +330,47 @@ const AdminReceipts = () => {
       </div>
 
       <Card className="border-border/70 shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <FileText className="h-5 w-5 text-[hsl(350_70%_48%)]" />
-            {t("admin.receipts.list")}
-          </CardTitle>
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FileText className="h-5 w-5 text-[#174080]" />
+              {t("admin.receipts.list")}
+            </CardTitle>
+            {receipts.length > 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {filteredReceipts.length} {t("admin.common.results")}
+              </p>
+            ) : null}
+          </div>
+          {receipts.length > 0 ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t("admin.receipts.search")}
+                className="sm:max-w-xs"
+              />
+              <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+                <SelectTrigger className="sm:w-[180px]">
+                  <SelectValue placeholder={t("admin.receipts.filterPayment")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("admin.receipts.filterAll")}</SelectItem>
+                  {PAYMENTS.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {labels.paymentMethods[p]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {hasFilters ? (
+                <Button variant="outline" size="sm" onClick={clearFilters} className="gap-1.5">
+                  <X className="h-3.5 w-3.5" />
+                  {t("admin.filter.clear")}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -317,51 +386,77 @@ const AdminReceipts = () => {
                 {t("admin.receipts.createFirst")}
               </Button>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("admin.receipts.no")}</TableHead>
-                    <TableHead>{t("admin.receipts.customer")}</TableHead>
-                    <TableHead>{t("admin.receipts.description")}</TableHead>
-                    <TableHead>{t("admin.receipts.grandTotal")}</TableHead>
-                    <TableHead>{t("admin.receipts.date")}</TableHead>
-                    <TableHead className="text-right">{t("admin.receipts.actions")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {receipts.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-medium">{r.receipt_no}</TableCell>
-                      <TableCell>
-                        {r.customer_name}
-                        {r.phone ? <div className="text-xs text-muted-foreground">{r.phone}</div> : null}
-                      </TableCell>
-                      <TableCell className="text-sm">{r.description || r.car_name || "—"}</TableCell>
-                      <TableCell className="font-semibold">{money(receiptGrandTotal(r))}</TableCell>
-                      <TableCell className="text-sm">{new Date(r.issued_at).toLocaleDateString()}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1.5">
-                          <Button size="sm" variant="outline" onClick={() => setPreview(r)} title={t("admin.receipts.view")}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => openEdit(r)} title={t("admin.receipts.edit")}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => handlePrint(r)} title={t("admin.receipts.print")}>
-                            <Printer className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => setDeleteId(r.id)} title={t("admin.receipts.delete")}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          ) : filteredReceipts.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground">
+              <p>{t("admin.receipts.noResults")}</p>
+              <Button variant="outline" className="mt-4 gap-1.5" onClick={clearFilters}>
+                <X className="h-3.5 w-3.5" />
+                {t("admin.filter.clear")}
+              </Button>
             </div>
+          ) : (
+            <>
+              <div className="space-y-3 md:hidden">
+                {filteredReceipts.map((r) => (
+                  <div key={r.id} className="space-y-2 rounded-xl border border-border/70 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-medium">{r.receipt_no}</div>
+                        <div className="text-sm">{r.customer_name}</div>
+                        {r.phone ? <div className="text-xs text-muted-foreground">{r.phone}</div> : null}
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold">{money(receiptGrandTotal(r))}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(r.issued_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {r.description || r.car_name || "—"}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {labels.paymentMethods[r.payment_method] || r.payment_method}
+                    </div>
+                    {rowActions(r)}
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("admin.receipts.no")}</TableHead>
+                      <TableHead>{t("admin.receipts.customer")}</TableHead>
+                      <TableHead>{t("admin.receipts.description")}</TableHead>
+                      <TableHead>{t("admin.receipts.payment")}</TableHead>
+                      <TableHead>{t("admin.receipts.grandTotal")}</TableHead>
+                      <TableHead>{t("admin.receipts.date")}</TableHead>
+                      <TableHead className="text-right">{t("admin.receipts.actions")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredReceipts.map((r) => (
+                      <TableRow key={r.id} className="transition-colors hover:bg-muted/50">
+                        <TableCell className="font-medium">{r.receipt_no}</TableCell>
+                        <TableCell>
+                          {r.customer_name}
+                          {r.phone ? <div className="text-xs text-muted-foreground">{r.phone}</div> : null}
+                        </TableCell>
+                        <TableCell className="text-sm">{r.description || r.car_name || "—"}</TableCell>
+                        <TableCell className="text-sm">
+                          {labels.paymentMethods[r.payment_method] || r.payment_method}
+                        </TableCell>
+                        <TableCell className="font-semibold">{money(receiptGrandTotal(r))}</TableCell>
+                        <TableCell className="text-sm">{new Date(r.issued_at).toLocaleDateString()}</TableCell>
+                        <TableCell className="text-right">{rowActions(r)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

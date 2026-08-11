@@ -1,9 +1,14 @@
 import { useMemo, useState } from "react";
 import { useCars } from "@/hooks/useCars";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useCountUp } from "@/hooks/useCountUp";
 import { useContact, DEFAULT_CONTACT } from "@/hooks/useContact";
 import {
-  useAdminOrders, useUpdateOrderStatus, useCreateOrder, useDeleteOrder, ORDER_STATUSES,
+  useAdminOrders,
+  useUpdateOrderStatus,
+  useCreateOrder,
+  useDeleteOrder,
+  ORDER_STATUSES,
   type Order,
 } from "@/hooks/useAdminOrders";
 import { useCreateReceipt } from "@/hooks/useReceipts";
@@ -16,12 +21,68 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Plus, Trash2, Package, FileText } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  Package,
+  FileText,
+  Clock,
+  Cog,
+  CheckCircle2,
+  X,
+  type LucideIcon,
+} from "lucide-react";
+import type { TranslationKey } from "@/i18n/translations";
+import { cn } from "@/lib/utils";
 
 const statusVariant = (s: string): "default" | "secondary" | "outline" | "destructive" =>
-  s === "completed" || s === "delivered" ? "default"
-    : s === "cancelled" ? "destructive"
-    : s === "pending" ? "outline" : "secondary";
+  s === "completed" || s === "delivered"
+    ? "default"
+    : s === "cancelled"
+      ? "destructive"
+      : s === "pending"
+        ? "outline"
+        : "secondary";
+
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  tone,
+}: {
+  label: string;
+  value: number;
+  icon: LucideIcon;
+  tone: string;
+}) {
+  const n = useCountUp(value);
+  return (
+    <Card className="admin-card-hover border-border/70 shadow-sm">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center justify-between text-sm font-medium text-muted-foreground">
+          {label}
+          <span className={cn("inline-flex h-8 w-8 items-center justify-center rounded-lg", tone)}>
+            <Icon className="h-4 w-4" />
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold tracking-tight tabular-nums">{n.toLocaleString()}</div>
+      </CardContent>
+    </Card>
+  );
+}
 
 const AdminOrders = () => {
   const { t } = useLanguage();
@@ -35,8 +96,18 @@ const AdminOrders = () => {
 
   const realCars = cars.filter((c) => !String(c.id).startsWith("mock-"));
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ customer_name: "", phone: "", carId: "", total: "", status: "pending", notes: "" });
+  const [form, setForm] = useState({
+    customer_name: "",
+    phone: "",
+    carId: "",
+    total: "",
+    status: "pending",
+    notes: "",
+  });
   const [receiptBusyId, setReceiptBusyId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const receiptLabels: ReceiptPrintLabels = useMemo(
     () => ({
@@ -82,8 +153,32 @@ const AdminOrders = () => {
     [t]
   );
 
-  const count = (s: string) => orders.filter((o) => o.status === s).length;
+  const statusLabel = (s: string) => {
+    const key = `orders.status.${s}` as TranslationKey;
+    const translated = t(key);
+    return translated === key ? s : translated;
+  };
+
   const money = (n: number) => `$${Number(n).toLocaleString()}`;
+
+  const filteredOrders = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return orders.filter((o) => {
+      if (statusFilter !== "all" && o.status !== statusFilter) return false;
+      if (q) {
+        const name = (o.customer_name || o.notes?.split("\n")[0] || "").toLowerCase();
+        const phone = (o.phone || "").toLowerCase();
+        if (!name.includes(q) && !phone.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [orders, search, statusFilter]);
+
+  const hasFilters = search.trim() !== "" || statusFilter !== "all";
+  const clearFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+  };
 
   const issueReceipt = (order: Order) => {
     const item = order.order_items?.[0];
@@ -98,7 +193,8 @@ const AdminOrders = () => {
     createReceipt.mutate(
       {
         order_id: order.id,
-        customer_name: order.customer_name || order.notes?.split("\n")[0]?.trim() || "Customer",
+        customer_name:
+          order.customer_name || order.notes?.split("\n")[0]?.trim() || t("admin.orders.walkIn"),
         phone: order.phone || undefined,
         description: carName,
         car_name: carName,
@@ -129,136 +225,363 @@ const AdminOrders = () => {
 
   const submit = () => {
     const car = realCars.find((c) => c.id === form.carId);
-    createOrder.mutate({
-      customer_name: form.customer_name || "Walk-in customer",
-      phone: form.phone,
-      status: form.status,
-      total_amount: form.total !== "" ? Number(form.total) : (car ? car.price : 0),
-      notes: form.notes,
-      items: car ? [{ car_id: car.id, car_name: car.name, price: car.price }] : [],
-    }, {
-      onSuccess: () => { setOpen(false); setForm({ customer_name: "", phone: "", carId: "", total: "", status: "pending", notes: "" }); },
-    });
+    createOrder.mutate(
+      {
+        customer_name: form.customer_name || t("admin.orders.walkIn"),
+        phone: form.phone,
+        status: form.status,
+        total_amount: form.total !== "" ? Number(form.total) : car ? car.price : 0,
+        notes: form.notes,
+        items: car ? [{ car_id: car.id, car_name: car.name, price: car.price }] : [],
+      },
+      {
+        onSuccess: () => {
+          setOpen(false);
+          setForm({ customer_name: "", phone: "", carId: "", total: "", status: "pending", notes: "" });
+        },
+      }
+    );
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t("admin.orders.title")}</h1>
-          <p className="text-muted-foreground">{t("admin.orders.subtitle")}</p>
+  const customerCell = (o: Order) => (
+    <>
+      <div className="font-medium">
+        {o.customer_name || o.notes?.split("\n")[0]?.trim() || "—"}
+      </div>
+      {o.phone ? <div className="text-xs text-muted-foreground">{o.phone}</div> : null}
+      {o.notes?.includes("Telegram:") ? (
+        <div className="text-xs text-[#229ED9]">
+          {o.notes.split("\n").find((l) => l.startsWith("Telegram:"))}
         </div>
-        <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-2" />New Order</Button>
+      ) : null}
+    </>
+  );
+
+  const itemsLabel = (o: Order) =>
+    o.order_items?.length
+      ? o.order_items.map((i) => i.car_name || i.car_id || "Car").join(", ")
+      : o.notes || "—";
+
+  const rowActions = (o: Order) => (
+    <div className="flex justify-end gap-1.5">
+      <Button
+        size="sm"
+        variant="outline"
+        className="gap-1"
+        disabled={receiptBusyId === o.id || createReceipt.isPending}
+        onClick={() => issueReceipt(o)}
+        title={t("admin.receipts.fromOrder")}
+      >
+        {receiptBusyId === o.id ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <FileText className="h-4 w-4" />
+        )}
+      </Button>
+      <Button size="sm" variant="destructive" onClick={() => setDeleteId(o.id)}>
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button onClick={() => setOpen(true)} className="gap-1.5 transition-transform active:scale-95">
+          <Plus className="h-4 w-4" />
+          {t("admin.orders.new")}
+        </Button>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[["Total Orders", orders.length], ["Pending", count("pending")], ["Processing", count("processing")], ["Completed", count("completed") + count("delivered")]].map(([l, v]) => (
-          <Card key={l as string}><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{l}</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-bold">{v as number}</div></CardContent></Card>
-        ))}
+      <div className="admin-stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label={t("admin.orders.statTotal")}
+          value={orders.length}
+          icon={Package}
+          tone="text-[#174080] bg-[#174080]/12"
+        />
+        <StatCard
+          label={t("admin.orders.statPending")}
+          value={orders.filter((o) => o.status === "pending").length}
+          icon={Clock}
+          tone="text-amber-600 bg-amber-500/10"
+        />
+        <StatCard
+          label={t("admin.orders.statProcessing")}
+          value={orders.filter((o) => o.status === "processing").length}
+          icon={Cog}
+          tone="text-orange-600 bg-orange-500/10"
+        />
+        <StatCard
+          label={t("admin.orders.statCompleted")}
+          value={
+            orders.filter((o) => o.status === "completed" || o.status === "delivered").length
+          }
+          icon={CheckCircle2}
+          tone="text-emerald-600 bg-emerald-500/10"
+        />
       </div>
 
-      <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><Package className="h-5 w-5" />All Orders</CardTitle></CardHeader>
+      <Card className="animate-admin-pop border-border/70 shadow-sm">
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-[#174080]" />
+              {t("admin.orders.list")}
+            </CardTitle>
+            {orders.length > 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {filteredOrders.length} {t("admin.common.results")}
+              </p>
+            ) : null}
+          </div>
+          {orders.length > 0 ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t("admin.orders.search")}
+                className="sm:max-w-xs"
+              />
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="sm:w-[180px]">
+                  <SelectValue placeholder={t("admin.orders.filterStatus")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("admin.orders.filterAll")}</SelectItem>
+                  {ORDER_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {statusLabel(s)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {hasFilters ? (
+                <Button variant="outline" size="sm" onClick={clearFilters} className="gap-1.5">
+                  <X className="h-3.5 w-3.5" />
+                  {t("admin.filter.clear")}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+        </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
           ) : orders.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground">
-              <Package className="h-12 w-12 mx-auto mb-3 opacity-50" /><p>No orders yet</p>
-              <Button className="mt-4" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-2" />Create first order</Button>
+            <div className="py-10 text-center text-muted-foreground">
+              <Package className="mx-auto mb-3 h-12 w-12 opacity-50" />
+              <p>{t("admin.orders.empty")}</p>
+              <Button className="mt-4 gap-1.5" onClick={() => setOpen(true)}>
+                <Plus className="h-4 w-4" />
+                {t("admin.orders.createFirst")}
+              </Button>
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground">
+              <p>{t("admin.orders.noResults")}</p>
+              <Button variant="outline" className="mt-4 gap-1.5" onClick={clearFilters}>
+                <X className="h-3.5 w-3.5" />
+                {t("admin.filter.clear")}
+              </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader><TableRow>
-                  <TableHead>Customer</TableHead><TableHead>Date</TableHead><TableHead>Items</TableHead>
-                  <TableHead>Total</TableHead><TableHead>Status</TableHead><TableHead>Update</TableHead><TableHead className="text-right">Actions</TableHead>
-                </TableRow></TableHeader>
-                <TableBody>
-                  {orders.map((o) => (
-                    <TableRow key={o.id}>
-                      <TableCell className="font-medium">
-                        {o.customer_name || o.notes?.split("\n")[0]?.trim() || "—"}
-                        <div className="text-xs text-muted-foreground">{o.phone}</div>
-                        {o.notes?.includes("Telegram:") && (
-                          <div className="text-xs text-[#229ED9]">
-                            {o.notes.split("\n").find((l) => l.startsWith("Telegram:"))}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm">{new Date(o.created_at).toLocaleDateString()}</TableCell>
-                      <TableCell className="text-sm">{o.order_items?.length ? o.order_items.map((i) => i.car_name || i.car_id || "Car").join(", ") : (o.notes || "—")}</TableCell>
-                      <TableCell className="font-semibold">{money(o.total_amount)}</TableCell>
-                      <TableCell><Badge variant={statusVariant(o.status)}>{o.status}</Badge></TableCell>
-                      <TableCell>
-                        <Select value={o.status} onValueChange={(v) => updateStatus.mutate({ id: o.id, status: v })}>
-                          <SelectTrigger className="h-8 w-[130px]"><SelectValue /></SelectTrigger>
-                          <SelectContent>{ORDER_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1.5">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1"
-                            disabled={receiptBusyId === o.id || createReceipt.isPending}
-                            onClick={() => issueReceipt(o)}
-                            title={t("admin.receipts.fromOrder")}
-                          >
-                            {receiptBusyId === o.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <FileText className="h-4 w-4" />
-                            )}
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => deleteOrder.mutate(o.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+            <>
+              <div className="space-y-3 md:hidden">
+                {filteredOrders.map((o) => (
+                  <div key={o.id} className="space-y-3 rounded-xl border border-border/70 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">{customerCell(o)}</div>
+                      <Badge variant={statusVariant(o.status)}>{statusLabel(o.status)}</Badge>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {new Date(o.created_at).toLocaleDateString()}
+                    </div>
+                    <div className="text-sm">{itemsLabel(o)}</div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold">{money(o.total_amount)}</span>
+                      <Select
+                        value={o.status}
+                        onValueChange={(v) => updateStatus.mutate({ id: o.id, status: v })}
+                      >
+                        <SelectTrigger className="h-8 w-[130px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ORDER_STATUSES.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {statusLabel(s)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {rowActions(o)}
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("admin.orders.col.customer")}</TableHead>
+                      <TableHead>{t("admin.orders.col.date")}</TableHead>
+                      <TableHead>{t("admin.orders.col.items")}</TableHead>
+                      <TableHead>{t("admin.orders.col.total")}</TableHead>
+                      <TableHead>{t("admin.orders.col.status")}</TableHead>
+                      <TableHead>{t("admin.orders.col.update")}</TableHead>
+                      <TableHead className="text-right">{t("admin.orders.col.actions")}</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredOrders.map((o) => (
+                      <TableRow key={o.id} className="transition-colors hover:bg-muted/50">
+                        <TableCell>{customerCell(o)}</TableCell>
+                        <TableCell className="text-sm">
+                          {new Date(o.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-sm">{itemsLabel(o)}</TableCell>
+                        <TableCell className="font-semibold">{money(o.total_amount)}</TableCell>
+                        <TableCell>
+                          <Badge variant={statusVariant(o.status)}>{statusLabel(o.status)}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={o.status}
+                            onValueChange={(v) => updateStatus.mutate({ id: o.id, status: v })}
+                          >
+                            <SelectTrigger className="h-8 w-[130px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ORDER_STATUSES.map((s) => (
+                                <SelectItem key={s} value={s}>
+                                  {statusLabel(s)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="text-right">{rowActions(o)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>New Order</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{t("admin.orders.form.title")}</DialogTitle>
+          </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5"><Label>Customer name</Label><Input value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} placeholder="Customer name" /></div>
-              <div className="space-y-1.5"><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/[^0-9+\-\s()]/g, "") })} placeholder="0xx xxx xxx" /></div>
+              <div className="space-y-1.5">
+                <Label>{t("admin.orders.form.name")}</Label>
+                <Input
+                  value={form.customer_name}
+                  onChange={(e) => setForm({ ...form, customer_name: e.target.value })}
+                  placeholder={t("admin.orders.form.name")}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t("admin.orders.form.phone")}</Label>
+                <Input
+                  value={form.phone}
+                  onChange={(e) =>
+                    setForm({ ...form, phone: e.target.value.replace(/[^0-9+\-\s()]/g, "") })
+                  }
+                  placeholder="0xx xxx xxx"
+                />
+              </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Car</Label>
+              <Label>{t("admin.orders.form.car")}</Label>
               <Select value={form.carId} onValueChange={pickCar}>
-                <SelectTrigger><SelectValue placeholder="Select a car" /></SelectTrigger>
-                <SelectContent>{realCars.map((c) => <SelectItem key={c.id} value={c.id}>{c.name} — ${c.price.toLocaleString()}</SelectItem>)}</SelectContent>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("admin.orders.form.selectCar")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {realCars.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name} — ${c.price.toLocaleString()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5"><Label>Total ($)</Label><Input type="number" value={form.total} onChange={(e) => setForm({ ...form, total: e.target.value })} placeholder="0" /></div>
-              <div className="space-y-1.5"><Label>Status</Label>
+              <div className="space-y-1.5">
+                <Label>{t("admin.orders.form.total")}</Label>
+                <Input
+                  type="number"
+                  value={form.total}
+                  onChange={(e) => setForm({ ...form, total: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t("admin.orders.form.status")}</Label>
                 <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{ORDER_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ORDER_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {statusLabel(s)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
             </div>
-            <div className="space-y-1.5"><Label>Notes (optional)</Label><Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Notes" /></div>
+            <div className="space-y-1.5">
+              <Label>{t("admin.orders.form.notes")}</Label>
+              <Input
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                placeholder={t("admin.orders.form.notes")}
+              />
+            </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick={submit} disabled={createOrder.isPending}>{createOrder.isPending ? "Saving..." : "Create order"}</Button>
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                {t("form.cancel")}
+              </Button>
+              <Button onClick={submit} disabled={createOrder.isPending}>
+                {createOrder.isPending ? t("form.saving") : t("admin.orders.form.create")}
+              </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("admin.orders.deleteTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("admin.orders.deleteDesc")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("form.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteId) deleteOrder.mutate(deleteId);
+                setDeleteId(null);
+              }}
+            >
+              {t("admin.orders.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

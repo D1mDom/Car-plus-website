@@ -17,7 +17,7 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         ocean: "bg-gradient-ocean text-primary-foreground font-semibold shadow-button hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]",
         hero: "bg-gradient-ocean text-primary-foreground font-semibold text-base px-8 py-6 shadow-button hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]",
-        category: "border border-border bg-muted/40 text-foreground hover:border-primary/50 hover:bg-primary/10 data-[active=true]:border-primary data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:hover:bg-primary",
+        category: "rounded-full border border-border/80 bg-background text-foreground hover:border-[#174080]/35 hover:bg-[#174080]/5 data-[active=true]:border-[#174080] data-[active=true]:bg-[#174080] data-[active=true]:text-white data-[active=true]:shadow-sm data-[active=true]:hover:bg-[#143871]",
       },
       size: {
         default: "h-10 px-4 py-2",

@@ -70,7 +70,7 @@ const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
 
   return (
     <>
-      <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/35 hover:shadow-lg">
+      <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/35 hover:shadow-lg">
         <div className="block w-full text-left">
           {/* Tap / click image → preview popup */}
           <button
@@ -84,7 +84,7 @@ const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
             aria-label={t("card.preview")}
           >
             {featured && (
-              <span className="absolute left-3 top-3 z-10 inline-flex items-center gap-1 rounded-lg bg-amber-500 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm">
+              <span className="absolute left-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm">
                 <Star className="h-3 w-3 fill-white" />
                 {t("card.featured")}
               </span>
@@ -187,29 +187,35 @@ const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
             )}
           </button>
 
-          <div className="p-4 pb-3">
-            <p className="inline-block rounded-md border border-border px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+          <div className="flex flex-1 flex-col gap-2 p-5">
+            <p className="inline-flex w-fit items-center rounded-full border border-border bg-background/60 px-2 py-1 font-mono text-[11px] text-muted-foreground">
               {car.code}
             </p>
-            <h3 className="mt-1.5 line-clamp-1 font-heading text-base font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
+            <h3 className="line-clamp-1 font-heading text-base font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
               {car.name}
             </h3>
-            <p className="mt-1.5 font-heading text-xl font-bold text-primary sm:text-2xl">
-              ${car.price.toLocaleString()}
-            </p>
-            <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5 shrink-0" />
-              {t("card.location")}
-            </p>
+            <div className="flex items-end justify-between gap-3">
+              <p className="font-heading text-xl font-bold text-primary tabular-nums sm:text-2xl">
+                ${car.price.toLocaleString()}
+              </p>
+              <p className="hidden text-xs text-muted-foreground sm:block">
+                {t("card.location")}
+              </p>
+            </div>
 
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground sm:hidden">
+              <MapPin className="h-3.5 w-3.5 shrink-0" />
+              <span>{t("card.location")}</span>
+            </div>
+
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
                 {t(statusKey)}
               </span>
               {specs.map((s, i) => (
                 <span
                   key={i}
-                  className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                  className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/60 px-2 py-1 text-xs text-muted-foreground"
                 >
                   <s.icon className="h-3.5 w-3.5" />
                   {s.value}
@@ -219,11 +225,11 @@ const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
           </div>
         </div>
 
-        <div className="mt-auto flex gap-2 border-t border-border/70 p-[10px]">
+        <div className="mt-auto flex gap-2 border-t border-border/60 bg-muted/15 p-4">
           <Button asChild size="sm" className="flex-1">
             <Link to={`/car/${car.id}`}>{t("card.details")}</Link>
           </Button>
-          <Button asChild size="sm" variant="outline" className="flex-1">
+          <Button asChild size="sm" variant="outline" className="flex-1 border-border/70">
             <a href={`https://t.me/${telegram}`} target="_blank" rel="noopener noreferrer">
               <MessageCircle className="h-4 w-4" />
               {t("card.contact")}

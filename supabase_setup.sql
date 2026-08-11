@@ -451,6 +451,52 @@ EXCEPTION
 END $$;
 
 -- ============================================================================
+-- Site visitor counter (admin navbar badge)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.site_stats (
+  id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  visitor_count BIGINT NOT NULL DEFAULT 0,
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+INSERT INTO public.site_stats (id, visitor_count) VALUES (1, 0)
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE public.site_stats ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "No direct site_stats access" ON public.site_stats;
+CREATE POLICY "No direct site_stats access" ON public.site_stats FOR ALL USING (false);
+
+CREATE OR REPLACE FUNCTION public.record_site_visit()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.site_stats (id, visitor_count, updated_at)
+  VALUES (1, 1, now())
+  ON CONFLICT (id) DO UPDATE
+    SET visitor_count = public.site_stats.visitor_count + 1,
+        updated_at = now();
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_visitor_count()
+RETURNS bigint
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COALESCE((SELECT visitor_count FROM public.site_stats WHERE id = 1), 0);
+$$;
+
+GRANT EXECUTE ON FUNCTION public.record_site_visit() TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_visitor_count() TO anon, authenticated;
+
+-- ============================================================================
 -- BOOTSTRAP — grant the first admin
 --
 -- admin_users cannot be written through the public API by design, so the first

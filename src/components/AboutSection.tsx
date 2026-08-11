@@ -37,12 +37,12 @@ const AboutSection = () => {
           className="pointer-events-none absolute inset-0 opacity-40"
           style={{
             backgroundImage:
-              "radial-gradient(ellipse 55% 45% at 85% 15%, hsl(199 100% 55% / 0.28), transparent 60%), radial-gradient(ellipse 40% 50% at 10% 90%, hsl(28 90% 58% / 0.12), transparent 55%)",
+              "radial-gradient(ellipse 55% 45% at 85% 15%, hsl(199 100% 55% / 0.28), transparent 60%), radial-gradient(ellipse 40% 50% at 10% 90%, hsl(217 70% 38% / 0.12), transparent 55%)",
           }}
         />
         <div className="container relative mx-auto max-w-7xl px-[10px] py-14 sm:py-20">
           <div className="mx-auto max-w-3xl animate-slide-up text-center sm:text-left">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[hsl(199_90%_72%)]">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#5b8fd4]]">
               {t("about.eyebrow")}
             </p>
             <h1 className="font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-[2.75rem]">
@@ -59,11 +59,11 @@ const AboutSection = () => {
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
               <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-white/90 ring-1 ring-white/15">
-                <Calendar className="h-3.5 w-3.5 text-[hsl(28_95%_68%)]" />
+                <Calendar className="h-3.5 w-3.5 text-[hsl(199_95%_68%)]" />
                 {t("about.founded")}
               </span>
               <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-white/90 ring-1 ring-white/15">
-                <MapPin className="h-3.5 w-3.5 text-[hsl(199_90%_72%)]" />
+                <MapPin className="h-3.5 w-3.5 text-[#5b8fd4]]" />
                 {t("about.location")}
               </span>
             </div>

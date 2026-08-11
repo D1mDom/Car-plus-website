@@ -105,7 +105,7 @@ const Orders = () => {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[hsl(210_28%_97%)]">
-        <Loader2 className="h-8 w-8 animate-spin text-[hsl(350_70%_48%)]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#174080]" />
       </div>
     );
   }
@@ -206,12 +206,12 @@ const Orders = () => {
 
       <main className="flex-1">
         {/* Hero — sits below sticky header */}
-        <section className="relative overflow-hidden bg-[linear-gradient(135deg,hsl(216_50%_14%),hsl(350_42%_26%))]">
+        <section className="relative overflow-hidden bg-[linear-gradient(135deg,hsl(216_50%_14%),hsl(199_50%_26%))]">
           <div
             className="pointer-events-none absolute inset-0"
             style={{
               backgroundImage:
-                "radial-gradient(ellipse 70% 60% at 10% 0%, hsl(350 70% 52% / 0.28), transparent 50%), radial-gradient(ellipse 50% 40% at 95% 30%, hsl(199 90% 55% / 0.18), transparent 45%)",
+                "radial-gradient(ellipse 70% 60% at 10% 0%, hsl(217 70% 30% / 0.28), transparent 50%), radial-gradient(ellipse 50% 40% at 95% 30%, hsl(199 90% 55% / 0.18), transparent 45%)",
             }}
           />
           <div className="container relative mx-auto max-w-5xl px-4 py-10 sm:py-12">
@@ -269,8 +269,8 @@ const Orders = () => {
                   className={cn(
                     "inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium shadow-sm transition-colors",
                     filter === f.key
-                      ? "border-[hsl(350_70%_52%)] bg-[hsl(350_70%_52%)] text-white"
-                      : "border-border/80 bg-card text-foreground hover:border-[hsl(350_70%_52%/0.35)]"
+                      ? "border-[#174080] bg-[#174080] text-white"
+                      : "border-border/80 bg-card text-foreground hover:border-[#174080]/35"
                   )}
                 >
                   {f.label}
@@ -289,27 +289,27 @@ const Orders = () => {
 
           {isLoading ? (
             <div className="flex justify-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-[hsl(350_70%_48%)]" />
+              <Loader2 className="h-8 w-8 animate-spin text-[#174080]" />
             </div>
           ) : orders.length === 0 ? (
             <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm">
               <div className="grid md:grid-cols-2">
                 <div className="flex flex-col justify-center px-8 py-12 sm:px-10">
-                  <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(350_70%_52%/0.1)] text-[hsl(350_70%_48%)]">
+                  <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#174080]/10 text-[#174080]">
                     <Package className="h-7 w-7" />
                   </span>
                   <h2 className="font-heading text-xl font-bold text-foreground">
                     {t("orders.empty")}
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">{t("orders.emptyHint")}</p>
-                  <Button asChild className="mt-6 w-fit gap-2 bg-[hsl(350_70%_52%)] hover:bg-[hsl(350_70%_46%)]">
+                  <Button asChild className="mt-6 w-fit gap-2 bg-[#174080] hover:bg-[#143871]">
                     <Link to="/cars">
                       {t("orders.browse")}
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
                 </div>
-                <div className="relative hidden min-h-[240px] bg-[linear-gradient(145deg,hsl(216_40%_20%),hsl(350_40%_30%))] md:block">
+                <div className="relative hidden min-h-[240px] bg-[linear-gradient(145deg,hsl(216_40%_20%),hsl(199_45%_30%))] md:block">
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Car className="h-24 w-24 text-white/20" />
                   </div>
@@ -336,7 +336,7 @@ const Orders = () => {
                 return (
                   <li
                     key={o.id}
-                    className="group overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[hsl(350_70%_52%/0.28)] hover:shadow-lg"
+                    className="group overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#174080]/28 hover:shadow-lg"
                   >
                     <div className="flex flex-col sm:flex-row">
                       {/* Fixed-height image column (was collapsing on desktop) */}
@@ -360,7 +360,7 @@ const Orders = () => {
                             />
                           )
                         ) : (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[hsl(350_70%_52%/0.08)] text-[hsl(350_70%_48%)]">
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#174080]/8 text-[#174080]">
                             <Car className="h-10 w-10" />
                             <span className="text-xs font-medium opacity-70">{t("orders.noPhoto")}</span>
                           </div>
@@ -406,7 +406,7 @@ const Orders = () => {
                                 <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                                   {o.phone && (
                                     <span className="inline-flex items-center gap-1">
-                                      <Phone className="h-3.5 w-3.5 text-[hsl(350_70%_48%)]" />
+                                      <Phone className="h-3.5 w-3.5 text-[#174080]" />
                                       {o.phone}
                                     </span>
                                   )}
@@ -450,13 +450,13 @@ const Orders = () => {
                             return (
                               <div key={step} className="flex items-center gap-1.5">
                                 {idx > 0 && (
-                                  <div className={cn("h-px w-6", done ? "bg-[hsl(350_70%_52%)]" : "bg-border")} />
+                                  <div className={cn("h-px w-6", done ? "bg-[#174080]" : "bg-border")} />
                                 )}
                                 <span
                                   className={cn(
                                     "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold",
                                     current
-                                      ? "bg-[hsl(350_70%_52%/0.12)] text-[hsl(350_70%_45%)]"
+                                      ? "bg-[#174080]/12 text-[#143871]"
                                       : done
                                         ? "text-emerald-700"
                                         : "text-muted-foreground/60"
@@ -550,7 +550,7 @@ const Orders = () => {
                   </Button>
                 </div>
               </div>
-              <div className="border-t border-border/60 bg-[linear-gradient(145deg,hsl(216_40%_18%),hsl(350_38%_28%))] px-6 py-7 text-white sm:px-8 md:border-l md:border-t-0">
+              <div className="border-t border-border/60 bg-[linear-gradient(145deg,hsl(216_40%_18%),hsl(199_42%_28%))] px-6 py-7 text-white sm:px-8 md:border-l md:border-t-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/60">
                   {t("orders.processTitle")}
                 </p>

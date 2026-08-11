@@ -16,7 +16,7 @@ const Footer = () => {
             <Link to="/" className="inline-flex items-center gap-3">
               <img src={logo} alt="Car Plus" className="h-11 w-auto rounded-lg" />
               <span className="font-heading text-xl font-bold tracking-tight">
-                Car <span className="text-[hsl(199_100%_62%)]">Plus</span>
+                Car <span className="text-[#1a4a93]">Plus</span>
               </span>
             </Link>
             <p className="max-w-xs text-sm leading-relaxed text-white/55">

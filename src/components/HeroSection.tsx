@@ -114,7 +114,7 @@ const HeroSection = () => {
                 <Button
                   asChild
                   size="lg"
-                  className="mt-7 h-11 rounded-none bg-[hsl(350_72%_42%)] px-9 text-xs font-bold uppercase tracking-[0.14em] text-white hover:bg-[hsl(350_72%_36%)] sm:text-sm"
+                  className="mt-7 h-11 rounded-none bg-[#174080] px-9 text-xs font-bold uppercase tracking-[0.14em] text-white hover:bg-[#143871] sm:text-sm"
                 >
                   <Link to="/cars">{t("hero.ctaMore")}</Link>
                 </Button>
@@ -191,7 +191,7 @@ const HeroSection = () => {
                   className={cn(
                     "h-2 w-2 transition-colors duration-300",
                     current === index
-                      ? "bg-[hsl(350_72%_45%)]"
+                      ? "bg-[#174080]"
                       : "bg-white/80 hover:bg-white"
                   )}
                 />

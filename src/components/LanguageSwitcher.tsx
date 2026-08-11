@@ -60,8 +60,8 @@ const OPTIONS: {
 
 interface LanguageSwitcherProps {
   className?: string;
-  /** For dark overlays (e.g. admin login) */
-  tone?: "default" | "light";
+  /** default = light page; light = on dark hero; admin = red navbar pill */
+  tone?: "default" | "light" | "admin";
 }
 
 const LanguageSwitcher = ({ className, tone = "default" }: LanguageSwitcherProps) => {
@@ -76,17 +76,31 @@ const LanguageSwitcher = ({ className, tone = "default" }: LanguageSwitcherProps
           variant="outline"
           size="sm"
           className={cn(
-            "h-9 gap-1.5 rounded-full px-2.5 font-semibold",
+            "h-9 gap-1.5 font-semibold",
+            tone === "admin"
+              ? "rounded-lg border-0 bg-[#174080] px-3 text-white shadow-sm hover:bg-[#143871] hover:text-white data-[state=open]:bg-[#143871]"
+              : "rounded-full px-2.5",
             tone === "light"
               ? "border-white/35 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-              : "border-border/80 bg-background text-foreground hover:border-[hsl(28_90%_58%/0.45)] hover:bg-[hsl(28_95%_62%/0.14)] hover:text-[hsl(24_80%_42%)] data-[state=open]:border-[hsl(28_90%_58%/0.55)] data-[state=open]:bg-[hsl(28_95%_62%/0.16)] data-[state=open]:text-[hsl(24_80%_42%)]",
+              : tone === "default"
+                ? "border-border/80 bg-background text-foreground hover:border-[#174080]/45 hover:bg-[#174080]/12 hover:text-[#174080] data-[state=open]:border-[#174080]/55 data-[state=open]:bg-[#174080]/14 data-[state=open]:text-[#174080]"
+                : null,
             className
           )}
           aria-label={t("lang.select")}
         >
           <FlagImg src={current.flag} alt={current.flagAlt} />
-          <span className="text-xs tracking-wide">{current.code}</span>
-          <ChevronDown className="h-3.5 w-3.5 opacity-80" />
+          <span
+            className={cn(
+              "text-xs tracking-wide",
+              tone === "admin" && "text-sm font-medium text-white"
+            )}
+          >
+            {current.code}
+          </span>
+          <ChevronDown
+            className={cn("h-3.5 w-3.5 opacity-80", tone === "admin" && "text-white")}
+          />
         </Button>
       </DropdownMenuTrigger>
 
@@ -98,8 +112,8 @@ const LanguageSwitcher = ({ className, tone = "default" }: LanguageSwitcherProps
               key={value}
               onClick={() => setLang(value)}
               className={cn(
-                "cursor-pointer gap-3 rounded-lg px-2.5 py-2.5 focus:bg-[hsl(28_95%_62%/0.14)] focus:text-[hsl(24_80%_42%)]",
-                selected && "bg-[hsl(28_95%_62%/0.14)] focus:bg-[hsl(28_95%_62%/0.2)]"
+                "cursor-pointer gap-3 rounded-lg px-2.5 py-2.5 focus:bg-[#174080]/12 focus:text-[#174080]",
+                selected && "bg-[#174080]/12 focus:bg-[#174080]/18"
               )}
             >
               <FlagImg src={flag} alt={flagAlt} className="mt-0.5 h-5 w-7" />
@@ -111,7 +125,7 @@ const LanguageSwitcher = ({ className, tone = "default" }: LanguageSwitcherProps
                   {t(nativeKey)}
                 </span>
               </span>
-              {selected && <Check className="h-4 w-4 shrink-0 text-[hsl(28_90%_52%)]" />}
+              {selected && <Check className="h-4 w-4 shrink-0 text-[#174080]" />}
             </DropdownMenuItem>
           );
         })}
