@@ -31,6 +31,7 @@ import AdminSettings from "./pages/AdminSettings";
 import AdminGuard from "./components/admin/AdminGuard";
 import AdminLayout from "./components/admin/AdminLayout";
 import NotFound from "./pages/NotFound";
+import VisitorTracker from "./components/VisitorTracker";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => {
                 <WishlistProvider>
                   <Toaster />
                   <Sonner />
+                  <VisitorTracker />
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/cars" element={<Cars />} />

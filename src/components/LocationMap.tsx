@@ -103,7 +103,7 @@ const LocationMap = () => {
 
               {address ? (
                 <p className="mt-3 flex items-start gap-2.5 text-sm leading-relaxed text-white/75">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(199_90%_72%)]" />
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#5b8fd4]]" />
                   <span>{address}</span>
                 </p>
               ) : (
@@ -114,7 +114,7 @@ const LocationMap = () => {
                 href={`tel:${phone.replace(/\s+/g, "")}`}
                 className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-white/85 transition-colors hover:text-white"
               >
-                <Phone className="h-4 w-4 text-[hsl(28_95%_68%)]" />
+                <Phone className="h-4 w-4 text-[hsl(199_95%_68%)]" />
                 {phone}
               </a>
             </div>

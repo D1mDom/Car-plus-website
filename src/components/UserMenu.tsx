@@ -124,7 +124,7 @@ const UserMenu = ({
             <Button
               variant="outline"
               size="sm"
-              className="max-w-[200px] gap-2 hover:border-[hsl(28_90%_58%/0.45)] hover:bg-[hsl(28_95%_62%/0.14)] hover:text-[hsl(24_80%_42%)] data-[state=open]:border-[hsl(28_90%_58%/0.55)] data-[state=open]:bg-[hsl(28_95%_62%/0.16)] data-[state=open]:text-[hsl(24_80%_42%)]"
+              className="max-w-[200px] gap-2 hover:border-[#174080]/45 hover:bg-[#174080]/12 hover:text-[#174080] data-[state=open]:border-[#174080]/55 data-[state=open]:bg-[#174080]/14 data-[state=open]:text-[#174080]"
             >
               {avatarUrl ? (
                 <img

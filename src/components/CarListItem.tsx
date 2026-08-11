@@ -22,11 +22,11 @@ const CarListItem = ({ car }: CarListItemProps) => {
 
   return (
     <>
-      <Card className="group flex flex-col overflow-hidden border transition-all duration-300 hover:border-primary/50 sm:flex-row">
+      <Card className="group flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md sm:flex-row">
         <button
           type="button"
           onClick={() => setDetailOpen(true)}
-          className="relative h-48 w-full flex-shrink-0 overflow-hidden text-left sm:h-auto sm:w-64"
+          className="relative h-44 w-full flex-shrink-0 overflow-hidden text-left sm:h-auto sm:w-64"
           aria-label={t("card.preview")}
         >
           <img
@@ -39,18 +39,18 @@ const CarListItem = ({ car }: CarListItemProps) => {
             {t(statusKey)}
           </Badge>
         </button>
-        <div className="flex flex-1 flex-col justify-between p-[10px] sm:p-5">
+        <div className="flex flex-1 flex-col justify-between p-4 sm:p-5">
           <div>
             <div className="mb-2 flex items-start justify-between gap-3">
               <div>
-                <p className="inline-block rounded border border-border px-2 py-0.5 font-mono text-xs text-muted-foreground">
+                <p className="inline-flex w-fit items-center rounded-full border border-border bg-background/60 px-2 py-1 font-mono text-xs text-muted-foreground">
                   {car.code}
                 </p>
-                <h3 className="mt-2 text-lg font-semibold text-foreground transition-colors group-hover:text-primary">
+                <h3 className="mt-2 line-clamp-1 text-lg font-semibold text-foreground transition-colors group-hover:text-primary">
                   {car.name}
                 </h3>
               </div>
-              <p className="text-2xl font-bold text-primary">${car.price.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-primary tabular-nums">${car.price.toLocaleString()}</p>
             </div>
             <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1.5">
@@ -69,7 +69,11 @@ const CarListItem = ({ car }: CarListItemProps) => {
           </div>
           <div className="mt-4 flex items-center gap-2">
             <WishlistButton carId={car.id} variant="full" />
-            <Button asChild variant="outline" className="gap-2">
+            <Button
+              asChild
+              variant="outline"
+              className="gap-2 border-border/70 bg-background/60 hover:bg-background"
+            >
               <Link to={`/car/${car.id}`}>
                 <Eye className="h-4 w-4" />
                 {t("card.details")}

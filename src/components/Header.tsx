@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle 
 import logo from "@/assets/logo.png";
 import UserMenu from "@/components/UserMenu";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import VisitorBadge from "@/components/VisitorBadge";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -53,20 +54,20 @@ const Header = () => {
   };
 
   const iconBtnClass =
-    "h-9 w-9 text-[hsl(244_30%_40%)] hover:bg-[hsl(28_95%_62%/0.16)] hover:text-[hsl(24_80%_42%)] active:bg-[hsl(28_90%_58%/0.24)] active:text-[hsl(24_75%_38%)]";
+    "h-9 w-9 text-[hsl(244_30%_40%)] hover:bg-[#174080]/12 hover:text-[#174080] active:bg-[#174080]/20 active:text-[#143871]";
 
   const navLinkClass = (path: string) =>
     cn(
       "relative rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
       isActive(path)
-        ? "bg-[hsl(28_90%_58%)] text-white shadow-sm"
-        : "text-[hsl(244_30%_40%)] hover:bg-[hsl(28_95%_62%/0.16)] hover:text-[hsl(24_80%_42%)] active:bg-[hsl(28_90%_58%/0.24)]"
+        ? "bg-[#174080] text-white shadow-sm"
+        : "text-[hsl(244_30%_40%)] hover:bg-[#174080]/12 hover:text-[#174080] active:bg-[#174080]/20 active:text-[#143871]"
     );
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm">
       {promotionText && (
-        <div className="flex w-full items-center justify-center gap-2 bg-gradient-to-r from-[hsl(350_70%_52%)] to-[hsl(350_65%_58%)] px-[10px] py-1.5 text-white">
+        <div className="flex w-full items-center justify-center gap-2 bg-gradient-to-r from-[#174080] to-[#1a4a93] px-[10px] py-1.5 text-white">
           <Megaphone className="h-3.5 w-3.5 shrink-0 opacity-90" />
           <p className="text-center text-xs font-semibold tracking-wide sm:text-sm">{promotionText}</p>
         </div>
@@ -93,7 +94,7 @@ const Header = () => {
                       <img src={logo} alt="Car Plus" className="h-10 w-auto rounded-lg" />
                       <div>
                         <span className="font-heading text-base font-bold">Car Plus</span>
-                        <p className="text-[10px] font-medium uppercase tracking-wide text-[hsl(350_65%_48%)]">
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-[#174080]">
                           {t("hero.logoTagline")}
                         </p>
                       </div>
@@ -107,8 +108,8 @@ const Header = () => {
                           className={cn(
                             "flex items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-medium transition-colors",
                             isActive(path)
-                              ? "bg-[hsl(28_90%_58%)] text-white shadow-sm"
-                              : "text-foreground hover:bg-[hsl(28_95%_62%/0.16)] hover:text-[hsl(24_80%_42%)] active:bg-[hsl(28_90%_58%/0.24)]"
+                              ? "bg-[#174080] text-white shadow-sm"
+                              : "text-foreground hover:bg-[#174080]/12 hover:text-[#174080] active:bg-[#174080]/20 active:text-[#143871]"
                           )}
                         >
                           <Icon className="h-[18px] w-[18px]" />
@@ -137,7 +138,7 @@ const Header = () => {
                   <p className="font-heading text-base font-bold leading-tight text-[hsl(244_45%_22%)] sm:text-lg">
                     Car Plus
                   </p>
-                  <p className="truncate text-[9px] font-semibold uppercase tracking-[0.12em] text-[hsl(350_65%_48%)] sm:text-[10px]">
+                  <p className="truncate text-[9px] font-semibold uppercase tracking-[0.12em] text-[#174080] sm:text-[10px]">
                     {t("hero.logoTagline")}
                   </p>
                 </div>
@@ -155,6 +156,7 @@ const Header = () => {
             <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
               {mounted && (
                 <>
+                  <VisitorBadge className="hidden md:inline-flex" />
                   <LanguageSwitcher />
                   <Button
                     variant="ghost"
@@ -176,9 +178,9 @@ const Header = () => {
                 aria-label={t("nav.wishlist")}
                 onClick={() => goTo("/wishlist")}
               >
-                <Heart className={cn("h-[18px] w-[18px]", items.length > 0 && "fill-[hsl(350_70%_52%)] text-[hsl(350_70%_52%)]")} />
+                <Heart className={cn("h-[18px] w-[18px]", items.length > 0 && "fill-[#174080] text-[#174080]")} />
                 {items.length > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[hsl(350_70%_52%)] px-1 text-[10px] font-semibold text-white">
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#174080] px-1 text-[10px] font-semibold text-white">
                     {items.length}
                   </span>
                 )}
@@ -197,7 +199,7 @@ const Header = () => {
               </Button>
 
               <UserMenu
-                signInClassName="hidden rounded-full bg-[hsl(28_90%_58%)] px-5 font-semibold text-white hover:bg-[hsl(28_85%_52%)] active:bg-[hsl(24_80%_46%)] sm:inline-flex"
+                signInClassName="hidden rounded-full bg-[#174080] px-5 font-semibold text-white hover:bg-[#143871] active:bg-[#0f2d5c] sm:inline-flex"
                 signInLabel={t("auth.signIn")}
               />
             </div>
