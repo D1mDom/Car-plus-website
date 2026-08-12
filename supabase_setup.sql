@@ -395,6 +395,45 @@ CREATE POLICY "Admins can view all profiles" ON public.profiles FOR SELECT USING
 CREATE OR REPLACE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- ============================================================================
+-- 4g. Receipts / invoices (admin-only)
+--
+-- One row per issued invoice. Without this table the app silently falls back to
+-- browser localStorage, so receipts would live on a single device and be lost
+-- when the browser is cleared.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.receipts (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  receipt_no TEXT NOT NULL UNIQUE,
+  order_id UUID REFERENCES public.orders(id) ON DELETE SET NULL,
+  customer_name TEXT NOT NULL DEFAULT 'Customer',
+  phone TEXT,
+  description TEXT,
+  car_name TEXT,
+  car_code TEXT,
+  year TEXT,
+  make TEXT,
+  model TEXT,
+  unit_price NUMERIC NOT NULL DEFAULT 0 CHECK (unit_price >= 0),
+  qty INTEGER NOT NULL DEFAULT 1 CHECK (qty > 0),
+  tax_rate NUMERIC NOT NULL DEFAULT 0 CHECK (tax_rate >= 0),
+  amount NUMERIC NOT NULL DEFAULT 0 CHECK (amount >= 0),
+  payment_method TEXT NOT NULL DEFAULT 'cash'
+    CHECK (payment_method IN ('cash','transfer','card','other')),
+  bank_name TEXT,
+  account_no TEXT,
+  notes TEXT,
+  issued_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.receipts ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins manage receipts" ON public.receipts;
+CREATE POLICY "Admins manage receipts" ON public.receipts FOR ALL
+  USING (public.is_admin(auth.uid())) WITH CHECK (public.is_admin(auth.uid()));
+
+-- ============================================================================
 -- 5. Indexes
 --
 -- Every one of these backs a query the app actually runs. Without them each
@@ -413,6 +452,8 @@ CREATE INDEX IF NOT EXISTS idx_orders_status          ON public.orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at      ON public.orders(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id   ON public.order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_profiles_user_id       ON public.profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_receipts_issued_at     ON public.receipts(issued_at DESC);
+CREATE INDEX IF NOT EXISTS idx_receipts_order_id      ON public.receipts(order_id);
 
 -- ============================================================================
 -- 6. Upgrades for databases created before this script
