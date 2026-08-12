@@ -118,12 +118,33 @@ export default {
   				'100%': {
   					backgroundPosition: '200% 0'
   				}
-  			}
+  			},
+  			statCarDrive: {
+  				'0%, 100%': { transform: 'translateX(0) scale(1)' },
+  				'50%': { transform: 'translateX(10px) scale(1.08)' },
+  			},
+  			statCheckPop: {
+  				'0%, 100%': { transform: 'scale(1)' },
+  				'50%': { transform: 'scale(1.35)' },
+  			},
+  			statSparkle: {
+  				'0%, 100%': { transform: 'rotate(0deg) scale(1)' },
+  				'25%': { transform: 'rotate(-16deg) scale(1.15)' },
+  				'75%': { transform: 'rotate(16deg) scale(1.15)' },
+  			},
+  			statCoin: {
+  				'0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
+  				'50%': { transform: 'translateY(-6px) rotate(-14deg)' },
+  			},
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out',
-  			shimmer: 'shimmer 2s infinite linear'
+  			shimmer: 'shimmer 2s infinite linear',
+  			'stat-car': 'statCarDrive 1.6s ease-in-out infinite',
+  			'stat-check': 'statCheckPop 1.4s ease-in-out infinite',
+  			'stat-sparkle': 'statSparkle 1.3s ease-in-out infinite',
+  			'stat-coin': 'statCoin 1.6s ease-in-out infinite',
   		},
   		boxShadow: {
   			'2xs': 'var(--shadow-2xs)',

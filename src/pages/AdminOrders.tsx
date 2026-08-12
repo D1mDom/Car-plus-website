@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useCars } from "@/hooks/useCars";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useCountUp } from "@/hooks/useCountUp";
@@ -86,6 +87,7 @@ function StatCard({
 
 const AdminOrders = () => {
   const { t } = useLanguage();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: orders = [], isLoading } = useAdminOrders();
   const { data: cars = [] } = useCars();
   const updateStatus = useUpdateOrderStatus();
@@ -108,6 +110,25 @@ const AdminOrders = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const status = searchParams.get("status");
+    if (status && ORDER_STATUSES.includes(status as (typeof ORDER_STATUSES)[number])) {
+      setStatusFilter(status);
+    } else {
+      setStatusFilter("all");
+    }
+  }, [searchParams]);
+
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value);
+    if (value === "all") {
+      searchParams.delete("status");
+      setSearchParams(searchParams, { replace: true });
+    } else {
+      setSearchParams({ status: value }, { replace: true });
+    }
+  };
 
   const receiptLabels: ReceiptPrintLabels = useMemo(
     () => ({
@@ -168,7 +189,12 @@ const AdminOrders = () => {
       if (q) {
         const name = (o.customer_name || o.notes?.split("\n")[0] || "").toLowerCase();
         const phone = (o.phone || "").toLowerCase();
-        if (!name.includes(q) && !phone.includes(q)) return false;
+        const items = (
+          o.order_items?.map((i) => i.car_name || i.car_id || "").join(" ") ||
+          o.notes ||
+          ""
+        ).toLowerCase();
+        if (!name.includes(q) && !phone.includes(q) && !items.includes(q)) return false;
       }
       return true;
     });
@@ -178,6 +204,7 @@ const AdminOrders = () => {
   const clearFilters = () => {
     setSearch("");
     setStatusFilter("all");
+    setSearchParams({}, { replace: true });
   };
 
   const issueReceipt = (order: Order) => {
@@ -343,7 +370,7 @@ const AdminOrders = () => {
                 placeholder={t("admin.orders.search")}
                 className="sm:max-w-xs"
               />
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
                 <SelectTrigger className="sm:w-[180px]">
                   <SelectValue placeholder={t("admin.orders.filterStatus")} />
                 </SelectTrigger>
@@ -390,23 +417,32 @@ const AdminOrders = () => {
           ) : (
             <>
               <div className="space-y-3 md:hidden">
-                {filteredOrders.map((o) => (
-                  <div key={o.id} className="space-y-3 rounded-xl border border-border/70 p-3">
+                {filteredOrders.map((o, i) => (
+                  <div
+                    key={o.id}
+                    className="space-y-3 rounded-xl border border-border/70 p-3"
+                    style={{
+                      animation: "adminRise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both",
+                      animationDelay: `${Math.min(i, 12) * 0.03 + 0.1}s`,
+                    }}
+                  >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">{customerCell(o)}</div>
-                      <Badge variant={statusVariant(o.status)}>{statusLabel(o.status)}</Badge>
+                      <Badge variant={statusVariant(o.status)} className="shrink-0">
+                        {statusLabel(o.status)}
+                      </Badge>
                     </div>
                     <div className="text-sm text-muted-foreground">
                       {new Date(o.created_at).toLocaleDateString()}
                     </div>
-                    <div className="text-sm">{itemsLabel(o)}</div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold">{money(o.total_amount)}</span>
+                    <div className="text-sm font-medium leading-snug">{itemsLabel(o)}</div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-lg font-semibold tabular-nums">{money(o.total_amount)}</span>
                       <Select
                         value={o.status}
                         onValueChange={(v) => updateStatus.mutate({ id: o.id, status: v })}
                       >
-                        <SelectTrigger className="h-8 w-[130px]">
+                        <SelectTrigger className="h-9 w-full min-w-[140px] sm:w-[160px]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -418,7 +454,7 @@ const AdminOrders = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    {rowActions(o)}
+                    <div className="flex justify-end border-t border-border/50 pt-2">{rowActions(o)}</div>
                   </div>
                 ))}
               </div>
@@ -437,8 +473,15 @@ const AdminOrders = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredOrders.map((o) => (
-                      <TableRow key={o.id} className="transition-colors hover:bg-muted/50">
+                    {filteredOrders.map((o, i) => (
+                      <TableRow
+                        key={o.id}
+                        className="transition-colors hover:bg-muted/50"
+                        style={{
+                          animation: "adminRise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both",
+                          animationDelay: `${Math.min(i, 12) * 0.03 + 0.1}s`,
+                        }}
+                      >
                         <TableCell>{customerCell(o)}</TableCell>
                         <TableCell className="text-sm">
                           {new Date(o.created_at).toLocaleDateString()}

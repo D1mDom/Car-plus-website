@@ -290,6 +290,64 @@
     animation: adminIconSwap 0.35s ease-out both;
   }
 
+  .admin-stat-icon-wrap {
+    animation: adminStatIconIn 0.45s ease forwards;
+  }
+
+  .admin-stagger > *:nth-child(1) .admin-stat-icon-wrap { animation-delay: 0.15s; }
+  .admin-stagger > *:nth-child(2) .admin-stat-icon-wrap { animation-delay: 0.22s; }
+  .admin-stagger > *:nth-child(3) .admin-stat-icon-wrap { animation-delay: 0.29s; }
+  .admin-stagger > *:nth-child(4) .admin-stat-icon-wrap { animation-delay: 0.36s; }
+
+  .admin-stat-icon-wrap-car {
+    animation:
+      adminStatIconIn 0.45s ease forwards,
+      adminStatCarDrive 2s ease-in-out 0.45s infinite;
+  }
+
+  .admin-stagger > *:nth-child(1) .admin-stat-icon-wrap-car {
+    animation-delay: 0.15s, 0.6s;
+  }
+
+  .admin-stat-icon-wrap-check {
+    animation:
+      adminStatIconIn 0.45s ease forwards,
+      adminStatCheckPop 1.8s ease-in-out 0.45s infinite;
+  }
+
+  .admin-stagger > *:nth-child(2) .admin-stat-icon-wrap-check {
+    animation-delay: 0.22s, 0.6s;
+  }
+
+  .admin-stat-icon-wrap-sparkle {
+    animation:
+      adminStatIconIn 0.45s ease forwards,
+      adminStatSparkle 1.6s ease-in-out 0.45s infinite;
+  }
+
+  .admin-stagger > *:nth-child(3) .admin-stat-icon-wrap-sparkle {
+    animation-delay: 0.29s, 0.6s;
+  }
+
+  .admin-stat-icon-wrap-money {
+    animation:
+      adminStatIconIn 0.45s ease forwards,
+      adminStatCoin 2s ease-in-out 0.45s infinite;
+  }
+
+  .admin-stagger > *:nth-child(4) .admin-stat-icon-wrap-money {
+    animation-delay: 0.36s, 0.6s;
+  }
+
+  .admin-card-hover:hover .admin-stat-icon-wrap {
+    transform: scale(1.12);
+  }
+
+  .admin-card-hover .admin-stat-icon-wrap {
+    transition: transform 0.25s ease;
+    will-change: transform;
+  }
+
   .admin-stagger > * {
     animation: adminRise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
@@ -355,6 +413,11 @@
     .animate-admin-header,
     .animate-admin-pop,
     .animate-admin-icon-swap,
+    .admin-stat-icon-wrap,
+    .admin-stat-icon-wrap-car,
+    .admin-stat-icon-wrap-check,
+    .admin-stat-icon-wrap-sparkle,
+    .admin-stat-icon-wrap-money,
     .admin-stagger > *,
     .admin-nav-link.admin-nav-active::before {
       animation: none !important;
@@ -464,6 +527,58 @@
   to {
     opacity: 1;
     transform: rotate(0deg) scale(1);
+  }
+}
+
+@keyframes adminStatIconIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes adminStatCarDrive {
+  0%,
+  100% {
+    transform: translateX(0) scale(1);
+  }
+  50% {
+    transform: translateX(12px) scale(1.1);
+  }
+}
+
+@keyframes adminStatCheckPop {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.4);
+  }
+}
+
+@keyframes adminStatSparkle {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+  25% {
+    transform: rotate(-18deg) scale(1.15);
+  }
+  75% {
+    transform: rotate(18deg) scale(1.15);
+  }
+}
+
+@keyframes adminStatCoin {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(-16deg);
   }
 }
 

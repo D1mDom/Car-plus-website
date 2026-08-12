@@ -18,6 +18,7 @@ import Wishlist from "./pages/Wishlist";
 import Orders from "./pages/Orders";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
+import AdminCars from "./pages/AdminCars";
 import AdminAddCar from "./pages/AdminAddCar";
 import AdminLogin from "./pages/AdminLogin";
 import AdminContact from "./pages/AdminContact";
@@ -63,6 +64,7 @@ const App = () => {
                     <Route path="/admin" element={<AdminGuard />}>
                       <Route element={<AdminLayout />}>
                         <Route index element={<Admin />} />
+                        <Route path="cars" element={<AdminCars />} />
                         <Route path="add-car" element={<AdminAddCar />} />
                         <Route path="orders" element={<AdminOrders />} />
                         <Route path="receipts" element={<AdminReceipts />} />

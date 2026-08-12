@@ -60,7 +60,8 @@ import flagKh from "@/assets/flags/flag-kh.png";
 type NavItem = { to: string; end: boolean; labelKey: TranslationKey; icon: typeof Car };
 
 const SALES_NAV: NavItem[] = [
-  { to: "/admin", end: true, labelKey: "admin.nav.cars", icon: Car },
+  { to: "/admin", end: true, labelKey: "admin.nav.dashboard", icon: LayoutDashboard },
+  { to: "/admin/cars", end: false, labelKey: "admin.nav.cars", icon: Car },
   { to: "/admin/add-car", end: false, labelKey: "admin.nav.addCar", icon: Plus },
   { to: "/admin/orders", end: false, labelKey: "admin.nav.orders", icon: Package },
   { to: "/admin/receipts", end: false, labelKey: "admin.nav.receipts", icon: FileText },
@@ -82,7 +83,8 @@ const TOP_NAV: NavItem[] = [...SALES_NAV, ...WEBSITE_NAV];
 
 const PAGE_META: { match: (path: string) => boolean; title: TranslationKey; sub: TranslationKey }[] = [
   { match: (p) => p.startsWith("/admin/add-car"), title: "admin.addCar.title", sub: "admin.addCar.subtitle" },
-  { match: (p) => p === "/admin" || p === "/admin/", title: "admin.cars.title", sub: "admin.cars.subtitle" },
+  { match: (p) => p === "/admin" || p === "/admin/", title: "admin.dashboard.title", sub: "admin.dashboard.subtitle" },
+  { match: (p) => p.startsWith("/admin/cars"), title: "admin.cars.title", sub: "admin.cars.subtitle" },
   { match: (p) => p.startsWith("/admin/orders"), title: "admin.orders.title", sub: "admin.orders.subtitle" },
   { match: (p) => p.startsWith("/admin/receipts"), title: "admin.receipts.title", sub: "admin.receipts.subtitle" },
   { match: (p) => p.startsWith("/admin/reports"), title: "admin.reports.title", sub: "admin.reports.subtitle" },

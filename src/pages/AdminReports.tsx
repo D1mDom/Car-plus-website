@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useReports } from "@/hooks/useReports";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useCountUp } from "@/hooks/useCountUp";
@@ -10,7 +11,6 @@ import {
   DollarSign,
   ShoppingCart,
   Clock,
-  CheckCircle2,
   BarChart3,
   Download,
   RotateCcw,
@@ -20,8 +20,6 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -34,8 +32,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 const AdminReports = () => {
+  const navigate = useNavigate();
+  const { pathname, search } = useLocation();
   const { t } = useLanguage();
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -106,6 +107,8 @@ const AdminReports = () => {
     color,
     icon: Icon,
     formatValue,
+    to,
+    active = false,
   }: {
     value: number;
     label: string;
@@ -113,16 +116,40 @@ const AdminReports = () => {
     color: string;
     icon: LucideIcon;
     formatValue: (n: number) => string;
+    to?: string;
+    active?: boolean;
   }) => {
     const animatedValue = useCountUp(value, 900);
 
-    // purely visual "fill", based on this value only
     const goal = Math.max(1, animatedValue * 1.35);
     const pct = Math.max(2, Math.min(100, Math.round((animatedValue / goal) * 100)));
 
+    const go = () => {
+      if (to) navigate(to);
+    };
+
     return (
-      <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
+      <div
+        role={to ? "button" : undefined}
+        tabIndex={to ? 0 : undefined}
+        onClick={to ? go : undefined}
+        onKeyDown={
+          to
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  go();
+                }
+              }
+            : undefined
+        }
+        className={cn(
+          "rounded-2xl border border-border/70 bg-card p-5 shadow-sm transition-shadow",
+          to && "admin-card-hover relative z-10 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174080] focus-visible:ring-offset-2",
+          active && "border-[#174080]/50 ring-2 ring-[#174080]/25 shadow-md"
+        )}
+      >
+        <div className="pointer-events-none flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[13px] font-semibold leading-tight text-muted-foreground">{label}</p>
           </div>
@@ -139,7 +166,7 @@ const AdminReports = () => {
           </span>
         </div>
 
-        <div className="mt-5 flex items-center justify-center">
+        <div className="pointer-events-none mt-5 flex items-center justify-center">
           <div
             className="relative h-28 w-28"
             style={{
@@ -200,6 +227,12 @@ const AdminReports = () => {
     ],
     [t],
   );
+
+  const isTargetActive = (to: string) => {
+    const [path, query = ""] = to.split("?");
+    if (query) return pathname === path && search === `?${query}`;
+    return pathname === path && search === "";
+  };
 
   return (
     <div className="space-y-5">
@@ -272,14 +305,18 @@ const AdminReports = () => {
               color="#174080"
               icon={ShoppingCart}
               formatValue={formatCount}
+              to="/admin/orders"
+              active={isTargetActive("/admin/orders")}
             />
             <DonutMetric
               value={pendingOrders}
               label={t("admin.reports.pending")}
               unitText={t("admin.reports.unit.count")}
-              color="#16A34A"
+              color="#F59E0B"
               icon={Clock}
               formatValue={formatCount}
+              to="/admin/orders?status=pending"
+              active={isTargetActive("/admin/orders?status=pending")}
             />
             <DonutMetric
               value={totalRevenue}
@@ -288,100 +325,55 @@ const AdminReports = () => {
               color="#8B5CF6"
               icon={DollarSign}
               formatValue={formatMoney}
+              to="/admin/receipts"
+              active={pathname.startsWith("/admin/receipts")}
             />
           </div>
 
-          <div className="admin-stagger grid gap-6 lg:grid-cols-2">
-            <Card className="admin-card-hover border-border/70 shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#174080]/12 text-[#174080]">
-                    <BarChart3 className="h-4 w-4" />
-                  </span>
-                  {t("admin.reports.byMonth")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!hasRevenue ? (
-                  <div className="flex h-[280px] items-center justify-center text-muted-foreground">
-                    {t("admin.reports.emptyChart")}
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={r?.revenueByMonth ?? []}>
-                      <defs>
-                        <linearGradient id="revenueBar" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#174080" stopOpacity={0.95} />
-                          <stop offset="100%" stopColor="#174080" stopOpacity={0.35} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis
-                        dataKey="month"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={formatMonthTick}
-                      />
-                      <YAxis
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(v) => formatMoney(Number(v))}
-                      />
-                      <Tooltip formatter={(v: number) => money(v)} />
-                      <Bar dataKey="revenue" fill="url(#revenueBar)" radius={[10, 10, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="admin-card-hover border-border/70 shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
-                    <CheckCircle2 className="h-4 w-4" />
-                  </span>
-                  {t("admin.reports.byMonth")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!hasRevenue ? (
-                  <div className="flex h-[280px] items-center justify-center text-muted-foreground">
-                    {t("admin.reports.emptyChart")}
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <LineChart data={r?.revenueByMonth ?? []}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis
-                        dataKey="month"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={formatMonthTick}
-                      />
-                      <YAxis
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(v) => formatMoney(Number(v))}
-                      />
-                      <Tooltip formatter={(v: number) => money(v)} />
-                      <Line
-                        type="monotone"
-                        dataKey="revenue"
-                        stroke="#16A34A"
-                        strokeWidth={2.5}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          <Card className="admin-card-hover animate-admin-pop border-border/70 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#174080]/12 text-[#174080]">
+                  <BarChart3 className="h-4 w-4" />
+                </span>
+                {t("admin.reports.byMonth")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!hasRevenue ? (
+                <div className="flex h-[280px] items-center justify-center text-muted-foreground">
+                  {t("admin.reports.emptyChart")}
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={r?.revenueByMonth ?? []}>
+                    <defs>
+                      <linearGradient id="revenueBar" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#174080" stopOpacity={0.95} />
+                        <stop offset="100%" stopColor="#174080" stopOpacity={0.35} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                    <XAxis
+                      dataKey="month"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={formatMonthTick}
+                    />
+                    <YAxis
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => formatMoney(Number(v))}
+                    />
+                    <Tooltip formatter={(v: number) => money(v)} />
+                    <Bar dataKey="revenue" fill="url(#revenueBar)" radius={[10, 10, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
     </div>

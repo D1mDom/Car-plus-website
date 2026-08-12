@@ -56,6 +56,24 @@ export const useCreateBanner = () => {
   });
 };
 
+export const useUpdateBanner = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, image }: { id: string; image: string }) => {
+      const { error } = await db
+        .from("banners")
+        .update({ image, updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["banners"] });
+      toast.success("Banner updated");
+    },
+    onError: (error: unknown) => toast.error("Failed to update: " + errMessage(error)),
+  });
+};
+
 export const useUpdateBannerOrder = () => {
   const queryClient = useQueryClient();
   return useMutation({
