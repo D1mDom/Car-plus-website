@@ -5,7 +5,6 @@ import { useCountUp } from "@/hooks/useCountUp";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Loader2,
   DollarSign,
@@ -13,9 +12,9 @@ import {
   Clock,
   CheckCircle2,
   BarChart3,
-  PieChart as PieIcon,
   Download,
   RotateCcw,
+  type LucideIcon,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -27,12 +26,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
 } from "recharts";
-import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -40,16 +34,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const STATUS_COLORS: Record<string, string> = {
-  pending: "#F59E0B",
-  confirmed: "#0093DD",
-  processing: "#FB923C",
-  delivered: "#22C55E",
-  completed: "#16A34A",
-  cancelled: "#EF4444",
-};
-const FALLBACK = ["#0093DD", "#FB923C", "#F59E0B", "#16A34A", "#94A3B8", "#EF4444"];
 
 const AdminReports = () => {
   const { t } = useLanguage();
@@ -87,40 +71,10 @@ const AdminReports = () => {
   const r = data;
   const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
   const hasRevenue = (r?.revenueByMonth ?? []).some((m) => m.revenue > 0);
-  const hasStatus = (r?.ordersByStatus?.length ?? 0) > 0;
 
   const totalOrders = r?.totalOrders ?? 0;
   const pendingOrders = r?.pendingOrders ?? 0;
-  const completedOrders = r?.completedOrders ?? 0;
   const totalRevenue = r?.totalRevenue ?? 0;
-
-  const statusLabel = (status: string) => {
-    const key = `orders.status.${status}`;
-    const translated = t(key as never);
-    return translated === key ? status : translated;
-  };
-
-  const statusBadge = (status: string) => {
-    const color = STATUS_COLORS[status] ?? "#94A3B8";
-    return (
-      <span
-        className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
-        style={{
-          borderColor: `${color}55`,
-          backgroundColor: `${color}15`,
-          color,
-        }}
-      >
-        {statusLabel(status)}
-      </span>
-    );
-  };
-
-  const formatCompact = (n: number) => {
-    if (n >= 1_000_000) return `${Math.round(n / 1_000_000)}M`;
-    if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
-    return String(Math.round(n));
-  };
 
   const formatCount = (n: number) => Math.round(n).toLocaleString();
   const formatMoney = (n: number) => Math.round(n).toLocaleString();
@@ -157,7 +111,7 @@ const AdminReports = () => {
     label: string;
     unitText: string;
     color: string;
-    icon: (props: { className?: string }) => JSX.Element;
+    icon: LucideIcon;
     formatValue: (n: number) => string;
   }) => {
     const animatedValue = useCountUp(value, 900);
@@ -222,11 +176,6 @@ const AdminReports = () => {
     a.remove();
     URL.revokeObjectURL(url);
   };
-
-  const orderListRows = useMemo(() => {
-    const rows = r?.exportRows ?? [];
-    return [...rows].sort((a, b) => (a.date < b.date ? 1 : -1));
-  }, [r?.exportRows]);
 
   const resetDates = () => {
     setSelectedYear(currentYear);
@@ -429,111 +378,6 @@ const AdminReports = () => {
                       />
                     </LineChart>
                   </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="admin-stagger grid gap-6 lg:grid-cols-3">
-            <Card className="admin-card-hover border-border/70 shadow-sm lg:col-span-1">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600">
-                    <PieIcon className="h-4 w-4" />
-                  </span>
-                  {t("admin.reports.byStatus")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!hasStatus ? (
-                  <div className="flex min-h-[280px] items-center justify-center text-muted-foreground">
-                    {t("admin.reports.empty")}
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    <ResponsiveContainer width="100%" height={240}>
-                      <PieChart>
-                        <Tooltip
-                          formatter={(v: number, name) => [
-                            String(Math.round(v)),
-                            statusLabel(String(name ?? "")),
-                          ]}
-                        />
-                        <Legend
-                          verticalAlign="bottom"
-                          align="center"
-                          formatter={(value) => statusLabel(String(value))}
-                        />
-                        <Pie
-                          data={r?.ordersByStatus ?? []}
-                          dataKey="count"
-                          nameKey="status"
-                          innerRadius={55}
-                          outerRadius={95}
-                          paddingAngle={3}
-                        >
-                          {(r?.ordersByStatus ?? []).map((entry, idx) => {
-                            const color = STATUS_COLORS[entry.status] ?? FALLBACK[idx % FALLBACK.length];
-                            return <Cell key={entry.status} fill={color} />;
-                          })}
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
-
-                    <div className="grid gap-2">
-                      {(r?.ordersByStatus ?? []).map((entry) => {
-                        const color = STATUS_COLORS[entry.status] ?? FALLBACK[0];
-                        return (
-                          <div key={entry.status} className="flex items-center justify-between gap-3">
-                            <span className="flex items-center gap-2">
-                              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
-                              <span className="text-sm font-medium">{statusLabel(entry.status)}</span>
-                            </span>
-                            <span className="text-sm text-muted-foreground">{formatCount(entry.count)}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="admin-card-hover border-border/70 shadow-sm lg:col-span-2">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#174080]/12 text-[#174080]">
-                    <ShoppingCart className="h-4 w-4" />
-                  </span>
-                  {t("admin.reports.orders")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!hasStatus ? (
-                  <div className="py-10 text-center text-muted-foreground">
-                    {t("admin.reports.empty")}
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[140px]">{t("admin.orders.col.date")}</TableHead>
-                          <TableHead className="w-[160px]">{t("admin.orders.col.status")}</TableHead>
-                          <TableHead className="text-right">{t("admin.orders.col.total")}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {orderListRows.map((row) => (
-                          <TableRow key={`${row.date}-${row.status}-${row.total}`}>
-                            <TableCell className="text-sm">{row.date}</TableCell>
-                            <TableCell>{statusBadge(row.status)}</TableCell>
-                            <TableCell className="text-right font-semibold">{money(row.total)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
                 )}
               </CardContent>
             </Card>
