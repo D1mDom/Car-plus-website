@@ -111,9 +111,11 @@ const AdminCars = () => {
     }
   };
 
-  const handleFormClose = () => {
-    setFormOpen(false);
-    setEditingCar(null);
+  const handleFormClose = (open: boolean) => {
+    if (!open) {
+      setFormOpen(false);
+      setEditingCar(null);
+    }
   };
 
   return (

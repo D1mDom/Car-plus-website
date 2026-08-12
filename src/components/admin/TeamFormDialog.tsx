@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Upload, X, Loader2 } from "lucide-react";
+import { Upload, X, Loader2, Phone, Send } from "lucide-react";
 import { toast } from "sonner";
 import {
   useCreateTeamMember,
@@ -27,6 +27,8 @@ import {
 } from "@/hooks/useTeam";
 import { uploadImage, MAX_UPLOAD_BYTES } from "@/lib/imageUpload";
 import { useLanguage } from "@/hooks/useLanguage";
+import { stripContactFromImage } from "@/hooks/useTeam";
+import { onImgError } from "@/lib/imageFallback";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -59,8 +61,14 @@ const TeamFormDialog = ({ open, onOpenChange, member, nextSortOrder }: TeamFormD
   });
 
   const image = form.watch("image");
+  const previewName = form.watch("name");
+  const previewRole = form.watch("role");
+  const previewPhone = form.watch("phone");
+  const previewTelegram = form.watch("telegram");
+  const displayImage = stripContactFromImage(image);
 
   useEffect(() => {
+    if (!open) return;
     if (member) {
       form.reset({
         name: member.name,
@@ -80,7 +88,7 @@ const TeamFormDialog = ({ open, onOpenChange, member, nextSortOrder }: TeamFormD
         sort_order: nextSortOrder,
       });
     }
-  }, [member, nextSortOrder, form]);
+  }, [member?.id, nextSortOrder, open]);
 
   const handleFile = async (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -133,6 +141,48 @@ const TeamFormDialog = ({ open, onOpenChange, member, nextSortOrder }: TeamFormD
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
+              <p className="mb-3 text-xs font-medium text-muted-foreground">{t("admin.team.previewDesc")}</p>
+              <div className="mx-auto max-w-[160px] text-center">
+                <div className="mx-auto mb-2 overflow-hidden rounded-2xl bg-muted ring-1 ring-border/60">
+                  {displayImage ? (
+                    <img
+                      src={displayImage}
+                      alt=""
+                      onError={onImgError}
+                      className="aspect-[4/5] w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex aspect-[4/5] w-full items-center justify-center text-2xl font-semibold text-muted-foreground">
+                      {(previewName || "?").charAt(0)}
+                    </div>
+                  )}
+                </div>
+                <p className="font-heading text-sm font-semibold text-foreground">
+                  {previewName || t("team.form.namePlaceholder")}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {previewRole || t("team.form.rolePlaceholder")}
+                </p>
+                {(previewPhone?.trim() || previewTelegram?.trim()) && (
+                  <div className="mt-2 space-y-1 text-left text-xs">
+                    {previewPhone?.trim() ? (
+                      <p className="flex items-center gap-1 text-primary">
+                        <Phone className="h-3 w-3" />
+                        {previewPhone}
+                      </p>
+                    ) : null}
+                    {previewTelegram?.trim() ? (
+                      <p className="flex items-center gap-1 text-[#229ED9]">
+                        <Send className="h-3 w-3" />
+                        {previewTelegram.startsWith("@") ? previewTelegram : `@${previewTelegram}`}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            </div>
+
             <FormField
               control={form.control}
               name="image"

@@ -85,9 +85,11 @@ const AdminCarList = ({ previewLimit, syncUrlStatus = false }: AdminCarListProps
     }
   };
 
-  const handleFormClose = () => {
-    setFormOpen(false);
-    setEditingCar(null);
+  const handleFormClose = (open: boolean) => {
+    if (!open) {
+      setFormOpen(false);
+      setEditingCar(null);
+    }
   };
 
   const getStatusBadge = (status: string) => {

@@ -316,6 +316,26 @@ export const useUpdateTeamMember = () => {
   });
 };
 
+export const useUpdateTeamOrder = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (updates: { id: string; sort_order: number }[]) => {
+      for (const u of updates) {
+        const { error } = await db
+          .from("team_members")
+          .update({ sort_order: u.sort_order, updated_at: new Date().toISOString() })
+          .eq("id", u.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["team-members"] });
+      toast.success("Team order updated");
+    },
+    onError: (error: unknown) => toast.error("Failed to reorder: " + errMessage(error)),
+  });
+};
+
 export const useDeleteTeamMember = () => {
   const queryClient = useQueryClient();
   return useMutation({

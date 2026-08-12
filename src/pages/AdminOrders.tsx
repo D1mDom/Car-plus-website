@@ -1,4 +1,5 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, type FormEvent } from "react";
+import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
 import { useCars } from "@/hooks/useCars";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -250,15 +251,23 @@ const AdminOrders = () => {
     setForm((f) => ({ ...f, carId, total: car ? String(car.price) : f.total }));
   };
 
-  const submit = () => {
+  const submit = (e?: FormEvent) => {
+    e?.preventDefault();
     const car = realCars.find((c) => c.id === form.carId);
+    const totalAmount = form.total !== "" ? Number(form.total) : car ? car.price : 0;
+
+    if (!car && (!form.total || totalAmount <= 0)) {
+      toast.error(t("admin.orders.validationCarOrTotal"));
+      return;
+    }
+
     createOrder.mutate(
       {
-        customer_name: form.customer_name || t("admin.orders.walkIn"),
-        phone: form.phone,
+        customer_name: form.customer_name.trim() || t("admin.orders.walkIn"),
+        phone: form.phone.trim(),
         status: form.status,
-        total_amount: form.total !== "" ? Number(form.total) : car ? car.price : 0,
-        notes: form.notes,
+        total_amount: totalAmount,
+        notes: form.notes.trim() || undefined,
         items: car ? [{ car_id: car.id, car_name: car.name, price: car.price }] : [],
       },
       {
@@ -266,7 +275,7 @@ const AdminOrders = () => {
           setOpen(false);
           setForm({ customer_name: "", phone: "", carId: "", total: "", status: "pending", notes: "" });
         },
-      }
+      },
     );
   };
 
@@ -524,7 +533,7 @@ const AdminOrders = () => {
           <DialogHeader>
             <DialogTitle>{t("admin.orders.form.title")}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <form className="space-y-4" onSubmit={submit}>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>{t("admin.orders.form.name")}</Label>
@@ -547,18 +556,27 @@ const AdminOrders = () => {
             </div>
             <div className="space-y-1.5">
               <Label>{t("admin.orders.form.car")}</Label>
-              <Select value={form.carId} onValueChange={pickCar}>
+              <Select value={form.carId || undefined} onValueChange={pickCar}>
                 <SelectTrigger>
                   <SelectValue placeholder={t("admin.orders.form.selectCar")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {realCars.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name} — ${c.price.toLocaleString()}
+                  {realCars.length === 0 ? (
+                    <SelectItem value="__none__" disabled>
+                      {t("admin.orders.noCarsInDb")}
                     </SelectItem>
-                  ))}
+                  ) : (
+                    realCars.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} — ${c.price.toLocaleString()}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
+              {realCars.length === 0 ? (
+                <p className="text-xs text-amber-600">{t("admin.orders.noCarsHint")}</p>
+              ) : null}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -595,14 +613,14 @@ const AdminOrders = () => {
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 {t("form.cancel")}
               </Button>
-              <Button onClick={submit} disabled={createOrder.isPending}>
+              <Button type="submit" disabled={createOrder.isPending}>
                 {createOrder.isPending ? t("form.saving") : t("admin.orders.form.create")}
               </Button>
             </div>
-          </div>
+          </form>
         </DialogContent>
       </Dialog>
 

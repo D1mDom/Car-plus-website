@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export interface OrderItem {
   id: string;
@@ -98,6 +99,7 @@ export const useAdminOrders = () => {
 
 export const useUpdateOrderStatus = () => {
   const qc = useQueryClient();
+  const { t } = useLanguage();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { error } = await db
@@ -106,16 +108,30 @@ export const useUpdateOrderStatus = () => {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      refreshOrders(qc);
-      toast.success("Order status updated");
+    onMutate: async ({ id, status }) => {
+      await qc.cancelQueries({ queryKey: ["admin-orders"] });
+      const previous = qc.getQueryData<Order[]>(["admin-orders"]);
+      qc.setQueryData<Order[]>(["admin-orders"], (old) =>
+        old?.map((o) => (o.id === id ? { ...o, status } : o)) ?? [],
+      );
+      return { previous };
     },
-    onError: (e) => toast.error("Failed to update status: " + msg(e)),
+    onSuccess: () => {
+      toast.success(t("admin.orders.toast.statusUpdated"));
+    },
+    onError: (e, _vars, context) => {
+      if (context?.previous) qc.setQueryData(["admin-orders"], context.previous);
+      toast.error(`${t("admin.orders.toast.statusFail")}: ${msg(e)}`);
+    },
+    onSettled: () => {
+      refreshOrders(qc);
+    },
   });
 };
 
 export const useCreateOrder = () => {
   const qc = useQueryClient();
+  const { t } = useLanguage();
   return useMutation({
     mutationFn: async (input: NewOrderInput) => {
       // New schema first
@@ -178,16 +194,44 @@ export const useCreateOrder = () => {
         }
       }
     },
-    onSuccess: () => {
-      refreshOrders(qc);
-      toast.success("Order created");
+    onMutate: async (input) => {
+      await qc.cancelQueries({ queryKey: ["admin-orders"] });
+      const previous = qc.getQueryData<Order[]>(["admin-orders"]);
+      const optimistic: Order = {
+        id: `optimistic-${Date.now()}`,
+        user_id: null,
+        customer_name: input.customer_name,
+        phone: input.phone || null,
+        status: input.status,
+        total_amount: input.total_amount,
+        notes: input.notes ?? null,
+        created_at: new Date().toISOString(),
+        order_items: input.items.map((it, i) => ({
+          id: `optimistic-item-${i}`,
+          car_id: it.car_id ?? null,
+          car_name: it.car_name,
+          price: it.price,
+        })),
+      };
+      qc.setQueryData<Order[]>(["admin-orders"], (old) => [optimistic, ...(old ?? [])]);
+      return { previous };
     },
-    onError: (e) => toast.error("Failed to create order: " + msg(e)),
+    onSuccess: () => {
+      toast.success(t("admin.orders.toast.created"));
+    },
+    onError: (e, _input, context) => {
+      if (context?.previous) qc.setQueryData(["admin-orders"], context.previous);
+      toast.error(`${t("admin.orders.toast.createFail")}: ${msg(e)}`);
+    },
+    onSettled: () => {
+      refreshOrders(qc);
+    },
   });
 };
 
 export const useDeleteOrder = () => {
   const qc = useQueryClient();
+  const { t } = useLanguage();
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await db.from("orders").delete().eq("id", id);
@@ -195,8 +239,8 @@ export const useDeleteOrder = () => {
     },
     onSuccess: () => {
       refreshOrders(qc);
-      toast.success("Order deleted");
+      toast.success(t("admin.orders.toast.deleted"));
     },
-    onError: (e) => toast.error("Failed to delete: " + msg(e)),
+    onError: (e) => toast.error(`${t("admin.orders.toast.deleteFail")}: ${msg(e)}`),
   });
 };

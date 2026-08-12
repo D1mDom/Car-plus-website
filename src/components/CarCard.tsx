@@ -56,7 +56,6 @@ const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
   };
 
   const openPreview = () => {
-    if (adminMode) return;
     setDetailOpen(true);
   };
 
@@ -68,21 +67,12 @@ const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
 
   const statusKey = `status.${car.status}` as TranslationKey;
 
-  return (
+  const imageAreaClass = cn(
+    "relative block aspect-[4/3] w-full cursor-pointer overflow-hidden bg-muted text-left",
+  );
+
+  const imageAreaContent = (
     <>
-      <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/35 hover:shadow-lg">
-        <div className="block w-full text-left">
-          {/* Tap / click image → preview popup */}
-          <button
-            type="button"
-            onClick={openPreview}
-            disabled={adminMode}
-            className={cn(
-              "relative block aspect-[4/3] w-full overflow-hidden bg-muted text-left",
-              !adminMode && "cursor-pointer"
-            )}
-            aria-label={t("card.preview")}
-          >
             {featured && (
               <span className="absolute left-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm">
                 <Star className="h-3 w-3 fill-white" />
@@ -129,19 +119,15 @@ const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
             </div>
             {adminMode && (
               <div
-                className="absolute bottom-3 right-3 z-10 flex gap-1.5"
+                className="absolute bottom-3 right-3 z-30 flex gap-1.5"
                 onClick={(e) => e.stopPropagation()}
               >
                 {onEdit && (
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onEdit(car);
-                    }}
-                    aria-label="កែសម្រួល"
-                    className="rounded-xl bg-white/95 p-2 text-primary shadow-sm"
+                    onClick={() => onEdit(car)}
+                    aria-label={t("card.edit")}
+                    className="rounded-xl bg-white/95 p-2 text-primary shadow-sm transition-colors hover:bg-white"
                   >
                     <Pencil className="h-4 w-4" />
                   </button>
@@ -149,13 +135,9 @@ const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
                 {onDelete && (
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onDelete(car);
-                    }}
-                    aria-label="លុប"
-                    className="rounded-xl bg-white/95 p-2 text-destructive shadow-sm"
+                    onClick={() => onDelete(car)}
+                    aria-label={t("card.delete")}
+                    className="rounded-xl bg-white/95 p-2 text-destructive shadow-sm transition-colors hover:bg-white"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -173,7 +155,7 @@ const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
                     <button
                       key={i}
                       type="button"
-                      aria-label={`រូបភាព ${i + 1}`}
+                      aria-label={`${t("card.photo")} ${i + 1}`}
                       onMouseEnter={() => setActive(i)}
                       onClick={(e) => previewImage(e, i)}
                       className={cn(
@@ -185,7 +167,28 @@ const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
                 </div>
               </>
             )}
-          </button>
+    </>
+  );
+
+  return (
+    <>
+      <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/35 hover:shadow-lg">
+        <div className="block w-full text-left">
+          <div
+            className={imageAreaClass}
+            role="button"
+            tabIndex={0}
+            onClick={openPreview}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                openPreview();
+              }
+            }}
+            aria-label={t("card.preview")}
+          >
+            {imageAreaContent}
+          </div>
 
           <div className="flex flex-1 flex-col gap-2 p-5">
             <p className="inline-flex w-fit items-center rounded-full border border-border bg-background/60 px-2 py-1 font-mono text-[11px] text-muted-foreground">
