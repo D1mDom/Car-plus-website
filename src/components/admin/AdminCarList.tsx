@@ -5,11 +5,13 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pencil, Trash2, Car, Loader2, Plus, X, ArrowRight } from "lucide-react";
 import CarFormDialog from "@/components/admin/CarFormDialog";
+import CarDetailDialog from "@/components/CarDetailDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,8 +24,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { Car as CarType } from "@/hooks/useCars";
 import type { TranslationKey } from "@/i18n/translations";
+import { cn } from "@/lib/utils";
 
 const CAR_STATUSES = ["ready", "onroad", "luxury", "plate"] as const;
+
+type MonthFilter = "all" | "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" | "11";
+
+const FILTER_YEARS = Array.from({ length: 27 }, (_, i) => 2026 - i);
 
 interface AdminCarListProps {
   /** Limit rows on dashboard preview; full list when omitted */
@@ -45,6 +52,9 @@ const AdminCarList = ({ previewLimit, syncUrlStatus = false }: AdminCarListProps
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [visibleFilter, setVisibleFilter] = useState("all");
+  const [selectedYear, setSelectedYear] = useState<number | "all">("all");
+  const [selectedMonth, setSelectedMonth] = useState<MonthFilter>("all");
+  const [previewCar, setPreviewCar] = useState<CarType | null>(null);
 
   useEffect(() => {
     if (!syncUrlStatus) return;
@@ -108,9 +118,38 @@ const AdminCarList = ({ previewLimit, syncUrlStatus = false }: AdminCarListProps
     [cars],
   );
 
+  const monthOptions = useMemo(
+    () => [
+      { value: "all" as const, label: t("admin.reports.month.all") },
+      { value: "0" as const, label: t("admin.reports.month.jan") },
+      { value: "1" as const, label: t("admin.reports.month.feb") },
+      { value: "2" as const, label: t("admin.reports.month.mar") },
+      { value: "3" as const, label: t("admin.reports.month.apr") },
+      { value: "4" as const, label: t("admin.reports.month.may") },
+      { value: "5" as const, label: t("admin.reports.month.jun") },
+      { value: "6" as const, label: t("admin.reports.month.jul") },
+      { value: "7" as const, label: t("admin.reports.month.aug") },
+      { value: "8" as const, label: t("admin.reports.month.sep") },
+      { value: "9" as const, label: t("admin.reports.month.oct") },
+      { value: "10" as const, label: t("admin.reports.month.nov") },
+      { value: "11" as const, label: t("admin.reports.month.dec") },
+    ],
+    [t],
+  );
+
+  const carMatchesPeriod = (car: CarType) => {
+    if (selectedYear === "all" && selectedMonth === "all") return true;
+    if (!car.createdAt) return false;
+    const d = new Date(car.createdAt);
+    if (selectedYear !== "all" && d.getFullYear() !== selectedYear) return false;
+    if (selectedMonth !== "all" && d.getMonth() !== Number(selectedMonth)) return false;
+    return true;
+  };
+
   const filteredCars = useMemo(() => {
     const q = search.trim().toLowerCase();
     return realCars.filter((car) => {
+      if (!carMatchesPeriod(car)) return false;
       if (q) {
         const hay = `${car.name} ${car.code ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -120,19 +159,37 @@ const AdminCarList = ({ previewLimit, syncUrlStatus = false }: AdminCarListProps
       if (visibleFilter === "hidden" && car.isActive) return false;
       return true;
     });
-  }, [realCars, search, statusFilter, visibleFilter]);
+  }, [realCars, search, statusFilter, visibleFilter, selectedYear, selectedMonth]);
 
   const displayCars = previewLimit ? filteredCars.slice(0, previewLimit) : filteredCars;
   const hasMore = previewLimit != null && filteredCars.length > previewLimit;
 
-  const hasFilters = search.trim() !== "" || statusFilter !== "all" || visibleFilter !== "all";
+  const hasFilters =
+    search.trim() !== "" ||
+    statusFilter !== "all" ||
+    visibleFilter !== "all" ||
+    selectedYear !== "all" ||
+    selectedMonth !== "all";
 
   const clearFilters = () => {
     setSearch("");
     setStatusFilter("all");
     setVisibleFilter("all");
+    setSelectedYear("all");
+    setSelectedMonth("all");
     if (syncUrlStatus) setSearchParams({}, { replace: true });
   };
+
+  const carImage = (car: CarType, className: string) => (
+    <button
+      type="button"
+      onClick={() => setPreviewCar(car)}
+      className={cn("cursor-pointer overflow-hidden rounded-lg border-0 bg-transparent p-0 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2", className)}
+      title={t("card.preview")}
+    >
+      <img src={car.image} alt={car.name} className="h-full w-full object-cover" />
+    </button>
+  );
 
   const carActions = (car: CarType) => (
     <div className="flex justify-end gap-2">
@@ -171,7 +228,48 @@ const AdminCarList = ({ previewLimit, syncUrlStatus = false }: AdminCarListProps
             ) : null}
           </div>
           {realCars.length > 0 ? (
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+              {previewLimit != null ? (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="car-preview-year">{t("admin.reports.year")}</Label>
+                    <Select
+                      value={String(selectedYear)}
+                      onValueChange={(v) => setSelectedYear(v === "all" ? "all" : Number(v))}
+                    >
+                      <SelectTrigger id="car-preview-year" className="sm:w-[140px]">
+                        <SelectValue placeholder={t("admin.reports.year")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t("admin.cars.filterAll")}</SelectItem>
+                        {FILTER_YEARS.map((y) => (
+                          <SelectItem key={y} value={String(y)}>
+                            {y}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="car-preview-month">{t("admin.reports.month")}</Label>
+                    <Select
+                      value={selectedMonth}
+                      onValueChange={(v) => setSelectedMonth(v as MonthFilter)}
+                    >
+                      <SelectTrigger id="car-preview-month" className="sm:w-[160px]">
+                        <SelectValue placeholder={t("admin.reports.month")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {monthOptions.map((m) => (
+                          <SelectItem key={m.value} value={m.value}>
+                            {m.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              ) : null}
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -246,11 +344,7 @@ const AdminCarList = ({ previewLimit, syncUrlStatus = false }: AdminCarListProps
                       animationDelay: `${Math.min(i, 12) * 0.03 + 0.25}s`,
                     }}
                   >
-                    <img
-                      src={car.image}
-                      alt={car.name}
-                      className="h-16 w-20 shrink-0 rounded-lg object-cover"
-                    />
+                    {carImage(car, "h-16 w-20 shrink-0")}
                     <div className="min-w-0 flex-1 space-y-1.5">
                       <div className="font-medium leading-tight">{car.name}</div>
                       <div className="text-xs text-muted-foreground">{car.code}</div>
@@ -293,11 +387,7 @@ const AdminCarList = ({ previewLimit, syncUrlStatus = false }: AdminCarListProps
                         }}
                       >
                         <TableCell>
-                          <img
-                            src={car.image}
-                            alt={car.name}
-                            className="h-12 w-16 rounded object-cover transition-transform duration-300 hover:scale-105"
-                          />
+                          {carImage(car, "h-12 w-16 rounded transition-transform duration-300 hover:scale-105")}
                         </TableCell>
                         <TableCell className="font-medium">{car.name}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{car.code}</TableCell>
@@ -332,6 +422,14 @@ const AdminCarList = ({ previewLimit, syncUrlStatus = false }: AdminCarListProps
       </Card>
 
       <CarFormDialog open={formOpen} onOpenChange={handleFormClose} car={editingCar} />
+
+      <CarDetailDialog
+        car={previewCar}
+        open={!!previewCar}
+        onOpenChange={(open) => {
+          if (!open) setPreviewCar(null);
+        }}
+      />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

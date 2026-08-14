@@ -16,13 +16,11 @@ import {
 } from "lucide-react";
 import WishlistButton from "@/components/WishlistButton";
 import { useContact } from "@/hooks/useContact";
-import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
-import PlaceOrderDialog from "@/components/PlaceOrderDialog";
+import OrderAuthPrompt from "@/components/OrderAuthPrompt";
 import CarDetailDialog from "@/components/CarDetailDialog";
 import { onImgError } from "@/lib/imageFallback";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import type { TranslationKey } from "@/i18n/translations";
 
 interface CarCardProps {
@@ -34,7 +32,6 @@ interface CarCardProps {
 
 const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
   const { data: contact } = useContact();
-  const { user } = useAuth();
   const { t } = useLanguage();
   const [orderCar, setOrderCar] = useState<Car | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -102,10 +99,6 @@ const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (!user) {
-                      toast.error(t("order.loginRequired"));
-                      return;
-                    }
                     setOrderCar(car);
                   }}
                   aria-label={t("card.order")}
@@ -241,7 +234,7 @@ const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
         </div>
       </article>
 
-      <PlaceOrderDialog car={orderCar} onOpenChange={(o) => { if (!o) setOrderCar(null); }} />
+      <OrderAuthPrompt car={orderCar} onOpenChange={(o) => { if (!o) setOrderCar(null); }} />
       <CarDetailDialog car={car} open={detailOpen} onOpenChange={setDetailOpen} />
     </>
   );

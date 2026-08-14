@@ -1,115 +1,116 @@
-import { useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useLanguage } from "@/hooks/useLanguage";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useCars } from "@/hooks/useCars";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, Upload } from "lucide-react";
+import { Loader2, Sheet, FileText } from "lucide-react";
 import { toast } from "sonner";
 import AdminStatCards from "@/components/admin/AdminStatCards";
 import AdminCarList from "@/components/admin/AdminCarList";
+import { exportDashboardExcel, exportDashboardPdf } from "@/lib/dashboardExport";
 
 const Admin = () => {
   const { t } = useLanguage();
-  const [importing, setImporting] = useState(false);
-  const importInputRef = useRef<HTMLInputElement>(null);
-  const queryClient = useQueryClient();
+  const { data: cars = [] } = useCars();
+  const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any;
+  const realCars = useMemo(
+    () => cars.filter((c) => !String(c.id).startsWith("mock-")),
+    [cars],
+  );
 
-  const handleBackup = async () => {
+  const stats = useMemo(
+    () => ({
+      total: realCars.length,
+      ready: realCars.filter((c) => c.status === "ready").length,
+      luxury: realCars.filter((c) => c.status === "luxury").length,
+      totalValue: realCars.reduce((sum, c) => sum + c.price, 0),
+    }),
+    [realCars],
+  );
+
+  const exportLabels = useMemo(
+    () => ({
+      title: t("admin.dashboard.exportTitle"),
+      exportedAt: t("admin.dashboard.exportedAt"),
+      totalCars: t("admin.cars.total"),
+      ready: t("admin.cars.ready"),
+      luxury: t("admin.cars.luxury"),
+      totalValue: t("admin.cars.value"),
+      colCode: t("admin.cars.col.code"),
+      colName: t("admin.cars.col.name"),
+      colModel: t("form.model"),
+      colYear: t("admin.cars.col.year"),
+      colPrice: t("admin.cars.col.price"),
+      colStatus: t("admin.cars.col.status"),
+      colVisible: t("admin.cars.col.visible"),
+      yes: t("admin.dashboard.yes"),
+      no: t("admin.dashboard.no"),
+    }),
+    [t],
+  );
+
+  const stamp = new Date().toISOString().slice(0, 10);
+
+  const handleExcel = () => {
+    if (!realCars.length) {
+      toast.error(t("admin.dashboard.exportEmpty"));
+      return;
+    }
+    setExporting("excel");
     try {
-      const [carsRes, teamRes, bannersRes, contactRes] = await Promise.all([
-        supabase.from("cars").select("*"),
-        db.from("team_members").select("*"),
-        db.from("banners").select("*"),
-        db.from("contact_info").select("*").eq("id", 1).maybeSingle(),
-      ]);
-      const backup = {
-        exported_at: new Date().toISOString(),
-        version: 1,
-        cars: carsRes.data ?? [],
-        team_members: teamRes.data ?? [],
-        banners: bannersRes.data ?? [],
-        contact_info: contactRes.data ?? null,
-      };
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `carplus-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      toast.success("Backup downloaded");
+      exportDashboardExcel(realCars, `carplus-dashboard-${stamp}.csv`);
+      toast.success(t("admin.dashboard.exportExcelDone"));
     } catch (err) {
-      toast.error("Backup failed: " + (err instanceof Error ? err.message : "error"));
+      toast.error(t("admin.dashboard.exportFail"));
+    } finally {
+      setExporting(null);
     }
   };
 
-  const handleImport = async (file: File) => {
-    setImporting(true);
+  const handlePdf = async () => {
+    if (!realCars.length) {
+      toast.error(t("admin.dashboard.exportEmpty"));
+      return;
+    }
+    setExporting("pdf");
     try {
-      const backup = JSON.parse(await file.text());
-      const fail = (e: unknown) => {
-        if (e) throw e;
-      };
-
-      if (Array.isArray(backup.cars) && backup.cars.length) {
-        fail((await supabase.from("cars").upsert(backup.cars, { onConflict: "id" })).error);
-      }
-      if (Array.isArray(backup.team_members) && backup.team_members.length) {
-        fail((await db.from("team_members").upsert(backup.team_members, { onConflict: "id" })).error);
-      }
-      if (Array.isArray(backup.banners) && backup.banners.length) {
-        fail((await db.from("banners").upsert(backup.banners, { onConflict: "id" })).error);
-      }
-      if (backup.contact_info) {
-        const { id: _id, ...contact } = backup.contact_info;
-        fail((await db.from("contact_info").update(contact).eq("id", 1)).error);
-      }
-
-      queryClient.invalidateQueries();
-      toast.success("Data imported successfully");
-    } catch (err) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : err && typeof err === "object" && "message" in err
-            ? String((err as { message: unknown }).message)
-            : "Invalid backup file";
-      toast.error("Import failed: " + msg);
+      await exportDashboardPdf(realCars, stats, exportLabels);
+      toast.success(t("admin.dashboard.exportPdfDone"));
+    } catch {
+      toast.error(t("admin.dashboard.exportFail"));
     } finally {
-      setImporting(false);
-      if (importInputRef.current) importInputRef.current.value = "";
+      setExporting(null);
     }
   };
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap justify-end gap-2">
-        <Button variant="outline" className="transition-transform active:scale-95" onClick={handleBackup}>
-          <Download className="mr-2 h-4 w-4" />
-          {t("admin.cars.backup")}
-        </Button>
-        <input
-          ref={importInputRef}
-          type="file"
-          accept="application/json,.json"
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files?.[0]) handleImport(e.target.files[0]);
-          }}
-        />
         <Button
           variant="outline"
-          className="transition-transform active:scale-95"
-          onClick={() => importInputRef.current?.click()}
-          disabled={importing}
+          className="gap-2 transition-transform active:scale-95"
+          onClick={handleExcel}
+          disabled={!!exporting}
         >
-          {importing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-          {t("admin.cars.import")}
+          {exporting === "excel" ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Sheet className="h-4 w-4 text-emerald-600" />
+          )}
+          {t("admin.dashboard.exportExcel")}
+        </Button>
+        <Button
+          variant="outline"
+          className="gap-2 transition-transform active:scale-95"
+          onClick={() => void handlePdf()}
+          disabled={!!exporting}
+        >
+          {exporting === "pdf" ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <FileText className="h-4 w-4 text-red-600" />
+          )}
+          {t("admin.dashboard.exportPdf")}
         </Button>
       </div>
 

@@ -15,6 +15,7 @@ import loginBg from "@/assets/slides/slide-3-showroom.jpg";
 import { supabase } from "@/integrations/supabase/client";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
+import { hasDashboardAccess } from "@/lib/dashboardAccess";
 
 const emailSchema = z.string().email("Invalid email");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -107,11 +108,13 @@ const AdminLogin = () => {
 
     setLoading(false);
 
-    if (adminErr || adminOk !== true) {
+    const rpcOk = !adminErr && adminOk === true;
+    if (!hasDashboardAccess(signedIn, rpcOk)) {
       await signOut();
       toast({
         title: "No admin access",
-        description: "This account does not have dashboard permission.",
+        description:
+          "This account does not have dashboard permission. Ask the owner to create the account again with Admin role, or confirm email in Supabase.",
         variant: "destructive",
       });
       return;

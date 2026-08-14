@@ -4,7 +4,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle 
 import logo from "@/assets/logo.png";
 import UserMenu from "@/components/UserMenu";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import VisitorBadge from "@/components/VisitorBadge";
+import OrderAlertBanner from "@/components/OrderAlertBanner";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -72,6 +72,8 @@ const Header = () => {
           <p className="text-center text-xs font-semibold tracking-wide sm:text-sm">{promotionText}</p>
         </div>
       )}
+
+      <OrderAlertBanner />
 
       <div className="border-b border-slate-100">
         <div className="container mx-auto px-[10px]">
@@ -156,7 +158,6 @@ const Header = () => {
             <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
               {mounted && (
                 <>
-                  <VisitorBadge className="hidden md:inline-flex" />
                   <LanguageSwitcher />
                   <Button
                     variant="ghost"

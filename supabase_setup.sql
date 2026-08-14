@@ -137,6 +137,33 @@ CREATE POLICY "Admins can update car images" ON storage.objects
 CREATE POLICY "Admins can delete car images" ON storage.objects
   FOR DELETE USING (bucket_id = 'car-images' AND public.is_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "Users can upload own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own avatar" ON storage.objects;
+
+CREATE POLICY "Users can upload own avatar" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'car-images'
+    AND name LIKE ('avatars/' || auth.uid()::text || '/%')
+  );
+CREATE POLICY "Users can update own avatar" ON storage.objects
+  FOR UPDATE TO authenticated
+  USING (
+    bucket_id = 'car-images'
+    AND name LIKE ('avatars/' || auth.uid()::text || '/%')
+  )
+  WITH CHECK (
+    bucket_id = 'car-images'
+    AND name LIKE ('avatars/' || auth.uid()::text || '/%')
+  );
+CREATE POLICY "Users can delete own avatar" ON storage.objects
+  FOR DELETE TO authenticated
+  USING (
+    bucket_id = 'car-images'
+    AND name LIKE ('avatars/' || auth.uid()::text || '/%')
+  );
+
 -- ============================================================================
 -- 4b. Contact info (single-row, admin-editable)
 --

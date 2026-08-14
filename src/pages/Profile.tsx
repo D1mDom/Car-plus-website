@@ -53,7 +53,6 @@ import {
   KeyRound,
   Camera,
   Trash2,
-  ImagePlus,
 } from "lucide-react";
 import type { TranslationKey } from "@/i18n/translations";
 
@@ -88,19 +87,22 @@ const SHORTCUTS: {
 
 const Profile = () => {
   const { user, loading: authLoading, signOut, updatePassword } = useAuth();
-  const { data: profile, isLoading, save, uploadAvatarFile } = useProfile();
+  const { data: profile, isLoading, save, uploadAvatarFile, uploadCoverFile } = useProfile();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
+  const coverFileRef = useRef<HTMLInputElement>(null);
 
   const [section, setSection] = useState<SectionId>("personal");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [coverUrl, setCoverUrl] = useState("");
   const [telegram, setTelegram] = useState("");
   const [preferredTime, setPreferredTime] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [logoutSuccessOpen, setLogoutSuccessOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -119,6 +121,7 @@ const Profile = () => {
   useEffect(() => {
     contactReady.current = false;
     setAvatarUrl("");
+    setCoverUrl("");
   }, [user?.id]);
 
   useEffect(() => {
@@ -127,6 +130,11 @@ const Profile = () => {
     setAvatarUrl(
       profile?.avatar_url ||
         (typeof meta.avatar_url === "string" ? meta.avatar_url : "") ||
+        ""
+    );
+    setCoverUrl(
+      profile?.cover_url ||
+        (typeof meta.cover_url === "string" ? meta.cover_url : "") ||
         ""
     );
     setTelegram(
@@ -153,18 +161,26 @@ const Profile = () => {
 
   const onPersonalSaved = (saved: Profile) => {
     setAvatarUrl(saved.avatar_url ?? avatarUrl);
+    setCoverUrl(saved.cover_url ?? coverUrl);
     setTelegram(saved.telegram ?? telegram);
     setPreferredTime(saved.preferred_time ?? preferredTime);
   };
+
+  const profileSaveBase = () => ({
+    full_name: profile?.full_name ?? "",
+    phone: profile?.phone ?? "",
+    address: profile?.address ?? "",
+    avatar_url: avatarUrl || null,
+    cover_url: coverUrl || null,
+    telegram: profile?.telegram ?? telegram,
+    preferred_time: profile?.preferred_time ?? preferredTime,
+  });
 
   const onSaveContact = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const saved = await save.mutateAsync({
-        full_name: profile?.full_name ?? "",
-        phone: profile?.phone ?? "",
-        address: profile?.address ?? "",
-        avatar_url: avatarUrl || null,
+        ...profileSaveBase(),
         telegram,
         preferred_time: preferredTime,
       });
@@ -187,12 +203,8 @@ const Profile = () => {
       const url = await uploadAvatarFile.mutateAsync(file);
       setAvatarUrl(url);
       await save.mutateAsync({
-        full_name: profile?.full_name ?? "",
-        phone: profile?.phone ?? "",
-        address: profile?.address ?? "",
+        ...profileSaveBase(),
         avatar_url: url,
-        telegram: profile?.telegram ?? telegram,
-        preferred_time: profile?.preferred_time ?? preferredTime,
       });
       toast.success(t("profile.avatarSaved"));
     } catch (err) {
@@ -208,18 +220,53 @@ const Profile = () => {
     try {
       setAvatarUrl("");
       await save.mutateAsync({
-        full_name: profile?.full_name ?? "",
-        phone: profile?.phone ?? "",
-        address: profile?.address ?? "",
+        ...profileSaveBase(),
         avatar_url: null,
-        telegram: profile?.telegram ?? telegram,
-        preferred_time: profile?.preferred_time ?? preferredTime,
       });
       toast.success(t("profile.avatarRemoved"));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("profile.saveFail"));
     } finally {
       setUploading(false);
+    }
+  };
+
+  const onPickCover = async (file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error(t("profile.avatarInvalid"));
+      return;
+    }
+    setUploadingCover(true);
+    try {
+      const url = await uploadCoverFile.mutateAsync(file);
+      setCoverUrl(url);
+      await save.mutateAsync({
+        ...profileSaveBase(),
+        cover_url: url,
+      });
+      toast.success(t("profile.coverSaved"));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("profile.coverFail"));
+    } finally {
+      setUploadingCover(false);
+      if (coverFileRef.current) coverFileRef.current.value = "";
+    }
+  };
+
+  const onRemoveCover = async () => {
+    setUploadingCover(true);
+    try {
+      setCoverUrl("");
+      await save.mutateAsync({
+        ...profileSaveBase(),
+        cover_url: null,
+      });
+      toast.success(t("profile.coverRemoved"));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("profile.saveFail"));
+    } finally {
+      setUploadingCover(false);
     }
   };
 
@@ -262,169 +309,173 @@ const Profile = () => {
     : null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#f0f2f5] dark:bg-background">
       <Header />
-      <main className="pb-16">
-        <section className="relative overflow-hidden border-b border-border/60 bg-[linear-gradient(165deg,hsl(216_45%_14%)_0%,hsl(210_35%_22%)_48%,hsl(199_55%_28%)_100%)]">
-          <div
-            className="pointer-events-none absolute inset-0 opacity-40"
-            style={{
-              backgroundImage:
-                "radial-gradient(ellipse 55% 45% at 85% 15%, hsl(199 100% 55% / 0.28), transparent 60%)",
-            }}
-          />
-          <div className="container relative mx-auto max-w-5xl px-[10px] py-8 sm:py-10">
-            <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
-              <div className="relative">
-                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-white/15 text-3xl font-bold text-white ring-1 ring-white/20 sm:h-24 sm:w-24">
-                  {avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt={displayName}
-                      onError={onImgError}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    initial
-                  )}
-                </div>
-                <button
-                  type="button"
-                  disabled={uploading}
-                  onClick={() => fileRef.current?.click()}
-                  className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full bg-[#174080] text-white shadow-md ring-2 ring-[hsl(216_45%_18%)] transition hover:bg-[#143871] disabled:opacity-60"
-                  aria-label={t("profile.avatarChange")}
-                >
-                  {uploading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Camera className="h-4 w-4" />
-                  )}
-                </button>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => void onPickAvatar(e.target.files?.[0] ?? null)}
-                />
-              </div>
-              <div className="min-w-0">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#5b8fd4]]">
-                  {t("profile.settingsEyebrow")}
-                </p>
-                <h1 className="font-heading text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                  {displayName}
-                </h1>
-                <p className="mt-1 truncate text-sm text-white/75">{user.email}</p>
-                <p className="mt-2 text-sm text-white/65">{t("profile.subtitle")}</p>
-                {memberSince && (
-                  <p className="mt-1 text-xs text-white/50">
-                    {t("profile.memberSince")}: {memberSince}
-                  </p>
+      <main className="pb-16 pt-[72px] sm:pt-[80px]">
+        {/* Facebook-style profile header */}
+        <div className="mx-auto w-full max-w-[940px] bg-card shadow-sm">
+          {/* Cover photo */}
+          <div className="group relative h-[200px] overflow-hidden bg-[#dfe0e4] dark:bg-muted sm:h-[280px] md:h-[360px]">
+            {coverUrl ? (
+              <img
+                src={coverUrl}
+                alt=""
+                onError={onImgError}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            ) : null}
+            <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/25" />
+            <div className="absolute bottom-3 right-3 flex gap-2 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+              <button
+                type="button"
+                disabled={uploadingCover}
+                onClick={() => coverFileRef.current?.click()}
+                className="flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-foreground shadow-md transition hover:bg-white/95 disabled:opacity-60 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
+              >
+                {uploadingCover ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4" />
                 )}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <div className="container mx-auto max-w-5xl px-[10px] py-8 sm:py-10">
-          <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-            <nav className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
-              {NAV.map(({ id, icon: Icon, label }) => (
+                {t("profile.editCover")}
+              </button>
+              {coverUrl ? (
                 <button
-                  key={id}
                   type="button"
-                  onClick={() => setSection(id)}
-                  className={cn(
-                    "flex shrink-0 items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-left text-sm font-medium transition-colors",
-                    section === id
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
+                  disabled={uploadingCover}
+                  onClick={() => void onRemoveCover()}
+                  className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-foreground shadow-md transition hover:bg-white/95 disabled:opacity-60 dark:bg-zinc-800 dark:text-white"
+                  aria-label={t("profile.coverRemove")}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {t(label)}
+                  <Trash2 className="h-4 w-4" />
                 </button>
-              ))}
-            </nav>
-
-            <div className="min-w-0 space-y-6">
-              {isLoading && (section === "personal" || section === "contact") ? (
-                <div className="flex justify-center rounded-2xl border border-border/70 bg-card py-16">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
               ) : null}
+            </div>
+            <input
+              ref={coverFileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => void onPickCover(e.target.files?.[0] ?? null)}
+            />
+          </div>
 
-              {section === "personal" && !isLoading && (
-                <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6">
-                  <div className="mb-5 border-b border-border/60 pb-4">
-                    <h2 className="font-heading text-lg font-semibold text-foreground">
-                      {t("profile.details")}
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">{t("profile.detailsDesc")}</p>
+          {/* Avatar + name row */}
+          <div className="relative px-4 pb-3 sm:px-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
+                <div className="group/avatar relative -mt-[60px] shrink-0 sm:-mt-[84px]">
+                  <div className="flex h-[120px] w-[120px] items-center justify-center overflow-hidden rounded-full bg-muted text-4xl font-bold text-[#174080] ring-4 ring-card sm:h-[168px] sm:w-[168px]">
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt={displayName}
+                        onError={onImgError}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      initial
+                    )}
                   </div>
-
-                  <div className="mb-6 flex flex-col gap-4 rounded-xl border border-border/70 bg-muted/30 p-4 sm:flex-row sm:items-center">
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted text-xl font-semibold text-muted-foreground">
-                      {avatarUrl ? (
-                        <img
-                          src={avatarUrl}
-                          alt={displayName}
-                          onError={onImgError}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        initial
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground">{t("profile.avatarTitle")}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{t("profile.avatarHint")}</p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="gap-1.5"
-                          disabled={uploading}
-                          onClick={() => fileRef.current?.click()}
-                        >
-                          {uploading ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <ImagePlus className="h-3.5 w-3.5" />
-                          )}
-                          {t("profile.avatarUpload")}
-                        </Button>
-                        {avatarUrl && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="gap-1.5 text-destructive hover:text-destructive"
-                            disabled={uploading}
-                            onClick={() => void onRemoveAvatar()}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            {t("profile.avatarRemove")}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <ProfilePersonalForm
-                    email={user.email ?? ""}
-                    profile={profile}
-                    avatarUrl={avatarUrl}
-                    onSaved={onPersonalSaved}
+                  <button
+                    type="button"
+                    disabled={uploading}
+                    onClick={() => fileRef.current?.click()}
+                    className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-[#e4e6eb] text-foreground shadow-sm transition hover:bg-[#d8dadf] disabled:opacity-60 dark:bg-zinc-700 dark:hover:bg-zinc-600 sm:bottom-3 sm:right-3 sm:h-10 sm:w-10"
+                    aria-label={t("profile.editPhoto")}
+                    title={t("profile.editPhoto")}
+                  >
+                    {uploading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4 sm:h-5 sm:w-5" />
+                    )}
+                  </button>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => void onPickAvatar(e.target.files?.[0] ?? null)}
                   />
                 </div>
-              )}
+                <div className="min-w-0 pb-1 sm:pb-2">
+                  <h1 className="font-heading text-2xl font-bold leading-tight text-foreground sm:text-[32px]">
+                    {displayName}
+                  </h1>
+                  {memberSince && (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {t("profile.memberSince")}: {memberSince}
+                    </p>
+                  )}
+                  <p className="mt-0.5 truncate text-sm text-muted-foreground">{user.email}</p>
+                </div>
+              </div>
+              {avatarUrl ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="hidden shrink-0 border-border/80 bg-muted/40 sm:inline-flex"
+                  disabled={uploading}
+                  onClick={() => void onRemoveAvatar()}
+                >
+                  {t("profile.avatarRemove")}
+                </Button>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Facebook-style tabs */}
+          <nav className="flex gap-0 overflow-x-auto border-t border-border/80 px-2 sm:px-4">
+            {NAV.map(({ id, icon: Icon, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setSection(id)}
+                className={cn(
+                  "relative flex shrink-0 items-center gap-2 px-4 py-3.5 text-sm font-semibold transition-colors",
+                  section === id
+                    ? "text-[#174080] after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[#174080]"
+                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                )}
+              >
+                <Icon className="hidden h-4 w-4 sm:block" />
+                {t(label)}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Tab content */}
+        <div className="mx-auto w-full max-w-[940px] px-[10px] py-4 sm:px-4">
+          <div className="min-w-0 space-y-4">
+            {isLoading && (section === "personal" || section === "contact") ? (
+              <div className="flex justify-center rounded-lg border border-border/70 bg-card py-16 shadow-sm">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : null}
+
+            {section === "personal" && !isLoading && (
+              <div className="rounded-lg border border-border/70 bg-card p-5 shadow-sm sm:p-6">
+                <div className="mb-5 border-b border-border/60 pb-4">
+                  <h2 className="font-heading text-lg font-semibold text-foreground">
+                    {t("profile.details")}
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">{t("profile.detailsDesc")}</p>
+                </div>
+
+                <ProfilePersonalForm
+                  email={user.email ?? ""}
+                  profile={profile}
+                  avatarUrl={avatarUrl}
+                  onSaved={onPersonalSaved}
+                />
+              </div>
+            )}
 
               {section === "contact" && !isLoading && (
-                <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6">
+                <div className="rounded-lg border border-border/70 bg-card p-5 shadow-sm sm:p-6">
                   <div className="mb-5 border-b border-border/60 pb-4">
                     <h2 className="font-heading text-lg font-semibold text-foreground">
                       {t("profile.contactTitle")}
@@ -483,7 +534,7 @@ const Profile = () => {
               )}
 
               {section === "security" && (
-                <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6">
+                <div className="rounded-lg border border-border/70 bg-card p-5 shadow-sm sm:p-6">
                   <div className="mb-5 border-b border-border/60 pb-4">
                     <h2 className="font-heading text-lg font-semibold text-foreground">
                       {t("profile.securityTitle")}
@@ -531,7 +582,7 @@ const Profile = () => {
               )}
 
               {section === "preferences" && (
-                <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6">
+                <div className="rounded-lg border border-border/70 bg-card p-5 shadow-sm sm:p-6">
                   <div className="mb-5 border-b border-border/60 pb-4">
                     <h2 className="font-heading text-lg font-semibold text-foreground">
                       {t("profile.preferencesTitle")}
@@ -548,7 +599,7 @@ const Profile = () => {
               )}
 
               {section === "shortcuts" && (
-                <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6">
+                <div className="rounded-lg border border-border/70 bg-card p-5 shadow-sm sm:p-6">
                   <div className="mb-5 border-b border-border/60 pb-4">
                     <h2 className="font-heading text-lg font-semibold text-foreground">
                       {t("profile.shortcutsTitle")}
@@ -581,7 +632,7 @@ const Profile = () => {
               )}
 
               {section === "account" && (
-                <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6">
+                <div className="rounded-lg border border-border/70 bg-card p-5 shadow-sm sm:p-6">
                   <div className="mb-5 border-b border-border/60 pb-4">
                     <h2 className="font-heading text-lg font-semibold text-foreground">
                       {t("profile.accountTitle")}
@@ -615,7 +666,6 @@ const Profile = () => {
                   </div>
                 </div>
               )}
-            </div>
           </div>
         </div>
       </main>

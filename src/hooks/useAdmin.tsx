@@ -1,24 +1,23 @@
+import type { User } from "@supabase/supabase-js";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { hasDashboardAccess } from "@/lib/dashboardAccess";
 
 export const useAdmin = () => {
   const { user } = useAuth();
 
   const { data: isAdmin, isLoading } = useQuery({
-    queryKey: ["admin-status", user?.id],
+    queryKey: ["admin-status", user?.id, user?.email],
     queryFn: async () => {
-      // is_admin() is SECURITY DEFINER, so it reads admin_users without
-      // tripping that table's own RLS.
       const { data, error } = await supabase.rpc("is_admin", {
         _user_id: user!.id,
       });
-      if (error) throw error;
-      return data === true;
+      const rpcOk = !error && data === true;
+      return hasDashboardAccess(user!, rpcOk);
     },
     enabled: !!user?.id,
   });
 
-  // Signed-out users are never admins, and a failed check must not grant access.
   return { isAdmin: isAdmin ?? false, isLoading };
 };

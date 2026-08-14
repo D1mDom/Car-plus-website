@@ -1,4 +1,4 @@
-import type { Car } from "@/hooks/useCars";
+import type { Car, CarStatus } from "@/hooks/useCars";
 
 export const extractBrand = (name: string): string => {
   const first = name.trim().split(/\s+/)[0] ?? "";
@@ -66,4 +66,24 @@ export const carMatchesBrand = (carName: string, brand: string): boolean => {
 export const filterCarsByBrand = (cars: Car[], brand: string | null): Car[] => {
   if (!brand) return cars;
   return cars.filter((c) => carMatchesBrand(c.name, brand));
+};
+
+export const STATUS_CATEGORIES: CarStatus[] = ["onroad", "ready", "luxury", "plate"];
+
+export const getPublicCars = (cars: Car[]): Car[] => publicCars(cars);
+
+export const getCarsByStatus = (
+  cars: Car[],
+  status: CarStatus,
+  limit?: number,
+): Car[] => {
+  const list = publicCars(cars).filter((c) => c.status === status);
+  return limit === undefined ? list : list.slice(0, limit);
+};
+
+export const countCarsByStatus = (cars: Car[]): Record<CarStatus | "all", number> => {
+  const base = publicCars(cars);
+  const counts = { all: base.length, onroad: 0, ready: 0, luxury: 0, plate: 0 };
+  for (const car of base) counts[car.status]++;
+  return counts;
 };

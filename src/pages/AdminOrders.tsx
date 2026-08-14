@@ -48,6 +48,11 @@ import {
 import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/lib/utils";
 
+type MonthFilter = "all" | "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" | "11";
+type SortFilter = "newest" | "oldest" | "amountHigh" | "amountLow";
+
+const FILTER_YEARS = Array.from({ length: 27 }, (_, i) => 2026 - i);
+
 const statusVariant = (s: string): "default" | "secondary" | "outline" | "destructive" =>
   s === "completed" || s === "delivered"
     ? "default"
@@ -110,6 +115,10 @@ const AdminOrders = () => {
   const [receiptBusyId, setReceiptBusyId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedYear, setSelectedYear] = useState<number | "all">("all");
+  const [selectedMonth, setSelectedMonth] = useState<MonthFilter>("all");
+  const [carFilter, setCarFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<SortFilter>("newest");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -183,9 +192,59 @@ const AdminOrders = () => {
 
   const money = (n: number) => `$${Number(n).toLocaleString()}`;
 
+  const monthOptions = useMemo(
+    () => [
+      { value: "all" as const, label: t("admin.reports.month.all") },
+      { value: "0" as const, label: t("admin.reports.month.jan") },
+      { value: "1" as const, label: t("admin.reports.month.feb") },
+      { value: "2" as const, label: t("admin.reports.month.mar") },
+      { value: "3" as const, label: t("admin.reports.month.apr") },
+      { value: "4" as const, label: t("admin.reports.month.may") },
+      { value: "5" as const, label: t("admin.reports.month.jun") },
+      { value: "6" as const, label: t("admin.reports.month.jul") },
+      { value: "7" as const, label: t("admin.reports.month.aug") },
+      { value: "8" as const, label: t("admin.reports.month.sep") },
+      { value: "9" as const, label: t("admin.reports.month.oct") },
+      { value: "10" as const, label: t("admin.reports.month.nov") },
+      { value: "11" as const, label: t("admin.reports.month.dec") },
+    ],
+    [t],
+  );
+
+  const carOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const order of orders) {
+      for (const item of order.order_items ?? []) {
+        const id = item.car_id || item.car_name;
+        if (!id) continue;
+        map.set(id, item.car_name || item.car_id || id);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [orders]);
+
+  const orderMatchesPeriod = (order: Order) => {
+    if (selectedYear === "all" && selectedMonth === "all") return true;
+    const d = new Date(order.created_at);
+    if (selectedYear !== "all" && d.getFullYear() !== selectedYear) return false;
+    if (selectedMonth !== "all" && d.getMonth() !== Number(selectedMonth)) return false;
+    return true;
+  };
+
+  const orderMatchesCar = (order: Order) => {
+    if (carFilter === "all") return true;
+    return (order.order_items ?? []).some(
+      (item) => item.car_id === carFilter || item.car_name === carFilter,
+    );
+  };
+
   const filteredOrders = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return orders.filter((o) => {
+    const list = orders.filter((o) => {
+      if (!orderMatchesPeriod(o)) return false;
+      if (!orderMatchesCar(o)) return false;
       if (statusFilter !== "all" && o.status !== statusFilter) return false;
       if (q) {
         const name = (o.customer_name || o.notes?.split("\n")[0] || "").toLowerCase();
@@ -199,12 +258,36 @@ const AdminOrders = () => {
       }
       return true;
     });
-  }, [orders, search, statusFilter]);
 
-  const hasFilters = search.trim() !== "" || statusFilter !== "all";
+    return [...list].sort((a, b) => {
+      switch (sortBy) {
+        case "oldest":
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case "amountHigh":
+          return b.total_amount - a.total_amount;
+        case "amountLow":
+          return a.total_amount - b.total_amount;
+        case "newest":
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+  }, [orders, search, statusFilter, selectedYear, selectedMonth, carFilter, sortBy]);
+
+  const hasFilters =
+    search.trim() !== "" ||
+    statusFilter !== "all" ||
+    selectedYear !== "all" ||
+    selectedMonth !== "all" ||
+    carFilter !== "all" ||
+    sortBy !== "newest";
   const clearFilters = () => {
     setSearch("");
     setStatusFilter("all");
+    setSelectedYear("all");
+    setSelectedMonth("all");
+    setCarFilter("all");
+    setSortBy("newest");
     setSearchParams({}, { replace: true });
   };
 
@@ -372,32 +455,110 @@ const AdminOrders = () => {
             ) : null}
           </div>
           {orders.length > 0 ? (
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("admin.orders.search")}
-                className="sm:max-w-xs"
-              />
-              <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-                <SelectTrigger className="sm:w-[180px]">
-                  <SelectValue placeholder={t("admin.orders.filterStatus")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("admin.orders.filterAll")}</SelectItem>
-                  {ORDER_STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {statusLabel(s)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {hasFilters ? (
-                <Button variant="outline" size="sm" onClick={clearFilters} className="gap-1.5">
-                  <X className="h-3.5 w-3.5" />
-                  {t("admin.filter.clear")}
-                </Button>
-              ) : null}
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+                <div className="space-y-1.5">
+                  <Label htmlFor="orders-year">{t("admin.reports.year")}</Label>
+                  <Select
+                    value={String(selectedYear)}
+                    onValueChange={(v) => setSelectedYear(v === "all" ? "all" : Number(v))}
+                  >
+                    <SelectTrigger id="orders-year" className="sm:w-[140px]">
+                      <SelectValue placeholder={t("admin.reports.year")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("admin.orders.filterAllYears")}</SelectItem>
+                      {FILTER_YEARS.map((y) => (
+                        <SelectItem key={y} value={String(y)}>
+                          {y}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="orders-month">{t("admin.reports.month")}</Label>
+                  <Select
+                    value={selectedMonth}
+                    onValueChange={(v) => setSelectedMonth(v as MonthFilter)}
+                  >
+                    <SelectTrigger id="orders-month" className="sm:w-[160px]">
+                      <SelectValue placeholder={t("admin.reports.month")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {monthOptions.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>
+                          {m.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="orders-status">{t("admin.orders.filterStatus")}</Label>
+                  <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+                    <SelectTrigger id="orders-status" className="sm:w-[180px]">
+                      <SelectValue placeholder={t("admin.orders.filterStatus")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("admin.orders.filterAll")}</SelectItem>
+                      {ORDER_STATUSES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {statusLabel(s)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="orders-car">{t("admin.orders.filterCar")}</Label>
+                  <Select value={carFilter} onValueChange={setCarFilter}>
+                    <SelectTrigger id="orders-car" className="sm:w-[200px]">
+                      <SelectValue placeholder={t("admin.orders.filterCar")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("admin.orders.filterAllCars")}</SelectItem>
+                      {carOptions.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+                <div className="space-y-1.5 sm:flex-1 sm:min-w-[200px]">
+                  <Label htmlFor="orders-search">{t("admin.orders.searchLabel")}</Label>
+                  <Input
+                    id="orders-search"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={t("admin.orders.search")}
+                    className="sm:max-w-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="orders-sort">{t("admin.orders.filterSort")}</Label>
+                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortFilter)}>
+                    <SelectTrigger id="orders-sort" className="sm:w-[180px]">
+                      <SelectValue placeholder={t("admin.orders.filterSort")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="newest">{t("admin.orders.sort.newest")}</SelectItem>
+                      <SelectItem value="oldest">{t("admin.orders.sort.oldest")}</SelectItem>
+                      <SelectItem value="amountHigh">{t("admin.orders.sort.amountHigh")}</SelectItem>
+                      <SelectItem value="amountLow">{t("admin.orders.sort.amountLow")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {hasFilters ? (
+                  <Button variant="outline" size="sm" onClick={clearFilters} className="gap-1.5 sm:mb-0.5">
+                    <X className="h-3.5 w-3.5" />
+                    {t("admin.filter.clear")}
+                  </Button>
+                ) : null}
+              </div>
             </div>
           ) : null}
         </CardHeader>

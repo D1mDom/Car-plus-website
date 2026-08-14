@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -17,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePlaceOrder } from "@/hooks/usePlaceOrder";
+import { useOrderAlert } from "@/hooks/useOrderAlert";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -34,9 +36,11 @@ const PlaceOrderDialog = ({ car, onOpenChange }: PlaceOrderDialogProps) => {
   const [telegram, setTelegram] = useState("");
   const [preferredTime, setPreferredTime] = useState("");
   const [note, setNote] = useState("");
+  const [contactConsent, setContactConsent] = useState(false);
   const [touched, setTouched] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const placeOrder = usePlaceOrder();
+  const { showOrderAlert } = useOrderAlert();
   const { data: profile } = useProfile();
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -56,6 +60,7 @@ const PlaceOrderDialog = ({ car, onOpenChange }: PlaceOrderDialogProps) => {
       setTelegram(profile?.telegram?.replace(/^@/, "") ?? "");
       setPreferredTime(profile?.preferred_time ?? "");
       setNote("");
+      setContactConsent(false);
       setSubmitted(false);
       setTouched(false);
     }
@@ -72,7 +77,7 @@ const PlaceOrderDialog = ({ car, onOpenChange }: PlaceOrderDialogProps) => {
   const cleanPhone = (v: string) => v.replace(/[^0-9+\-\s()]/g, "");
   const nameOk = name.trim().length >= 2;
   const phoneOk = phone.trim().replace(/[^0-9]/g, "").length >= 8;
-  const formOk = nameOk && phoneOk;
+  const formOk = nameOk && phoneOk && contactConsent;
 
   const close = () => {
     onOpenChange(false);
@@ -81,6 +86,7 @@ const PlaceOrderDialog = ({ car, onOpenChange }: PlaceOrderDialogProps) => {
     setTelegram("");
     setPreferredTime("");
     setNote("");
+    setContactConsent(false);
     setTouched(false);
     setSubmitted(false);
   };
@@ -97,7 +103,15 @@ const PlaceOrderDialog = ({ car, onOpenChange }: PlaceOrderDialogProps) => {
         preferredTime: preferredTime || undefined,
         note: note.trim() || undefined,
       },
-      { onSuccess: () => setSubmitted(true) }
+      { onSuccess: () => {
+          setSubmitted(true);
+          showOrderAlert({
+            carId: String(car.id),
+            carName: car.name,
+            carPrice: car.price,
+            carImage: car.image,
+          });
+        } }
     );
   };
 
@@ -230,6 +244,21 @@ const PlaceOrderDialog = ({ car, onOpenChange }: PlaceOrderDialogProps) => {
                 />
               </div>
             </div>
+
+            <div className="flex items-start gap-3 rounded-lg border border-border/80 bg-muted/40 px-3 py-3">
+              <Checkbox
+                id="order-consent"
+                checked={contactConsent}
+                onCheckedChange={(v) => setContactConsent(v === true)}
+                className="mt-0.5"
+              />
+              <Label htmlFor="order-consent" className="cursor-pointer text-sm font-normal leading-relaxed">
+                {t("order.dialog.consentLabel")}
+              </Label>
+            </div>
+            {touched && !contactConsent ? (
+              <p className="text-xs text-destructive">{t("order.dialog.consentRequired")}</p>
+            ) : null}
 
             <div className="flex gap-2 rounded-lg border border-border/80 bg-muted/40 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
               <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#174080]" />

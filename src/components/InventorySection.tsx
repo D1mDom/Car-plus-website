@@ -16,18 +16,20 @@ import { cn } from "@/lib/utils";
 interface InventorySectionProps {
   initialSearch?: string;
   initialBrand?: string | null;
+  initialCategory?: CarStatus | "all";
   showHeader?: boolean;
 }
 
 const InventorySection = ({
   initialSearch = "",
   initialBrand = null,
+  initialCategory = "all",
   showHeader = true,
 }: InventorySectionProps) => {
   const { t } = useLanguage();
   const { data: carsData = [], isLoading } = useCars();
   const [searchQuery, setSearchQuery] = useState(initialSearch);
-  const [activeCategory, setActiveCategory] = useState<CarStatus | "all">("all");
+  const [activeCategory, setActiveCategory] = useState<CarStatus | "all">(initialCategory);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
@@ -41,6 +43,10 @@ const InventorySection = ({
   useEffect(() => {
     setBrandFilter(initialBrand);
   }, [initialBrand]);
+
+  useEffect(() => {
+    setActiveCategory(initialCategory);
+  }, [initialCategory]);
 
   const priceRange = useMemo(() => {
     if (carsData.length === 0) return { min: 0, max: 100000 };

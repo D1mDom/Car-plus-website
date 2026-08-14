@@ -428,20 +428,28 @@ const AdminSettings = () => {
       </header>
 
       {/* Roles */}
-      <section className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl border border-border/60 bg-background p-4">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Shield className="h-4 w-4 text-[#174080]" />
-            {t("admin.settings.roleAdminTitle")}
+      <section className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-border/60 bg-background p-4">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Shield className="h-4 w-4 text-[#174080]" />
+              {t("admin.settings.roleAdminTitle")}
+            </div>
+            <p className="text-sm leading-relaxed text-muted-foreground">{t("admin.settings.roleAdminBody")}</p>
           </div>
-          <p className="text-sm leading-relaxed text-muted-foreground">{t("admin.settings.roleAdminBody")}</p>
+          <div className="rounded-2xl border border-border/60 bg-background p-4">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+              <UserRound className="h-4 w-4 text-sky-600" />
+              {t("admin.settings.roleUserTitle")}
+            </div>
+            <p className="text-sm leading-relaxed text-muted-foreground">{t("admin.settings.roleUserBody")}</p>
+          </div>
         </div>
-        <div className="rounded-2xl border border-border/60 bg-background p-4">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <UserRound className="h-4 w-4 text-sky-600" />
-            {t("admin.settings.roleUserTitle")}
-          </div>
-          <p className="text-sm leading-relaxed text-muted-foreground">{t("admin.settings.roleUserBody")}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#174080]/20 bg-[#174080]/5 px-4 py-3">
+          <p className="text-sm text-muted-foreground">{t("admin.settings.manageUsersHint")}</p>
+          <Button asChild size="sm" className="rounded-lg bg-[#174080] hover:bg-[#174080]/90">
+            <Link to="/admin/users">{t("admin.settings.manageUsersLink")}</Link>
+          </Button>
         </div>
       </section>
 

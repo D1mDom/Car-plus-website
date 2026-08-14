@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { uploadProfileAvatar } from "@/lib/imageUpload";
+import { uploadProfileAvatar, uploadProfileCover } from "@/lib/imageUpload";
+import { syncAuthUserMetadata, ensureUserProfile } from "@/lib/userProfileBootstrap";
 
 export type Profile = {
   id: string;
@@ -11,6 +12,7 @@ export type Profile = {
   phone: string | null;
   address: string | null;
   avatar_url: string | null;
+  cover_url: string | null;
   telegram: string | null;
   preferred_time: string | null;
   created_at: string;
@@ -22,6 +24,7 @@ export type ProfileInput = {
   phone: string;
   address: string;
   avatar_url?: string | null;
+  cover_url?: string | null;
   telegram?: string;
   preferred_time?: string;
 };
@@ -40,7 +43,7 @@ const errMessage = (e: unknown) => {
 const isMissingColumn = (e: unknown) => {
   const m = errMessage(e).toLowerCase();
   return (
-    (m.includes("avatar_url") || m.includes("telegram") || m.includes("preferred_time")) &&
+    (m.includes("avatar_url") || m.includes("cover_url") || m.includes("telegram") || m.includes("preferred_time")) &&
     (m.includes("column") || m.includes("schema cache") || m.includes("could not find"))
   );
 };
@@ -66,6 +69,7 @@ const mapRow = (row: Record<string, unknown>, meta: Record<string, unknown> = {}
     phone,
     address: text(row.address) || null,
     avatar_url: text(row.avatar_url) || text(meta.avatar_url) || null,
+    cover_url: text(row.cover_url) || text(meta.cover_url) || null,
     telegram: text(row.telegram) || text(meta.telegram) || null,
     preferred_time: text(row.preferred_time) || text(meta.preferred_time) || null,
     created_at: String(row.created_at ?? ""),
@@ -78,22 +82,18 @@ const syncAuthMeta = async (input: {
   full_name: string | null;
   phone: string | null;
   avatar_url: string | null;
+  cover_url: string | null;
   telegram: string | null;
   preferred_time: string | null;
 }) => {
-  try {
-    await supabase.auth.updateUser({
-      data: {
-        full_name: input.full_name ?? "",
-        phone: input.phone ?? "",
-        avatar_url: input.avatar_url ?? "",
-        telegram: input.telegram ?? "",
-        preferred_time: input.preferred_time ?? "",
-      },
-    });
-  } catch (e) {
-    console.warn("profile auth meta sync failed:", e);
-  }
+  await syncAuthUserMetadata({
+    full_name: input.full_name ?? "",
+    phone: input.phone ?? "",
+    avatar_url: input.avatar_url ?? "",
+    cover_url: input.cover_url ?? "",
+    telegram: input.telegram ?? "",
+    preferred_time: input.preferred_time ?? "",
+  });
 };
 
 /**
@@ -107,6 +107,7 @@ const persistProfile = async (
     phone: string | null;
     address: string | null;
     avatar_url: string | null;
+    cover_url: string | null;
     telegram: string | null;
     preferred_time: string | null;
   }
@@ -148,6 +149,7 @@ const persistProfile = async (
     phone: fields.phone,
     address: fields.address,
     avatar_url: fields.avatar_url,
+    cover_url: fields.cover_url,
     telegram: fields.telegram,
     preferred_time: fields.preferred_time,
     updated_at,
@@ -167,6 +169,7 @@ const persistProfile = async (
     return {
       ...basic,
       avatar_url: fields.avatar_url,
+      cover_url: fields.cover_url,
       telegram: fields.telegram,
       preferred_time: fields.preferred_time,
     };
@@ -183,6 +186,7 @@ export const useProfile = () => {
     staleTime: 30_000,
     queryFn: async (): Promise<Profile | null> => {
       if (!user) return null;
+      await ensureUserProfile(user);
       const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
 
       const { data, error } = await db
@@ -200,6 +204,7 @@ export const useProfile = () => {
           phone: text(meta.phone) || null,
           address: null,
           avatar_url: text(meta.avatar_url) || null,
+          cover_url: text(meta.cover_url) || null,
           telegram: text(meta.telegram) || null,
           preferred_time: text(meta.preferred_time) || null,
           created_at: "",
@@ -255,12 +260,17 @@ export const useProfile = () => {
         input.avatar_url !== undefined
           ? input.avatar_url?.trim() || null
           : query.data?.avatar_url ?? null;
+      const cover_url =
+        input.cover_url !== undefined
+          ? input.cover_url?.trim() || null
+          : query.data?.cover_url ?? null;
 
       const row = await persistProfile(user.id, {
         full_name,
         phone,
         address,
         avatar_url,
+        cover_url,
         telegram,
         preferred_time,
       });
@@ -269,6 +279,7 @@ export const useProfile = () => {
         full_name,
         phone,
         avatar_url,
+        cover_url,
         telegram,
         preferred_time,
       });
@@ -281,6 +292,7 @@ export const useProfile = () => {
         phone,
         address,
         avatar_url,
+        cover_url,
         telegram,
         preferred_time,
         created_at: String(row.created_at ?? query.data?.created_at ?? ""),
@@ -295,9 +307,18 @@ export const useProfile = () => {
   const uploadAvatarFile = useMutation({
     mutationFn: async (file: File) => {
       if (!user) throw new Error("Not signed in");
+      await ensureUserProfile(user);
       return uploadProfileAvatar(user.id, file);
     },
   });
 
-  return { ...query, save, uploadAvatarFile };
+  const uploadCoverFile = useMutation({
+    mutationFn: async (file: File) => {
+      if (!user) throw new Error("Not signed in");
+      await ensureUserProfile(user);
+      return uploadProfileCover(user.id, file);
+    },
+  });
+
+  return { ...query, save, uploadAvatarFile, uploadCoverFile };
 };

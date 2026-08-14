@@ -2,10 +2,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
 import { WishlistProvider } from "@/hooks/useWishlist";
+import { OrderAlertProvider } from "@/hooks/useOrderAlert";
 import { LanguageProvider } from "@/hooks/useLanguage";
 import Index from "./pages/Index";
 import Cars from "./pages/Cars";
@@ -29,10 +30,11 @@ import AdminBanners from "./pages/AdminBanners";
 import AdminTeam from "./pages/AdminTeam";
 import AdminBrands from "./pages/AdminBrands";
 import AdminSettings from "./pages/AdminSettings";
+import AdminUsers from "./pages/AdminUsers";
 import AdminGuard from "./components/admin/AdminGuard";
 import AdminLayout from "./components/admin/AdminLayout";
 import NotFound from "./pages/NotFound";
-import VisitorTracker from "./components/VisitorTracker";
+import WelcomeDialog from "./components/WelcomeDialog";
 
 const queryClient = new QueryClient();
 
@@ -44,10 +46,11 @@ const App = () => {
           <TooltipProvider>
             <BrowserRouter>
               <AuthProvider>
+                <OrderAlertProvider>
                 <WishlistProvider>
                   <Toaster />
                   <Sonner />
-                  <VisitorTracker />
+                  <WelcomeDialog />
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/cars" element={<Cars />} />
@@ -61,6 +64,8 @@ const App = () => {
                     <Route path="/profile" element={<Profile />} />
 
                     <Route path="/admin/login" element={<AdminLogin />} />
+                    <Route path="/owner" element={<Navigate to="/admin/users" replace />} />
+                    <Route path="/admin/owner" element={<Navigate to="/admin/users" replace />} />
                     <Route path="/admin" element={<AdminGuard />}>
                       <Route element={<AdminLayout />}>
                         <Route index element={<Admin />} />
@@ -73,6 +78,7 @@ const App = () => {
                         <Route path="banners" element={<AdminBanners />} />
                         <Route path="brands" element={<AdminBrands />} />
                         <Route path="team" element={<AdminTeam />} />
+                        <Route path="users" element={<AdminUsers />} />
                         <Route path="settings" element={<AdminSettings />} />
                       </Route>
                     </Route>
@@ -80,6 +86,7 @@ const App = () => {
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </WishlistProvider>
+                </OrderAlertProvider>
               </AuthProvider>
             </BrowserRouter>
           </TooltipProvider>

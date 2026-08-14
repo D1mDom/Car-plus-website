@@ -108,13 +108,14 @@ export const uploadBrandLogo = async (file: File): Promise<string> => {
   return data.publicUrl;
 };
 
-/** Upload a profile photo under avatars/{userId}/ */
-export const uploadProfileAvatar = async (userId: string, file: File): Promise<string> => {
-  if (file.size > MAX_UPLOAD_BYTES) {
-    throw new Error("Image is too large (max 50MB)");
-  }
-  const { blob, extension } = await compressImage(file);
-  const path = `avatars/${userId}/${safeUUID()}.${extension}`;
+/** Upload a profile photo under avatars/{userId}/ or covers/{userId}/ */
+const uploadProfileImageDirect = async (
+  userId: string,
+  folder: "avatars" | "covers",
+  blob: Blob,
+  extension: string,
+): Promise<string> => {
+  const path = `${folder}/${userId}/${safeUUID()}.${extension}`;
 
   const { error } = await supabase.storage
     .from(BUCKET)
@@ -122,6 +123,91 @@ export const uploadProfileAvatar = async (userId: string, file: File): Promise<s
   if (error) throw error;
 
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  // Bust cache so the new photo shows immediately
   return `${data.publicUrl}?v=${Date.now()}`;
 };
+
+const uploadProfileAvatarDirect = async (userId: string, blob: Blob, extension: string) =>
+  uploadProfileImageDirect(userId, "avatars", blob, extension);
+
+const uploadProfileCoverDirect = async (userId: string, blob: Blob, extension: string) =>
+  uploadProfileImageDirect(userId, "covers", blob, extension);
+
+const isStorageRlsError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /row-level security|rls|policy/i.test(message);
+};
+
+const blobToDataUrl = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(new Error("Could not read image data"));
+    reader.readAsDataURL(blob);
+  });
+
+/** Smaller WebP for saving in profiles when storage RLS blocks upload. */
+const compressProfileInline = async (file: File, maxDim: number): Promise<Blob> => {
+  if (file.type === "image/gif") return file;
+
+  const img = await loadImage(file);
+  const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(img.width * scale));
+  canvas.height = Math.max(1, Math.round(img.height * scale));
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return file;
+
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/webp", 0.82),
+  );
+  return blob ?? file;
+};
+
+const compressAvatarInline = (file: File) => compressProfileInline(file, 512);
+
+const compressCoverInline = (file: File) => compressProfileInline(file, 1200);
+
+/** Fallback when storage bucket RLS has not been configured yet. */
+const uploadProfileImageInline = async (file: File, maxDim: number, maxBytes: number): Promise<string> => {
+  const blob = await compressProfileInline(file, maxDim);
+  if (blob.size > maxBytes) {
+    throw new Error("Image is too large after compression. Try a smaller photo.");
+  }
+  const dataUrl = await blobToDataUrl(blob);
+  if (!dataUrl.startsWith("data:image/")) {
+    throw new Error("Could not prepare profile photo");
+  }
+  return dataUrl;
+};
+
+const uploadProfileAvatarInline = (file: File) => uploadProfileImageInline(file, 512, 900_000);
+
+const uploadProfileCoverInline = (file: File) => uploadProfileImageInline(file, 1200, 1_500_000);
+
+const uploadProfileImage = async (
+  userId: string,
+  file: File,
+  kind: "avatar" | "cover",
+): Promise<string> => {
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new Error("Image is too large (max 50MB)");
+  }
+  const { blob, extension } = await compressImage(file);
+  const uploadDirect = kind === "avatar" ? uploadProfileAvatarDirect : uploadProfileCoverDirect;
+  const uploadInline = kind === "avatar" ? uploadProfileAvatarInline : uploadProfileCoverInline;
+
+  try {
+    return await uploadDirect(userId, blob, extension);
+  } catch (error) {
+    if (!isStorageRlsError(error)) throw error;
+    return uploadInline(file);
+  }
+};
+
+export const uploadProfileAvatar = async (userId: string, file: File): Promise<string> =>
+  uploadProfileImage(userId, file, "avatar");
+
+export const uploadProfileCover = async (userId: string, file: File): Promise<string> =>
+  uploadProfileImage(userId, file, "cover");

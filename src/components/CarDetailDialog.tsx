@@ -28,9 +28,7 @@ import {
   ExternalLink,
   MapPin,
 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
-import PlaceOrderDialog from "@/components/PlaceOrderDialog";
+import OrderAuthPrompt from "@/components/OrderAuthPrompt";
 import WishlistButton from "@/components/WishlistButton";
 
 const parseDescriptionItem = (raw: string) => {
@@ -48,9 +46,8 @@ interface CarDetailDialogProps {
 const CarDetailDialog = ({ car, open, onOpenChange }: CarDetailDialogProps) => {
   const { t } = useLanguage();
   const { data: contact } = useContact();
-  const { user } = useAuth();
   const [selectedImage, setSelectedImage] = useState(0);
-  const [orderOpen, setOrderOpen] = useState(false);
+  const [orderRequested, setOrderRequested] = useState(false);
 
   const telegram = (contact?.telegram || "@Carplus777").replace(/^@/, "");
   const phone = contact?.phone || "+855 12 345 678";
@@ -182,13 +179,7 @@ const CarDetailDialog = ({ car, open, onOpenChange }: CarDetailDialogProps) => {
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <Button
                       className="flex-1 gap-2"
-                      onClick={() => {
-                        if (!user) {
-                          toast.error(t("order.loginRequired"));
-                          return;
-                        }
-                        setOrderOpen(true);
-                      }}
+                      onClick={() => setOrderRequested(true)}
                     >
                       <ShoppingCart className="h-4 w-4" />
                       {t("card.order")}
@@ -225,10 +216,10 @@ const CarDetailDialog = ({ car, open, onOpenChange }: CarDetailDialogProps) => {
         </DialogContent>
       </Dialog>
 
-      <PlaceOrderDialog
-        car={orderOpen ? car : null}
+      <OrderAuthPrompt
+        car={orderRequested && car ? car : null}
         onOpenChange={(o) => {
-          if (!o) setOrderOpen(false);
+          if (!o) setOrderRequested(false);
         }}
       />
     </>

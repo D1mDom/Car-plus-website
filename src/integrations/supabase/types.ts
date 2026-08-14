@@ -18,16 +18,19 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          role: string
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
+          role?: string
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          role?: string
           user_id?: string
         }
         Relationships: []
@@ -194,6 +197,7 @@ export type Database = {
         Row: {
           address: string | null
           avatar_url: string | null
+          cover_url: string | null
           created_at: string
           full_name: string | null
           id: string
@@ -206,6 +210,7 @@ export type Database = {
         Insert: {
           address?: string | null
           avatar_url?: string | null
+          cover_url?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
@@ -218,6 +223,7 @@ export type Database = {
         Update: {
           address?: string | null
           avatar_url?: string | null
+          cover_url?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
