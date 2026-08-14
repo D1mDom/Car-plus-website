@@ -18,11 +18,6 @@ import {
   Sun,
   Moon,
   ChevronDown,
-  Database,
-  Loader2,
-  RefreshCw,
-  Flame,
-  Trash2,
   Globe,
   User,
 } from "lucide-react";
@@ -50,8 +45,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useEffect, useMemo, useState, useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import logo from "@/assets/logo.png";
 import { cn } from "@/lib/utils";
 import type { TranslationKey } from "@/i18n/translations";
@@ -63,6 +57,7 @@ import {
   useAdminOrderNotifications,
 } from "@/hooks/useAdminOrderNotifications";
 import { navPathToModule, routeToModule, type AdminModule } from "@/lib/modulePermissions";
+import AppDataMenu from "@/components/AppDataMenu";
 import AdminOrderNotifications from "@/components/admin/AdminOrderNotifications";
 import AdminOrderAlertBanner from "@/components/admin/AdminOrderAlertBanner";
 
@@ -206,75 +201,6 @@ function NavGroupDropdown({
   );
 }
 
-const ADMIN_QUERY_PREFIXES = [
-  "cars",
-  "admin-orders",
-  "admin-receipts",
-  "reports",
-  "banners",
-  "team-members",
-  "contact-info",
-  "brands",
-] as const;
-
-type DataAction = "refresh" | "warm" | "clear" | null;
-
-function DataMenuRow({
-  icon: Icon,
-  title,
-  description,
-  tone,
-  busy,
-  onClick,
-}: {
-  icon: typeof RefreshCw;
-  title: string;
-  description: string;
-  tone: "brand" | "green" | "red";
-  busy?: boolean;
-  onClick: () => void;
-}) {
-  const tones = {
-    brand: {
-      icon: "bg-[#174080]/12 text-[#174080]",
-      title: "text-[#174080]",
-      hover: "hover:bg-[#174080]/8 focus:bg-[#174080]/8",
-    },
-    green: {
-      icon: "bg-emerald-50 text-emerald-600",
-      title: "text-emerald-700",
-      hover: "hover:bg-emerald-50/80 focus:bg-emerald-50/80",
-    },
-    red: {
-      // Dashboard theme: turn "danger" tone into brand blue to match "red -> blue all".
-      icon: "bg-[#174080]/12 text-[#174080]",
-      title: "text-[#174080]",
-      hover: "hover:bg-[#174080]/8 focus:bg-[#174080]/8",
-    },
-  }[tone];
-
-  return (
-    <DropdownMenuItem
-      className={cn("cursor-pointer rounded-xl p-2", tones.hover)}
-      onClick={(e) => {
-        e.preventDefault();
-        onClick();
-      }}
-      disabled={busy}
-    >
-      <div className="flex w-full items-start gap-3">
-        <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", tones.icon)}>
-          {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Icon className="h-5 w-5" />}
-        </span>
-        <span className="min-w-0 pt-0.5">
-          <span className={cn("block text-sm font-semibold leading-tight", tones.title)}>{title}</span>
-          <span className="mt-0.5 block text-xs leading-snug text-slate-500">{description}</span>
-        </span>
-      </div>
-    </DropdownMenuItem>
-  );
-}
-
 const AdminOrderSeenSync = () => {
   const { pathname } = useLocation();
   const { markAllSeen } = useAdminOrderNotifications();
@@ -296,9 +222,6 @@ const AdminLayoutBody = () => {
   const [mounted, setMounted] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [dataAction, setDataAction] = useState<DataAction>(null);
-  const [dataMenuOpen, setDataMenuOpen] = useState(false);
-  const queryClient = useQueryClient();
   const { canManageUsers } = useUserRole();
   const { canReadModule } = useModulePermissions();
   const canReadOrders = canReadModule("orders");
@@ -332,60 +255,6 @@ const AdminLayoutBody = () => {
     setLogoutOpen(false);
     navigate("/admin/login", { replace: true });
   };
-
-  const refetchAdminQueries = useCallback(async () => {
-    await queryClient.invalidateQueries();
-    await queryClient.refetchQueries({ type: "active" });
-  }, [queryClient]);
-
-  const handleRefreshData = useCallback(async () => {
-    if (dataAction) return;
-    setDataAction("refresh");
-    try {
-      await refetchAdminQueries();
-      toast.success(t("admin.data.refreshDone"));
-      setDataMenuOpen(false);
-    } catch {
-      toast.error(t("admin.data.error"));
-    } finally {
-      setDataAction(null);
-    }
-  }, [dataAction, refetchAdminQueries, t]);
-
-  const handleWarmCache = useCallback(async () => {
-    if (dataAction) return;
-    setDataAction("warm");
-    try {
-      await Promise.all(
-        ADMIN_QUERY_PREFIXES.map((prefix) =>
-          queryClient.refetchQueries({ queryKey: [prefix], type: "all" })
-        )
-      );
-      toast.success(t("admin.data.warmDone"));
-      setDataMenuOpen(false);
-    } catch {
-      toast.error(t("admin.data.error"));
-    } finally {
-      setDataAction(null);
-    }
-  }, [dataAction, queryClient, t]);
-
-  const handleClearCache = useCallback(async () => {
-    if (dataAction) return;
-    setDataAction("clear");
-    setDataMenuOpen(false);
-    toast.message(t("admin.data.clearing"));
-    try {
-      queryClient.clear();
-      if ("caches" in window) {
-        const keys = await caches.keys();
-        await Promise.all(keys.map((key) => caches.delete(key)));
-      }
-    } catch {
-      /* still reload */
-    }
-    window.location.reload();
-  }, [dataAction, queryClient, t]);
 
   const MobileNavGroup = ({
     label,
@@ -494,59 +363,7 @@ const AdminLayoutBody = () => {
 
             <LanguageSwitcher tone="admin" className="inline-flex shrink-0" />
 
-            <DropdownMenu open={dataMenuOpen} onOpenChange={setDataMenuOpen}>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  type="button"
-                  className="h-9 w-9 text-[hsl(var(--sidebar-foreground))]/75 hover:bg-[#174080]/20 hover:text-white"
-                  title={t("admin.data.title")}
-                  aria-label={t("admin.data.title")}
-                  disabled={!!dataAction}
-                >
-                  {dataAction ? (
-                    <Loader2 className="h-[1.15rem] w-[1.15rem] animate-spin" />
-                  ) : (
-                    <Database className="h-[1.15rem] w-[1.15rem]" />
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-[min(calc(100vw-2rem),17.5rem)] rounded-2xl border-slate-200 p-2 shadow-xl"
-              >
-                <DropdownMenuLabel className="px-2 py-2 text-base font-semibold text-[#174080]">
-                  {t("admin.data.title")}
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DataMenuRow
-                  icon={RefreshCw}
-                  title={t("admin.data.refresh")}
-                  description={t("admin.data.refreshDesc")}
-                  tone="brand"
-                  busy={dataAction === "refresh"}
-                  onClick={() => void handleRefreshData()}
-                />
-                <DataMenuRow
-                  icon={Flame}
-                  title={t("admin.data.warm")}
-                  description={t("admin.data.warmDesc")}
-                  tone="green"
-                  busy={dataAction === "warm"}
-                  onClick={() => void handleWarmCache()}
-                />
-                <DropdownMenuSeparator />
-                <DataMenuRow
-                  icon={Trash2}
-                  title={t("admin.data.clear")}
-                  description={t("admin.data.clearDesc")}
-                  tone="red"
-                  busy={dataAction === "clear"}
-                  onClick={() => void handleClearCache()}
-                />
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <AppDataMenu scope="admin" tone="admin" />
 
             {mounted ? (
               <DropdownMenu>

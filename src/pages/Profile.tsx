@@ -3,9 +3,12 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProfilePersonalForm from "@/components/ProfilePersonalForm";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile, type Profile } from "@/hooks/useProfile";
+import { useProfileTheme } from "@/hooks/useProfileTheme";
 import { useLanguage } from "@/hooks/useLanguage";
+import { PROFILE_THEME_IDS, PROFILE_THEMES } from "@/lib/profileThemes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,6 +56,8 @@ import {
   KeyRound,
   Camera,
   Trash2,
+  Sparkles,
+  Palette,
 } from "lucide-react";
 import type { TranslationKey } from "@/i18n/translations";
 
@@ -88,6 +93,7 @@ const SHORTCUTS: {
 const Profile = () => {
   const { user, loading: authLoading, signOut, updatePassword } = useAuth();
   const { data: profile, isLoading, save, uploadAvatarFile, uploadCoverFile } = useProfile();
+  const { themeId, theme, setTheme } = useProfileTheme();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -309,13 +315,17 @@ const Profile = () => {
     : null;
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] dark:bg-background">
+    <div className={cn("min-h-screen transition-colors duration-300", theme.page)}>
       <Header />
       <main className="pb-16 pt-[72px] sm:pt-[80px]">
-        {/* Facebook-style profile header */}
-        <div className="mx-auto w-full max-w-[940px] bg-card shadow-sm">
+        <div className={cn("mx-auto w-full max-w-[940px] overflow-hidden", theme.header)}>
           {/* Cover photo */}
-          <div className="group relative h-[200px] overflow-hidden bg-[#dfe0e4] dark:bg-muted sm:h-[280px] md:h-[360px]">
+          <div
+            className={cn(
+              "group relative h-[200px] overflow-hidden sm:h-[260px] md:h-[320px]",
+              !coverUrl && theme.coverDefault,
+            )}
+          >
             {coverUrl ? (
               <img
                 src={coverUrl}
@@ -323,7 +333,12 @@ const Profile = () => {
                 onError={onImgError}
                 className="absolute inset-0 h-full w-full object-cover"
               />
-            ) : null}
+            ) : (
+              <div className="pointer-events-none absolute inset-0 opacity-40">
+                <div className="absolute -left-8 top-8 h-32 w-32 rounded-full bg-white/30 blur-2xl" />
+                <div className="absolute bottom-4 right-10 h-24 w-24 rounded-full bg-white/25 blur-xl" />
+              </div>
+            )}
             <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/25" />
             <div className="absolute bottom-3 right-3 flex gap-2 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
               <button
@@ -364,8 +379,14 @@ const Profile = () => {
           <div className="relative px-4 pb-3 sm:px-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
-                <div className="group/avatar relative -mt-[60px] shrink-0 sm:-mt-[84px]">
-                  <div className="flex h-[120px] w-[120px] items-center justify-center overflow-hidden rounded-full bg-muted text-4xl font-bold text-[#174080] ring-4 ring-card sm:h-[168px] sm:w-[168px]">
+                <div className="group/avatar relative -mt-[56px] shrink-0 sm:-mt-[72px]">
+                  <div
+                    className={cn(
+                      "flex h-[112px] w-[112px] items-center justify-center overflow-hidden rounded-full text-4xl font-bold sm:h-[144px] sm:w-[144px]",
+                      theme.avatarRing,
+                      !avatarUrl && theme.avatarFallback,
+                    )}
+                  >
                     {avatarUrl ? (
                       <img
                         src={avatarUrl}
@@ -400,6 +421,17 @@ const Profile = () => {
                   />
                 </div>
                 <div className="min-w-0 pb-1 sm:pb-2">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
+                        theme.badge,
+                      )}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {t("profile.welcomeBadge")}
+                    </span>
+                  </div>
                   <h1 className="font-heading text-2xl font-bold leading-tight text-foreground sm:text-[32px]">
                     {displayName}
                   </h1>
@@ -426,21 +458,19 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Facebook-style tabs */}
-          <nav className="flex gap-0 overflow-x-auto border-t border-border/80 px-2 sm:px-4">
+          {/* Profile tabs */}
+          <nav className={cn("mx-3 mb-3 mt-1 flex gap-1 overflow-x-auto sm:mx-4", theme.tabWrap)}>
             {NAV.map(({ id, icon: Icon, label }) => (
               <button
                 key={id}
                 type="button"
                 onClick={() => setSection(id)}
                 className={cn(
-                  "relative flex shrink-0 items-center gap-2 px-4 py-3.5 text-sm font-semibold transition-colors",
-                  section === id
-                    ? "text-[#174080] after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[#174080]"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                  "relative flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all sm:px-4",
+                  section === id ? theme.tabActive : theme.tabIdle,
                 )}
               >
-                <Icon className="hidden h-4 w-4 sm:block" />
+                <Icon className="h-4 w-4" />
                 {t(label)}
               </button>
             ))}
@@ -451,14 +481,14 @@ const Profile = () => {
         <div className="mx-auto w-full max-w-[940px] px-[10px] py-4 sm:px-4">
           <div className="min-w-0 space-y-4">
             {isLoading && (section === "personal" || section === "contact") ? (
-              <div className="flex justify-center rounded-lg border border-border/70 bg-card py-16 shadow-sm">
+              <div className={cn("flex justify-center py-16", theme.card)}>
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : null}
 
             {section === "personal" && !isLoading && (
-              <div className="rounded-lg border border-border/70 bg-card p-5 shadow-sm sm:p-6">
-                <div className="mb-5 border-b border-border/60 pb-4">
+              <div className={cn("p-5 sm:p-6", theme.card)}>
+                <div className={cn("mb-5 border-b pb-4", theme.cardHeader)}>
                   <h2 className="font-heading text-lg font-semibold text-foreground">
                     {t("profile.details")}
                   </h2>
@@ -475,8 +505,8 @@ const Profile = () => {
             )}
 
               {section === "contact" && !isLoading && (
-                <div className="rounded-lg border border-border/70 bg-card p-5 shadow-sm sm:p-6">
-                  <div className="mb-5 border-b border-border/60 pb-4">
+                <div className={cn("p-5 sm:p-6", theme.card)}>
+                  <div className={cn("mb-5 border-b pb-4", theme.cardHeader)}>
                     <h2 className="font-heading text-lg font-semibold text-foreground">
                       {t("profile.contactTitle")}
                     </h2>
@@ -534,8 +564,8 @@ const Profile = () => {
               )}
 
               {section === "security" && (
-                <div className="rounded-lg border border-border/70 bg-card p-5 shadow-sm sm:p-6">
-                  <div className="mb-5 border-b border-border/60 pb-4">
+                <div className={cn("p-5 sm:p-6", theme.card)}>
+                  <div className={cn("mb-5 border-b pb-4", theme.cardHeader)}>
                     <h2 className="font-heading text-lg font-semibold text-foreground">
                       {t("profile.securityTitle")}
                     </h2>
@@ -582,25 +612,59 @@ const Profile = () => {
               )}
 
               {section === "preferences" && (
-                <div className="rounded-lg border border-border/70 bg-card p-5 shadow-sm sm:p-6">
-                  <div className="mb-5 border-b border-border/60 pb-4">
+                <div className={cn("space-y-5 p-5 sm:p-6", theme.card)}>
+                  <div className={cn("border-b pb-4", theme.cardHeader)}>
                     <h2 className="font-heading text-lg font-semibold text-foreground">
                       {t("profile.preferencesTitle")}
                     </h2>
                     <p className="mt-1 text-sm text-muted-foreground">{t("profile.preferencesDesc")}</p>
                   </div>
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Palette className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm font-semibold text-foreground">{t("profile.theme.title")}</p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      {PROFILE_THEME_IDS.map((id) => {
+                        const item = PROFILE_THEMES[id];
+                        const selected = themeId === id;
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => setTheme(id)}
+                            className={cn(
+                              "overflow-hidden rounded-2xl border-2 text-left transition-all",
+                              selected
+                                ? "border-[#174080] shadow-md ring-2 ring-[#174080]/20"
+                                : "border-border/70 hover:border-[#174080]/40 hover:shadow-sm",
+                            )}
+                          >
+                            <div className={cn("h-16 bg-gradient-to-br", item.preview)} />
+                            <div className="p-3">
+                              <p className="text-sm font-semibold text-foreground">{t(item.labelKey)}</p>
+                              <p className="mt-0.5 text-xs text-muted-foreground">{t(item.descKey)}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm font-medium text-foreground">{t("profile.language")}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">{t("profile.languageHint")}</p>
                     </div>
+                    <LanguageSwitcher />
                   </div>
                 </div>
               )}
 
               {section === "shortcuts" && (
-                <div className="rounded-lg border border-border/70 bg-card p-5 shadow-sm sm:p-6">
-                  <div className="mb-5 border-b border-border/60 pb-4">
+                <div className={cn("p-5 sm:p-6", theme.card)}>
+                  <div className={cn("mb-5 border-b pb-4", theme.cardHeader)}>
                     <h2 className="font-heading text-lg font-semibold text-foreground">
                       {t("profile.shortcutsTitle")}
                     </h2>
@@ -611,9 +675,17 @@ const Profile = () => {
                       <Link
                         key={to}
                         to={to}
-                        className="group flex items-start gap-3 rounded-xl border border-border/70 bg-muted/30 p-4 transition-colors hover:border-primary/30 hover:bg-primary/5"
+                        className={cn(
+                          "group flex items-start gap-3 p-4 transition-all",
+                          theme.shortcut,
+                        )}
                       >
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <span
+                          className={cn(
+                            "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                            theme.shortcutIcon,
+                          )}
+                        >
                           <Icon className="h-4 w-4" />
                         </span>
                         <span className="min-w-0 flex-1">
@@ -632,8 +704,8 @@ const Profile = () => {
               )}
 
               {section === "account" && (
-                <div className="rounded-lg border border-border/70 bg-card p-5 shadow-sm sm:p-6">
-                  <div className="mb-5 border-b border-border/60 pb-4">
+                <div className={cn("p-5 sm:p-6", theme.card)}>
+                  <div className={cn("mb-5 border-b pb-4", theme.cardHeader)}>
                     <h2 className="font-heading text-lg font-semibold text-foreground">
                       {t("profile.accountTitle")}
                     </h2>

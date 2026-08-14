@@ -14,6 +14,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import AppDataMenu from "@/components/AppDataMenu";
 
 const Header = () => {
   const { items } = useWishlist();
@@ -75,7 +76,7 @@ const Header = () => {
 
       <OrderAlertBanner />
 
-      <div className="border-b border-slate-100">
+      <div className="border-b border-slate-100 bg-white dark:bg-background">
         <div className="container mx-auto px-[10px]">
           <div className="flex h-[4.25rem] items-center justify-between gap-3 sm:h-[4.5rem]">
             <div className="flex min-w-0 items-center gap-2">
@@ -121,6 +122,7 @@ const Header = () => {
                     ))}
                   </nav>
                   <div className="space-y-2 border-t border-border p-[10px]">
+                    <AppDataMenu scope="site" variant="inline" onAction={() => {}} />
                     <a
                       href={`https://t.me/${telegramHandle}`}
                       target="_blank"
@@ -159,6 +161,7 @@ const Header = () => {
               {mounted && (
                 <>
                   <LanguageSwitcher />
+                  <AppDataMenu scope="site" tone="site" />
                   <Button
                     variant="ghost"
                     size="icon"
