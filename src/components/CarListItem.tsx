@@ -7,8 +7,11 @@ import { Car, CarStatus } from "@/hooks/useCars";
 import { Eye, Calendar, Fuel } from "lucide-react";
 import WishlistButton from "@/components/WishlistButton";
 import CarDetailDialog from "@/components/CarDetailDialog";
+import SoldOutBadge from "@/components/SoldOutBadge";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useIsCarSold } from "@/hooks/useSoldCarIds";
 import { onImgError } from "@/lib/imageFallback";
+import { cn } from "@/lib/utils";
 import type { TranslationKey } from "@/i18n/translations";
 
 interface CarListItemProps { car: Car; }
@@ -18,6 +21,7 @@ const getStatusVariant = (status: CarStatus): "ready" | "onroad" | "luxury" | "p
 const CarListItem = ({ car }: CarListItemProps) => {
   const { t } = useLanguage();
   const [detailOpen, setDetailOpen] = useState(false);
+  const sold = useIsCarSold(car.id);
   const statusKey = `status.${car.status}` as TranslationKey;
 
   return (
@@ -33,11 +37,21 @@ const CarListItem = ({ car }: CarListItemProps) => {
             src={car.image}
             alt={car.name}
             onError={onImgError}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+            className={cn(
+              "h-full w-full object-cover transition-transform duration-500 group-hover:scale-110",
+              sold && "grayscale",
+            )}
           />
-          <Badge variant={getStatusVariant(car.status)} className="absolute left-3 top-3 border-2">
-            {t(statusKey)}
-          </Badge>
+          {sold ? (
+            <>
+              <div className="absolute inset-0 z-[8] bg-black/45" />
+              <SoldOutBadge className="absolute left-1/2 top-1/2 z-[9] -translate-x-1/2 -translate-y-1/2 -rotate-12" />
+            </>
+          ) : (
+            <Badge variant={getStatusVariant(car.status)} className="absolute left-3 top-3 border-2">
+              {t(statusKey)}
+            </Badge>
+          )}
         </button>
         <div className="flex flex-1 flex-col justify-between p-4 sm:p-5">
           <div>

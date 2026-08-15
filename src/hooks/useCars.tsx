@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { dedupeCars } from "@/lib/carUtils";
 
 export type CarStatus = "ready" | "onroad" | "luxury" | "plate";
+export type CarOrigin = "local" | "thai" | "import";
 
 export interface Car {
   id: string;
@@ -13,6 +14,7 @@ export interface Car {
   year: number;
   price: number;
   status: CarStatus;
+  origin?: CarOrigin;
   viewers: number;
   image: string;
   images: string[];
@@ -45,6 +47,7 @@ interface DbCar {
   color: string;
   description: string[];
   is_active: boolean;
+  origin?: string;
   created_at: string;
   updated_at: string;
 }
@@ -67,6 +70,7 @@ const mapDbCarToCar = (dbCar: DbCar): Car => ({
   color: dbCar.color,
   description: dbCar.description ?? [],
   isActive: dbCar.is_active,
+  origin: (dbCar.origin as CarOrigin) || "local",
   createdAt: dbCar.created_at,
   updatedAt: dbCar.updated_at,
 });
@@ -80,6 +84,7 @@ const MOCK_CARS: Car[] = [
     year: 2012,
     price: 18500,
     status: "ready",
+    origin: "thai",
     viewers: 250,
     image: "/cars/prius-silver.jpg",
     images: ["/cars/prius-silver.jpg", "/cars/prius-010-white.png"],
@@ -428,6 +433,7 @@ export const useCreateCar = () => {
           image: car.image, images: car.images, body_type: car.bodyType,
           tax_status: car.taxStatus, condition: car.condition, fuel_type: car.fuelType,
           color: car.color, description: car.description, is_active: car.isActive ?? true,
+          origin: car.origin ?? "local",
         })
         .select().single();
       if (error) throw error;
@@ -459,6 +465,7 @@ export const useUpdateCar = () => {
       if (car.color !== undefined) updateData.color = car.color;
       if (car.description !== undefined) updateData.description = car.description;
       if (car.isActive !== undefined) updateData.is_active = car.isActive;
+      if (car.origin !== undefined) updateData.origin = car.origin;
       const { data, error } = await supabase.from("cars").update(updateData).eq("id", id).select().single();
       if (error) throw error;
       return mapDbCarToCar(data as DbCar);
@@ -477,19 +484,28 @@ export const useDeleteCar = () => {
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("cars").delete().eq("id", id);
-      if (error) throw error;
+      if (error) {
+        const e = error as { code?: string; message?: string };
+        if (e.code === "42501" || e.message?.includes("policy")) {
+          throw new Error("Permission denied. Admin access is required to delete cars.");
+        }
+        throw error;
+      }
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["cars"] }); toast.success("Car deleted successfully"); },
-    onError: (error) => { toast.error("Failed to delete car: " + error.message); },
+    onError: (error) => {
+      const msg = error instanceof Error ? error.message : String(error);
+      toast.error(msg.startsWith("Failed") ? msg : "Failed to delete car: " + msg);
+    },
   });
 };
 
 export const getStatusLabel = (status: CarStatus): string => {
   switch (status) {
-    case "ready": return "ឡានរួចរាល់";
-    case "onroad": return "ឡានលើផ្លូវ";
-    case "luxury": return "ឡានប្រណីត";
-    case "plate": return "មានស្លាកលេខ";
+    case "ready": return "Ready";
+    case "onroad": return "On the road";
+    case "luxury": return "Luxury";
+    case "plate": return "With plates";
     default: return status;
   }
 };

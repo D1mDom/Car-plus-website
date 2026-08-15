@@ -1,9 +1,11 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Heart, Megaphone, Menu, Package, Car, Home, Info, Phone, Send, Sun, Moon } from "lucide-react";
+import { Heart, Megaphone, Menu, Package, Car, Home, Info, Phone, Send } from "lucide-react";
+import CustomerNotifications from "@/components/CustomerNotifications";
+import SiteSettingsMenu from "@/components/SiteSettingsMenu";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import logo from "@/assets/logo.png";
 import UserMenu from "@/components/UserMenu";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 import OrderAlertBanner from "@/components/OrderAlertBanner";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,10 +13,7 @@ import { Button } from "@/components/ui/button";
 import { usePromotion } from "@/hooks/usePromotion";
 import { useContact } from "@/hooks/useContact";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import AppDataMenu from "@/components/AppDataMenu";
 
 const Header = () => {
   const { items } = useWishlist();
@@ -22,14 +21,10 @@ const Header = () => {
   const { promotionText } = usePromotion();
   const { data: contact } = useContact();
   const { t } = useLanguage();
-  const { theme, setTheme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const telegramDisplay = contact?.telegram || "@Carplus777";
   const telegramHandle = telegramDisplay.replace(/^@/, "");
   const navigate = useNavigate();
   const location = useLocation();
-
-  useEffect(() => setMounted(true), []);
 
   const NAV_ITEMS = [
     { id: "home", label: t("nav.home"), path: "/", icon: Home },
@@ -38,10 +33,6 @@ const Header = () => {
     { id: "about", label: t("nav.about"), path: "/about", icon: Info },
     { id: "contact", label: t("nav.contact"), path: "/contact", icon: Phone },
   ] as const;
-
-  const MOBILE_ITEMS = NAV_ITEMS;
-
-  const isDark = (resolvedTheme ?? theme) === "dark";
 
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";
@@ -59,16 +50,16 @@ const Header = () => {
 
   const navLinkClass = (path: string) =>
     cn(
-      "relative rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+      "rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
       isActive(path)
         ? "bg-[#174080] text-white shadow-sm"
-        : "text-[hsl(244_30%_40%)] hover:bg-[#174080]/12 hover:text-[#174080] active:bg-[#174080]/20 active:text-[#143871]"
+        : "text-[hsl(244_30%_40%)] hover:bg-[#174080]/12 hover:text-[#174080]",
     );
 
   return (
-    <header className="sticky top-0 z-50 bg-white shadow-sm">
+    <header className="sticky top-0 z-50 bg-background shadow-sm">
       {promotionText && (
-        <div className="flex w-full items-center justify-center gap-2 bg-gradient-to-r from-[#174080] to-[#1a4a93] px-[10px] py-1.5 text-white">
+        <div className="flex w-full items-center justify-center gap-2 bg-gradient-to-r from-[#174080] to-[#1a4a93] px-3 py-1.5 text-white">
           <Megaphone className="h-3.5 w-3.5 shrink-0 opacity-90" />
           <p className="text-center text-xs font-semibold tracking-wide sm:text-sm">{promotionText}</p>
         </div>
@@ -76,9 +67,9 @@ const Header = () => {
 
       <OrderAlertBanner />
 
-      <div className="border-b border-slate-100 bg-white dark:bg-background">
-        <div className="container mx-auto px-[10px]">
-          <div className="flex h-[4.25rem] items-center justify-between gap-3 sm:h-[4.5rem]">
+      <div className="border-b border-border/70 bg-background">
+        <div className="container mx-auto px-3">
+          <div className="flex h-16 items-center justify-between gap-3 sm:h-[4.25rem]">
             <div className="flex min-w-0 items-center gap-2">
               <Sheet>
                 <SheetTrigger asChild className="lg:hidden">
@@ -103,8 +94,8 @@ const Header = () => {
                       </div>
                     </SheetTitle>
                   </SheetHeader>
-                  <nav className="flex flex-1 flex-col gap-1 p-[10px]">
-                    {MOBILE_ITEMS.map(({ id, label, path, icon: Icon }) => (
+                  <nav className="flex flex-1 flex-col gap-1 p-3">
+                    {NAV_ITEMS.map(({ id, label, path, icon: Icon }) => (
                       <SheetClose asChild key={id}>
                         <Link
                           to={path}
@@ -112,7 +103,7 @@ const Header = () => {
                             "flex items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-medium transition-colors",
                             isActive(path)
                               ? "bg-[#174080] text-white shadow-sm"
-                              : "text-foreground hover:bg-[#174080]/12 hover:text-[#174080] active:bg-[#174080]/20 active:text-[#143871]"
+                              : "text-foreground hover:bg-[#174080]/12 hover:text-[#174080]",
                           )}
                         >
                           <Icon className="h-[18px] w-[18px]" />
@@ -121,8 +112,7 @@ const Header = () => {
                       </SheetClose>
                     ))}
                   </nav>
-                  <div className="space-y-2 border-t border-border p-[10px]">
-                    <AppDataMenu scope="site" variant="inline" onAction={() => {}} />
+                  <div className="border-t border-border p-3">
                     <a
                       href={`https://t.me/${telegramHandle}`}
                       target="_blank"
@@ -139,7 +129,7 @@ const Header = () => {
               <Link to="/" className="flex min-w-0 items-center gap-2.5">
                 <img src={logo} alt="Car Plus" className="h-10 w-auto shrink-0 rounded-lg sm:h-11" />
                 <div className="hidden min-w-0 sm:block">
-                  <p className="font-heading text-base font-bold leading-tight text-[hsl(244_45%_22%)] sm:text-lg">
+                  <p className="font-heading text-base font-bold leading-tight text-foreground sm:text-lg">
                     Car Plus
                   </p>
                   <p className="truncate text-[9px] font-semibold uppercase tracking-[0.12em] text-[#174080] sm:text-[10px]">
@@ -157,22 +147,8 @@ const Header = () => {
               ))}
             </nav>
 
-            <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
-              {mounted && (
-                <>
-                  <LanguageSwitcher />
-                  <AppDataMenu scope="site" tone="site" />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={iconBtnClass}
-                    onClick={() => setTheme(isDark ? "light" : "dark")}
-                    aria-label={isDark ? t("theme.light") : t("theme.dark")}
-                  >
-                    {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                  </Button>
-                </>
-              )}
+            <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+              <LanguageSwitcher />
 
               <Button
                 type="button"
@@ -190,20 +166,11 @@ const Header = () => {
                 )}
               </Button>
 
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className={iconBtnClass}
-                aria-label={t("nav.orders")}
-                title={t("nav.orders")}
-                onClick={() => goTo("/orders")}
-              >
-                <Package className="h-[18px] w-[18px]" />
-              </Button>
+              <CustomerNotifications />
+              <SiteSettingsMenu />
 
               <UserMenu
-                signInClassName="hidden rounded-full bg-[#174080] px-5 font-semibold text-white hover:bg-[#143871] active:bg-[#0f2d5c] sm:inline-flex"
+                signInClassName="rounded-full bg-[#174080] px-3 font-semibold text-white hover:bg-[#143871] sm:px-5"
                 signInLabel={t("auth.signIn")}
               />
             </div>

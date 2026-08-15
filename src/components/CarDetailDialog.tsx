@@ -30,6 +30,8 @@ import {
 } from "lucide-react";
 import OrderAuthPrompt from "@/components/OrderAuthPrompt";
 import WishlistButton from "@/components/WishlistButton";
+import SoldOutBadge from "@/components/SoldOutBadge";
+import { useIsCarSold } from "@/hooks/useSoldCarIds";
 
 const parseDescriptionItem = (raw: string) => {
   const pinned = /^\s*📌/.test(raw);
@@ -48,6 +50,7 @@ const CarDetailDialog = ({ car, open, onOpenChange }: CarDetailDialogProps) => {
   const { data: contact } = useContact();
   const [selectedImage, setSelectedImage] = useState(0);
   const [orderRequested, setOrderRequested] = useState(false);
+  const sold = useIsCarSold(car?.id);
 
   const telegram = (contact?.telegram || "@Carplus777").replace(/^@/, "");
   const phone = contact?.phone || "+855 12 345 678";
@@ -83,9 +86,16 @@ const CarDetailDialog = ({ car, open, onOpenChange }: CarDetailDialogProps) => {
                     src={images[selectedImage] || car.image}
                     alt={car.name}
                     onError={onImgError}
-                    className="h-full w-full object-cover"
+                    className={cn("h-full w-full object-cover", sold && "grayscale")}
                   />
-                  <Badge className="absolute left-3 top-3">{t(statusKey)}</Badge>
+                  {sold ? (
+                    <>
+                      <div className="absolute inset-0 z-[8] bg-black/45" />
+                      <SoldOutBadge className="absolute left-1/2 top-1/2 z-[9] -translate-x-1/2 -translate-y-1/2 -rotate-12" />
+                    </>
+                  ) : (
+                    <Badge className="absolute left-3 top-3">{t(statusKey)}</Badge>
+                  )}
                   <div className="absolute right-3 top-3">
                     <WishlistButton carId={car.id} />
                   </div>
@@ -176,13 +186,19 @@ const CarDetailDialog = ({ car, open, onOpenChange }: CarDetailDialogProps) => {
                 )}
 
                 <div className="mt-auto space-y-2 pt-6">
+                  {sold ? (
+                    <p className="rounded-xl border border-red-500/20 bg-red-500/8 px-3 py-2 text-sm text-red-700">
+                      {t("card.soldOutHint")}
+                    </p>
+                  ) : null}
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <Button
                       className="flex-1 gap-2"
+                      disabled={sold}
                       onClick={() => setOrderRequested(true)}
                     >
                       <ShoppingCart className="h-4 w-4" />
-                      {t("card.order")}
+                      {sold ? t("card.soldOut") : t("card.order")}
                     </Button>
                     <Button asChild variant="outline" className="flex-1 gap-2">
                       <a

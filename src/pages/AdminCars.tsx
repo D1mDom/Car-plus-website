@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useCars, useDeleteCar, type Car as CarType } from "@/hooks/useCars";
+import { useCars, type Car as CarType } from "@/hooks/useCars";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,16 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Loader2, X, Car, LayoutGrid, Search } from "lucide-react";
 import CarCard from "@/components/CarCard";
 import CarFormDialog from "@/components/admin/CarFormDialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/lib/utils";
 
@@ -28,12 +18,9 @@ const AdminCars = () => {
   const { t } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: cars, isLoading } = useCars();
-  const deleteCar = useDeleteCar();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingCar, setEditingCar] = useState<CarType | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [carToDelete, setCarToDelete] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [visibleFilter, setVisibleFilter] = useState("all");
@@ -96,19 +83,6 @@ const AdminCars = () => {
   const handleEdit = (car: CarType) => {
     setEditingCar(car);
     setFormOpen(true);
-  };
-
-  const handleDelete = (car: CarType) => {
-    setCarToDelete(car.id);
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = () => {
-    if (carToDelete) {
-      deleteCar.mutate(carToDelete);
-      setDeleteDialogOpen(false);
-      setCarToDelete(null);
-    }
   };
 
   const handleFormClose = (open: boolean) => {
@@ -235,26 +209,13 @@ const AdminCars = () => {
                   {t("admin.cars.hidden")}
                 </Badge>
               ) : null}
-              <CarCard car={car} onEdit={handleEdit} onDelete={handleDelete} />
+              <CarCard car={car} onEdit={handleEdit} />
             </div>
           ))}
         </div>
       )}
 
       <CarFormDialog open={formOpen} onOpenChange={handleFormClose} car={editingCar} />
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("admin.cars.deleteTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("admin.cars.deleteDesc")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("auth.cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>{t("admin.cars.delete")}</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };

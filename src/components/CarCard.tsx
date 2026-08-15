@@ -9,7 +9,6 @@ import {
   Car as CarIcon,
   MessageCircle,
   Pencil,
-  Trash2,
   ShoppingCart,
   MapPin,
   Star,
@@ -17,8 +16,10 @@ import {
 import WishlistButton from "@/components/WishlistButton";
 import { useContact } from "@/hooks/useContact";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useIsCarSold } from "@/hooks/useSoldCarIds";
 import OrderAuthPrompt from "@/components/OrderAuthPrompt";
 import CarDetailDialog from "@/components/CarDetailDialog";
+import SoldOutBadge from "@/components/SoldOutBadge";
 import { onImgError } from "@/lib/imageFallback";
 import { cn } from "@/lib/utils";
 import type { TranslationKey } from "@/i18n/translations";
@@ -26,16 +27,16 @@ import type { TranslationKey } from "@/i18n/translations";
 interface CarCardProps {
   car: Car;
   onEdit?: (car: Car) => void;
-  onDelete?: (car: Car) => void;
   featured?: boolean;
 }
 
-const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
+const CarCard = ({ car, onEdit, featured }: CarCardProps) => {
   const { data: contact } = useContact();
   const { t } = useLanguage();
   const [orderCar, setOrderCar] = useState<Car | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const adminMode = Boolean(onEdit || onDelete);
+  const adminMode = Boolean(onEdit);
+  const sold = useIsCarSold(car.id);
   const telegram = (contact?.telegram || "@Carplus777").replace(/^@/, "");
 
   const images = car.images && car.images.length > 0 ? car.images : [car.image];
@@ -81,8 +82,17 @@ const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
               alt={car.name}
               loading="lazy"
               onError={onImgError}
-              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+              className={cn(
+                "h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]",
+                sold && "grayscale",
+              )}
             />
+            {sold && (
+              <>
+                <div className="absolute inset-0 z-[8] bg-black/45" />
+                <SoldOutBadge className="absolute left-1/2 top-1/2 z-[9] -translate-x-1/2 -translate-y-1/2 -rotate-12" />
+              </>
+            )}
             {hasMultiple && (
               <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-lg bg-black/55 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
                 <Images className="h-3.5 w-3.5" />
@@ -93,7 +103,7 @@ const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
               className="absolute right-3 top-3 z-10 flex items-center gap-1.5"
               onClick={(e) => e.stopPropagation()}
             >
-              {!adminMode && (
+              {!adminMode && !sold && (
                 <button
                   type="button"
                   onClick={(e) => {
@@ -123,16 +133,6 @@ const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
                     className="rounded-xl bg-white/95 p-2 text-primary shadow-sm transition-colors hover:bg-white"
                   >
                     <Pencil className="h-4 w-4" />
-                  </button>
-                )}
-                {onDelete && (
-                  <button
-                    type="button"
-                    onClick={() => onDelete(car)}
-                    aria-label={t("card.delete")}
-                    className="rounded-xl bg-white/95 p-2 text-destructive shadow-sm transition-colors hover:bg-white"
-                  >
-                    <Trash2 className="h-4 w-4" />
                   </button>
                 )}
               </div>
@@ -205,9 +205,15 @@ const CarCard = ({ car, onEdit, onDelete, featured }: CarCardProps) => {
             </div>
 
             <div className="mt-1 flex flex-wrap gap-1.5">
-              <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
-                {t(statusKey)}
-              </span>
+              {sold ? (
+                <span className="inline-flex items-center rounded-full bg-red-600/12 px-2 py-1 text-xs font-semibold text-red-700">
+                  {t("card.soldOut")}
+                </span>
+              ) : (
+                <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
+                  {t(statusKey)}
+                </span>
+              )}
               {specs.map((s, i) => (
                 <span
                   key={i}

@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useCars, useDeleteCar } from "@/hooks/useCars";
+import { useCars } from "@/hooks/useCars";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,19 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pencil, Trash2, Car, Loader2, Plus, X, ArrowRight } from "lucide-react";
+import { Pencil, Car, Loader2, Plus, X, ArrowRight } from "lucide-react";
 import CarFormDialog from "@/components/admin/CarFormDialog";
 import CarDetailDialog from "@/components/CarDetailDialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import type { Car as CarType } from "@/hooks/useCars";
 import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/lib/utils";
@@ -43,12 +33,9 @@ const AdminCarList = ({ previewLimit, syncUrlStatus = false }: AdminCarListProps
   const { t } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: cars, isLoading: carsLoading } = useCars();
-  const deleteCar = useDeleteCar();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingCar, setEditingCar] = useState<CarType | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [carToDelete, setCarToDelete] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [visibleFilter, setVisibleFilter] = useState("all");
@@ -80,19 +67,6 @@ const AdminCarList = ({ previewLimit, syncUrlStatus = false }: AdminCarListProps
   const handleEdit = (car: CarType) => {
     setEditingCar(car);
     setFormOpen(true);
-  };
-
-  const handleDelete = (id: string) => {
-    setCarToDelete(id);
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = () => {
-    if (carToDelete) {
-      deleteCar.mutate(carToDelete);
-      setDeleteDialogOpen(false);
-      setCarToDelete(null);
-    }
   };
 
   const handleFormClose = (open: boolean) => {
@@ -200,14 +174,6 @@ const AdminCarList = ({ previewLimit, syncUrlStatus = false }: AdminCarListProps
         onClick={() => handleEdit(car)}
       >
         <Pencil className="h-4 w-4" />
-      </Button>
-      <Button
-        size="sm"
-        variant="destructive"
-        className="transition-transform active:scale-90"
-        onClick={() => handleDelete(car.id)}
-      >
-        <Trash2 className="h-4 w-4" />
       </Button>
     </div>
   );
@@ -430,19 +396,6 @@ const AdminCarList = ({ previewLimit, syncUrlStatus = false }: AdminCarListProps
           if (!open) setPreviewCar(null);
         }}
       />
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("admin.cars.deleteTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("admin.cars.deleteDesc")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("auth.cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>{t("admin.cars.delete")}</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 };

@@ -9,7 +9,6 @@ import {
   useAdminOrders,
   useUpdateOrderStatus,
   useCreateOrder,
-  useDeleteOrder,
   ORDER_STATUSES,
   type Order,
 } from "@/hooks/useAdminOrders";
@@ -17,50 +16,47 @@ import { useCreateReceipt } from "@/hooks/useReceipts";
 import { printReceipt, type ReceiptPrintLabels } from "@/components/admin/receiptPrint";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   Loader2,
   Plus,
-  Trash2,
   Package,
   FileText,
   Clock,
   Cog,
   CheckCircle2,
   X,
+  Bell,
   type LucideIcon,
 } from "lucide-react";
 import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/lib/utils";
+import DeliveryTimeline from "@/components/DeliveryTimeline";
+import { NEXT_DELIVERY_STATUS } from "@/lib/orderFlow";
 
 type MonthFilter = "all" | "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" | "11";
 type SortFilter = "newest" | "oldest" | "amountHigh" | "amountLow";
 
 const FILTER_YEARS = Array.from({ length: 27 }, (_, i) => 2026 - i);
 
-const statusVariant = (s: string): "default" | "secondary" | "outline" | "destructive" =>
-  s === "completed" || s === "delivered"
-    ? "default"
-    : s === "cancelled"
-      ? "destructive"
-      : s === "pending"
-        ? "outline"
-        : "secondary";
+const nextActionKey = (status: string): TranslationKey | null => {
+  switch (status) {
+    case "pending":
+      return "admin.orders.flow.confirm";
+    case "confirmed":
+      return "admin.orders.flow.process";
+    case "processing":
+      return "admin.orders.flow.deliver";
+    case "delivered":
+      return "admin.orders.flow.complete";
+    default:
+      return null;
+  }
+};
 
 function StatCard({
   label,
@@ -98,7 +94,6 @@ const AdminOrders = () => {
   const { data: cars = [] } = useCars();
   const updateStatus = useUpdateOrderStatus();
   const createOrder = useCreateOrder();
-  const deleteOrder = useDeleteOrder();
   const createReceipt = useCreateReceipt();
   const { data: contact = DEFAULT_CONTACT } = useContact();
 
@@ -119,7 +114,6 @@ const AdminOrders = () => {
   const [selectedMonth, setSelectedMonth] = useState<MonthFilter>("all");
   const [carFilter, setCarFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortFilter>("newest");
-  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     const status = searchParams.get("status");
@@ -381,6 +375,41 @@ const AdminOrders = () => {
       ? o.order_items.map((i) => i.car_name || i.car_id || "Car").join(", ")
       : o.notes || "—";
 
+  const statusFlow = (o: Order) => {
+    const next = NEXT_DELIVERY_STATUS[o.status];
+    const action = nextActionKey(o.status);
+    const canCancel = o.status !== "completed" && o.status !== "cancelled";
+    return (
+      <div className="min-w-[220px] max-w-[280px] space-y-2.5">
+        <DeliveryTimeline status={o.status} compact />
+        <div className="flex flex-wrap items-center gap-1.5">
+          {next && action ? (
+            <Button
+              size="sm"
+              className="h-8 flex-1 gap-1.5 bg-[#174080] hover:bg-[#143871]"
+              disabled={updateStatus.isPending}
+              onClick={() => updateStatus.mutate({ id: o.id, status: next })}
+            >
+              <Bell className="h-3.5 w-3.5" />
+              {t(action)}
+            </Button>
+          ) : null}
+          {canCancel ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              disabled={updateStatus.isPending}
+              onClick={() => updateStatus.mutate({ id: o.id, status: "cancelled" })}
+            >
+              {t("admin.orders.flow.cancel")}
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    );
+  };
+
   const rowActions = (o: Order) => (
     <div className="flex justify-end gap-1.5">
       <Button
@@ -396,9 +425,6 @@ const AdminOrders = () => {
         ) : (
           <FileText className="h-4 w-4" />
         )}
-      </Button>
-      <Button size="sm" variant="destructive" onClick={() => setDeleteId(o.id)}>
-        <Trash2 className="h-4 w-4" />
       </Button>
     </div>
   );
@@ -598,32 +624,13 @@ const AdminOrders = () => {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">{customerCell(o)}</div>
-                      <Badge variant={statusVariant(o.status)} className="shrink-0">
-                        {statusLabel(o.status)}
-                      </Badge>
                     </div>
                     <div className="text-sm text-muted-foreground">
                       {new Date(o.created_at).toLocaleDateString()}
                     </div>
                     <div className="text-sm font-medium leading-snug">{itemsLabel(o)}</div>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-lg font-semibold tabular-nums">{money(o.total_amount)}</span>
-                      <Select
-                        value={o.status}
-                        onValueChange={(v) => updateStatus.mutate({ id: o.id, status: v })}
-                      >
-                        <SelectTrigger className="h-9 w-full min-w-[140px] sm:w-[160px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ORDER_STATUSES.map((s) => (
-                            <SelectItem key={s} value={s}>
-                              {statusLabel(s)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <div className="text-lg font-semibold tabular-nums">{money(o.total_amount)}</div>
+                    {statusFlow(o)}
                     <div className="flex justify-end border-t border-border/50 pt-2">{rowActions(o)}</div>
                   </div>
                 ))}
@@ -637,8 +644,7 @@ const AdminOrders = () => {
                       <TableHead>{t("admin.orders.col.date")}</TableHead>
                       <TableHead>{t("admin.orders.col.items")}</TableHead>
                       <TableHead>{t("admin.orders.col.total")}</TableHead>
-                      <TableHead>{t("admin.orders.col.status")}</TableHead>
-                      <TableHead>{t("admin.orders.col.update")}</TableHead>
+                      <TableHead className="min-w-[240px]">{t("admin.orders.col.delivery")}</TableHead>
                       <TableHead className="text-right">{t("admin.orders.col.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -658,26 +664,7 @@ const AdminOrders = () => {
                         </TableCell>
                         <TableCell className="text-sm">{itemsLabel(o)}</TableCell>
                         <TableCell className="font-semibold">{money(o.total_amount)}</TableCell>
-                        <TableCell>
-                          <Badge variant={statusVariant(o.status)}>{statusLabel(o.status)}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={o.status}
-                            onValueChange={(v) => updateStatus.mutate({ id: o.id, status: v })}
-                          >
-                            <SelectTrigger className="h-8 w-[130px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {ORDER_STATUSES.map((s) => (
-                                <SelectItem key={s} value={s}>
-                                  {statusLabel(s)}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
+                        <TableCell className="align-top">{statusFlow(o)}</TableCell>
                         <TableCell className="text-right">{rowActions(o)}</TableCell>
                       </TableRow>
                     ))}
@@ -784,26 +771,6 @@ const AdminOrders = () => {
           </form>
         </DialogContent>
       </Dialog>
-
-      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("admin.orders.deleteTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("admin.orders.deleteDesc")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("form.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (deleteId) deleteOrder.mutate(deleteId);
-                setDeleteId(null);
-              }}
-            >
-              {t("admin.orders.delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };

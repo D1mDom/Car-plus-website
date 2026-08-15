@@ -6,6 +6,8 @@ export type OrderAlert = {
   carPrice: number;
   carImage?: string;
   orderedAt: string;
+  status?: string;
+  orderId?: string;
 };
 
 type OrderAlertContextValue = {

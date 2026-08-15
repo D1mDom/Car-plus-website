@@ -42,6 +42,7 @@ import {
 import { cn } from "@/lib/utils";
 import flagEn from "@/assets/flags/flag-en.png";
 import flagKh from "@/assets/flags/flag-kh.png";
+import ThemeModeToggle from "@/components/ThemeModeToggle";
 
 type GuideItem = {
   id: string;
@@ -542,6 +543,8 @@ const AdminSettings = () => {
                               <ArrowRight className="h-3.5 w-3.5" />
                             </Link>
                           </Button>
+                        ) : item.id === "theme" ? (
+                          <ThemeModeToggle className="max-w-sm" />
                         ) : null}
                       </div>
                     </div>

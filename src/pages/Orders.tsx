@@ -6,7 +6,6 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   useMyOrders,
   useUpdateMyOrder,
-  useDeleteMyOrder,
   parseOrderNotes,
   type MyOrder,
 } from "@/hooks/useMyOrders";
@@ -30,16 +29,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import DeliveryTimeline from "@/components/DeliveryTimeline";
+import { OrderDeliveryDetailDialog } from "@/components/OrderDeliveryDetailDialog";
 import {
   Loader2,
   Package,
@@ -48,33 +40,46 @@ import {
   Car,
   ArrowRight,
   Pencil,
-  Trash2,
   Phone,
   Send,
   ExternalLink,
   CheckCircle2,
   Clock3,
   MessageCircle,
-  Info,
+  FileText,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { onImgError } from "@/lib/imageFallback";
+import { cleanPhoneInput, formatPhoneDisplay, isValidPhone } from "@/lib/phoneUtils";
+import {
+  sanitizeCustomerName,
+  sanitizeOrderNote,
+  sanitizeTelegram,
+} from "@/lib/orderSecurity";
 import type { TranslationKey } from "@/i18n/translations";
 
-type FilterKey = "all" | "pending" | "active" | "done";
+type FilterKey = "all" | "pending" | "active" | "done" | "cancelled";
+
+const TIME_KEYS: Record<string, TranslationKey> = {
+  morning: "order.dialog.timeMorning",
+  afternoon: "order.dialog.timeAfternoon",
+  evening: "order.dialog.timeEvening",
+  anytime: "order.dialog.timeAnytime",
+};
 
 const statusStyle = (s: string) => {
   switch (s) {
     case "completed":
     case "delivered":
-      return "bg-emerald-500/12 text-emerald-700 border-emerald-500/25";
+      return "bg-emerald-500/12 text-emerald-700 border-emerald-500/25 dark:text-emerald-300";
     case "cancelled":
-      return "bg-red-500/12 text-red-700 border-red-500/25";
+      return "bg-red-500/12 text-red-700 border-red-500/25 dark:text-red-300";
     case "pending":
-      return "bg-amber-500/12 text-amber-800 border-amber-500/25";
+      return "bg-amber-500/12 text-amber-800 border-amber-500/25 dark:text-amber-300";
     case "processing":
     case "confirmed":
-      return "bg-sky-500/12 text-sky-700 border-sky-500/25";
+      return "bg-sky-500/12 text-sky-700 border-sky-500/25 dark:text-sky-300";
     default:
       return "bg-muted text-muted-foreground border-border";
   }
@@ -85,13 +90,13 @@ const Orders = () => {
   const { data: orders = [], isLoading } = useMyOrders();
   const { data: cars = [] } = useCars();
   const { data: contact } = useContact();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const updateOrder = useUpdateMyOrder();
-  const deleteOrder = useDeleteMyOrder();
 
   const [filter, setFilter] = useState<FilterKey>("all");
+  const [query, setQuery] = useState("");
   const [editOrder, setEditOrder] = useState<MyOrder | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [detailOrder, setDetailOrder] = useState<MyOrder | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [telegram, setTelegram] = useState("");
@@ -101,10 +106,11 @@ const Orders = () => {
 
   const shopTelegram = (contact?.telegram || "@Carplus777").replace(/^@/, "");
   const shopPhone = contact?.phone || "";
+  const dateLocale = lang === "km" ? "km-KH" : "en-GB";
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[hsl(210_28%_97%)]">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-[#174080]" />
       </div>
     );
@@ -151,9 +157,9 @@ const Orders = () => {
     setEditOrder(o);
   };
 
-  const cleanPhone = (v: string) => v.replace(/[^0-9+\-\s()]/g, "");
+  const cleanPhone = (v: string) => formatPhoneDisplay(cleanPhoneInput(v));
   const nameOk = name.trim().length >= 2;
-  const phoneOk = phone.trim().replace(/[^0-9]/g, "").length >= 8;
+  const phoneOk = isValidPhone(phone);
 
   const saveEdit = () => {
     setTouched(true);
@@ -173,11 +179,6 @@ const Orders = () => {
     );
   };
 
-  const confirmDelete = () => {
-    if (!deleteId) return;
-    deleteOrder.mutate(deleteId, { onSuccess: () => setDeleteId(null) });
-  };
-
   const pendingCount = orders.filter((o) => o.status === "pending").length;
   const activeCount = orders.filter((o) =>
     ["confirmed", "processing"].includes(o.status)
@@ -185,12 +186,24 @@ const Orders = () => {
   const doneCount = orders.filter((o) =>
     ["completed", "delivered"].includes(o.status)
   ).length;
+  const cancelledCount = orders.filter((o) => o.status === "cancelled").length;
 
   const filtered = orders.filter((o) => {
-    if (filter === "pending") return o.status === "pending";
-    if (filter === "active") return ["confirmed", "processing"].includes(o.status);
-    if (filter === "done") return ["completed", "delivered"].includes(o.status);
-    return true;
+    if (filter === "pending") {
+      if (o.status !== "pending") return false;
+    } else if (filter === "active") {
+      if (!["confirmed", "processing"].includes(o.status)) return false;
+    } else if (filter === "done") {
+      if (!["completed", "delivered"].includes(o.status)) return false;
+    } else if (filter === "cancelled") {
+      if (o.status !== "cancelled") return false;
+    }
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    const title = carLabel(o).toLowerCase();
+    const id = o.id.toLowerCase();
+    const phoneVal = (o.phone || "").toLowerCase();
+    return title.includes(q) || id.includes(q) || phoneVal.includes(q);
   });
 
   const filters: { key: FilterKey; label: string; count: number }[] = [
@@ -198,58 +211,68 @@ const Orders = () => {
     { key: "pending", label: t("orders.pendingLabel"), count: pendingCount },
     { key: "active", label: t("orders.filterActive"), count: activeCount },
     { key: "done", label: t("orders.filterDone"), count: doneCount },
+    ...(cancelledCount > 0
+      ? [{ key: "cancelled" as const, label: t("orders.filterCancelled"), count: cancelledCount }]
+      : []),
+  ];
+
+  const stats = [
+    { key: "all" as FilterKey, label: t("orders.totalLabel"), value: orders.length, icon: Package },
+    { key: "pending" as FilterKey, label: t("orders.pendingLabel"), value: pendingCount, icon: Clock3 },
+    { key: "active" as FilterKey, label: t("orders.filterActive"), value: activeCount, icon: Car },
+    { key: "done" as FilterKey, label: t("orders.filterDone"), value: doneCount, icon: CheckCircle2 },
   ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-[hsl(210_28%_97%)] dark:bg-background">
+    <div className="flex min-h-screen flex-col bg-background">
       <Header />
 
       <main className="flex-1">
-        {/* Hero — sits below sticky header */}
-        <section className="relative overflow-hidden bg-[linear-gradient(135deg,hsl(216_50%_14%),hsl(199_50%_26%))]">
+        <section className="relative overflow-hidden border-b border-border/60 bg-[linear-gradient(165deg,hsl(216_45%_14%)_0%,hsl(210_35%_22%)_48%,hsl(199_55%_28%)_100%)]">
           <div
-            className="pointer-events-none absolute inset-0"
+            className="pointer-events-none absolute inset-0 opacity-40"
             style={{
               backgroundImage:
-                "radial-gradient(ellipse 70% 60% at 10% 0%, hsl(217 70% 30% / 0.28), transparent 50%), radial-gradient(ellipse 50% 40% at 95% 30%, hsl(199 90% 55% / 0.18), transparent 45%)",
+                "radial-gradient(ellipse 55% 45% at 85% 15%, hsl(199 100% 55% / 0.28), transparent 60%), radial-gradient(ellipse 40% 50% at 10% 90%, hsl(217 70% 38% / 0.12), transparent 55%)",
             }}
           />
-          <div className="container relative mx-auto max-w-5xl px-4 py-10 sm:py-12">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-xl">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/65">
-                  Car Plus
+          <div className="container relative mx-auto max-w-7xl px-[10px] py-12 sm:py-16">
+            <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-xl animate-slide-up">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#5b8fd4]">
+                  {t("orders.eyebrow")}
                 </p>
                 <h1 className="font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl">
                   {t("orders.title")}
                 </h1>
-                <p className="mt-2 text-sm leading-relaxed text-white/75 sm:text-base">
+                <p className="mt-3 text-sm leading-relaxed text-white/75 sm:text-base">
                   {t("orders.subtitle")}
                 </p>
-                <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-white/60 sm:text-sm">
-                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-white/70" />
+                <p className="mt-3 text-xs leading-relaxed text-white/60 sm:text-sm">
                   {t("orders.pageHint")}
                 </p>
               </div>
 
-              {!isLoading && (
-                <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-4 lg:w-auto lg:min-w-[420px]">
-                  {[
-                    { label: t("orders.totalLabel"), value: orders.length, icon: Package },
-                    { label: t("orders.pendingLabel"), value: pendingCount, icon: Clock3 },
-                    { label: t("orders.filterActive"), value: activeCount, icon: Car },
-                    { label: t("orders.filterDone"), value: doneCount, icon: CheckCircle2 },
-                  ].map((s) => (
-                    <div
-                      key={s.label}
-                      className="rounded-2xl border border-white/12 bg-white/10 px-3 py-3 backdrop-blur-sm"
+              {!isLoading && orders.length > 0 && (
+                <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-4 lg:w-auto lg:min-w-[440px]">
+                  {stats.map((s) => (
+                    <button
+                      key={s.key}
+                      type="button"
+                      onClick={() => setFilter(s.key)}
+                      className={cn(
+                        "rounded-2xl border px-3 py-3 text-left backdrop-blur-sm transition-colors",
+                        filter === s.key
+                          ? "border-white/40 bg-white/18"
+                          : "border-white/12 bg-white/10 hover:bg-white/14"
+                      )}
                     >
                       <div className="mb-1 flex items-center justify-between text-white/65">
                         <span className="text-[10px] font-medium sm:text-[11px]">{s.label}</span>
                         <s.icon className="h-3.5 w-3.5" />
                       </div>
                       <p className="font-heading text-xl font-bold text-white sm:text-2xl">{s.value}</p>
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
@@ -257,39 +280,61 @@ const Orders = () => {
           </div>
         </section>
 
-        <div className="container mx-auto max-w-5xl px-4 py-6 sm:py-8">
-          {/* Filters */}
+        <div className="container mx-auto max-w-5xl px-[10px] py-8 sm:py-10">
           {!isLoading && orders.length > 0 && (
-            <div className="mb-6 flex flex-wrap gap-2">
-              {filters.map((f) => (
-                <button
-                  key={f.key}
-                  type="button"
-                  onClick={() => setFilter(f.key)}
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium shadow-sm transition-colors",
-                    filter === f.key
-                      ? "border-[#174080] bg-[#174080] text-white"
-                      : "border-border/80 bg-card text-foreground hover:border-[#174080]/35"
-                  )}
-                >
-                  {f.label}
-                  <span
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap gap-2">
+                {filters.map((f) => (
+                  <button
+                    key={f.key}
+                    type="button"
+                    onClick={() => setFilter(f.key)}
                     className={cn(
-                      "rounded-full px-1.5 py-0.5 text-[10px] font-bold",
-                      filter === f.key ? "bg-white/20" : "bg-muted text-muted-foreground"
+                      "inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium shadow-sm transition-colors",
+                      filter === f.key
+                        ? "border-[#174080] bg-[#174080] text-white"
+                        : "border-border/80 bg-card text-foreground hover:border-[#174080]/35"
                     )}
                   >
-                    {f.count}
-                  </span>
-                </button>
-              ))}
+                    {f.label}
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-0.5 text-[10px] font-bold",
+                        filter === f.key ? "bg-white/20" : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {f.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <div className="relative w-full sm:max-w-xs">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={t("orders.searchPlaceholder")}
+                  className="h-10 rounded-full bg-card pl-9"
+                />
+              </div>
             </div>
           )}
 
           {isLoading ? (
-            <div className="flex justify-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-[#174080]" />
+            <div className="space-y-4">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="overflow-hidden rounded-3xl border border-border/70 bg-card">
+                  <div className="flex flex-col sm:flex-row">
+                    <Skeleton className="h-44 w-full sm:h-auto sm:min-h-[11.5rem] sm:w-52 md:w-64" />
+                    <div className="flex-1 space-y-3 p-5">
+                      <Skeleton className="h-5 w-24 rounded-full" />
+                      <Skeleton className="h-6 w-2/3" />
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-2 w-full" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : orders.length === 0 ? (
             <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm">
@@ -319,7 +364,15 @@ const Orders = () => {
           ) : filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border bg-card/80 px-6 py-14 text-center">
               <p className="text-muted-foreground">{t("orders.filterEmpty")}</p>
-              <Button type="button" variant="outline" className="mt-4" onClick={() => setFilter("all")}>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-4"
+                onClick={() => {
+                  setFilter("all");
+                  setQuery("");
+                }}
+              >
                 {t("orders.filterAll")}
               </Button>
             </div>
@@ -332,6 +385,7 @@ const Orders = () => {
                 const canManage = o.status === "pending";
                 const parsed = parseOrderNotes(o.notes);
                 const tg = parsed.telegram;
+                const timeKey = TIME_KEYS[parsed.preferredTime];
 
                 return (
                   <li
@@ -339,11 +393,10 @@ const Orders = () => {
                     className="group overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#174080]/28 hover:shadow-lg"
                   >
                     <div className="flex flex-col sm:flex-row">
-                      {/* Fixed-height image column (was collapsing on desktop) */}
-                      <div className="relative h-44 w-full shrink-0 overflow-hidden bg-muted sm:h-auto sm:min-h-[11.5rem] sm:w-52 md:w-64">
+                      <div className="relative h-44 w-full shrink-0 overflow-hidden bg-muted sm:h-auto sm:min-h-[12.5rem] sm:w-52 md:w-64">
                         {image ? (
                           firstCarId ? (
-                            <Link to={`/car/${firstCarId}`} className="absolute inset-0 block sm:relative sm:h-full sm:min-h-[11.5rem]">
+                            <Link to={`/car/${firstCarId}`} className="absolute inset-0 block sm:relative sm:h-full sm:min-h-[12.5rem]">
                               <img
                                 src={image}
                                 alt={title}
@@ -367,7 +420,7 @@ const Orders = () => {
                         )}
                         <span
                           className={cn(
-                            "absolute left-3 top-3 inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold shadow-sm backdrop-blur-md sm:hidden",
+                            "absolute left-3 top-3 inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold shadow-sm backdrop-blur-md",
                             statusStyle(o.status)
                           )}
                         >
@@ -378,30 +431,20 @@ const Orders = () => {
                       <div className="flex min-w-0 flex-1 flex-col justify-between gap-4 p-4 sm:p-5">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                           <div className="min-w-0">
-                            <div className="mb-1.5 hidden sm:block">
-                              <span
-                                className={cn(
-                                  "inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold",
-                                  statusStyle(o.status)
-                                )}
-                              >
-                                {statusLabel(o.status)}
-                              </span>
-                            </div>
                             <h2 className="font-heading text-lg font-bold leading-snug text-foreground md:text-xl">
                               {title}
                             </h2>
                             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                               <span className="inline-flex items-center gap-1">
                                 <CalendarDays className="h-3.5 w-3.5" />
-                                {new Date(o.created_at).toLocaleDateString()}
+                                {new Date(o.created_at).toLocaleDateString(dateLocale)}
                               </span>
                               <span className="inline-flex items-center gap-1">
                                 <Hash className="h-3.5 w-3.5" />
                                 {t("orders.number")} #{o.id.slice(0, 8)}
                               </span>
                             </div>
-                            {(o.phone || tg || parsed.note) && (
+                            {(o.phone || tg || parsed.note || timeKey) && (
                               <div className="mt-2.5 space-y-1">
                                 <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                                   {o.phone && (
@@ -414,6 +457,12 @@ const Orders = () => {
                                     <span className="inline-flex items-center gap-1">
                                       <Send className="h-3.5 w-3.5 text-[#229ED9]" />
                                       @{tg.replace(/^@/, "")}
+                                    </span>
+                                  )}
+                                  {timeKey && (
+                                    <span className="inline-flex items-center gap-1">
+                                      <Clock3 className="h-3.5 w-3.5 text-[#174080]" />
+                                      {t(timeKey)}
                                     </span>
                                   )}
                                 </div>
@@ -430,47 +479,26 @@ const Orders = () => {
                             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                               {t("orders.priceLabel")}
                             </p>
-                            <p className="font-heading text-2xl font-bold tracking-tight text-foreground">
+                            <p className="font-heading text-2xl font-bold tracking-tight text-[#174080]">
                               {money(o.total_amount)}
                             </p>
                           </div>
                         </div>
 
-                        {/* Simple status steps */}
-                        <div className="hidden items-center gap-1.5 md:flex">
-                          {["pending", "confirmed", "completed"].map((step, idx) => {
-                            const done =
-                              (step === "pending" && ["pending", "confirmed", "processing", "delivered", "completed"].includes(o.status))
-                              || (step === "confirmed" && ["confirmed", "processing", "delivered", "completed"].includes(o.status))
-                              || (step === "completed" && ["delivered", "completed"].includes(o.status));
-                            const current =
-                              (step === "pending" && o.status === "pending")
-                              || (step === "confirmed" && ["confirmed", "processing"].includes(o.status))
-                              || (step === "completed" && ["delivered", "completed"].includes(o.status));
-                            return (
-                              <div key={step} className="flex items-center gap-1.5">
-                                {idx > 0 && (
-                                  <div className={cn("h-px w-6", done ? "bg-[#174080]" : "bg-border")} />
-                                )}
-                                <span
-                                  className={cn(
-                                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                                    current
-                                      ? "bg-[#174080]/12 text-[#143871]"
-                                      : done
-                                        ? "text-emerald-700"
-                                        : "text-muted-foreground/60"
-                                  )}
-                                >
-                                  {done ? <CheckCircle2 className="h-3 w-3" /> : <Clock3 className="h-3 w-3" />}
-                                  {t(`orders.step.${step}` as TranslationKey)}
-                                </span>
-                              </div>
-                            );
-                          })}
+                        <div className="rounded-2xl border border-border/60 bg-muted/30 px-3 py-3 sm:px-4">
+                          <DeliveryTimeline status={o.status} />
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="h-9 gap-1.5 bg-[#174080] hover:bg-[#143871]"
+                            onClick={() => setDetailOrder(o)}
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                            {t("order.detail.show")}
+                          </Button>
                           {firstCarId && (
                             <Button asChild size="sm" variant="outline" className="h-9 gap-1.5">
                               <Link to={`/car/${firstCarId}`}>
@@ -480,33 +508,16 @@ const Orders = () => {
                             </Button>
                           )}
                           {canManage && (
-                            <>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                className="h-9 gap-1.5"
-                                onClick={() => openEdit(o)}
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                                {t("orders.edit")}
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="destructive"
-                                className="h-9 gap-1.5"
-                                onClick={() => setDeleteId(o.id)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                {t("orders.delete")}
-                              </Button>
-                            </>
-                          )}
-                          {o.status === "pending" && (
-                            <p className="w-full text-xs text-muted-foreground sm:ml-auto sm:w-auto">
-                              {t("orders.pendingHint")}
-                            </p>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-9 gap-1.5"
+                              onClick={() => openEdit(o)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              {t("orders.edit")}
+                            </Button>
                           )}
                         </div>
                       </div>
@@ -517,10 +528,12 @@ const Orders = () => {
             </ul>
           )}
 
-          {/* Help strip — completes the page */}
           <div className="mt-10 overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm">
             <div className="grid gap-0 md:grid-cols-[1.2fr_1fr]">
               <div className="px-6 py-7 sm:px-8">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                  {t("orders.eyebrow")}
+                </p>
                 <h3 className="font-heading text-lg font-bold text-foreground">
                   {t("orders.helpTitle")}
                 </h3>
@@ -552,22 +565,11 @@ const Orders = () => {
               </div>
               <div className="border-t border-border/60 bg-[linear-gradient(145deg,hsl(216_40%_18%),hsl(199_42%_28%))] px-6 py-7 text-white sm:px-8 md:border-l md:border-t-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/60">
-                  {t("orders.processTitle")}
+                  {t("orders.flowTitle")}
                 </p>
-                <ol className="mt-4 space-y-3 text-sm text-white/85">
-                  <li className="flex gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/15 text-xs font-bold">1</span>
-                    {t("orders.process1")}
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/15 text-xs font-bold">2</span>
-                    {t("orders.process2")}
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/15 text-xs font-bold">3</span>
-                    {t("orders.process3")}
-                  </li>
-                </ol>
+                <div className="mt-4">
+                  <DeliveryTimeline status="pending" legend onDark />
+                </div>
               </div>
             </div>
           </div>
@@ -577,19 +579,19 @@ const Orders = () => {
       <Footer />
 
       <Dialog open={!!editOrder} onOpenChange={(o) => { if (!o) setEditOrder(null); }}>
-        <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto rounded-3xl">
           <DialogHeader>
-            <DialogTitle>{t("orders.editTitle")}</DialogTitle>
+            <DialogTitle className="font-heading">{t("orders.editTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             {editOrder && (
-              <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm font-medium">
+              <p className="rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm font-medium">
                 {carLabel(editOrder)}
               </p>
             )}
             <div className="space-y-1.5">
               <Label htmlFor="edit-name">{t("order.dialog.nameLabel")}</Label>
-              <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} />
+              <Input id="edit-name" value={name} maxLength={120} onChange={(e) => setName(sanitizeCustomerName(e.target.value))} />
               {touched && !nameOk && (
                 <p className="text-xs text-destructive">{t("order.dialog.nameInvalid")}</p>
               )}
@@ -615,7 +617,8 @@ const Orders = () => {
               <Input
                 id="edit-telegram"
                 value={telegram}
-                onChange={(e) => setTelegram(e.target.value.replace(/\s/g, ""))}
+                maxLength={32}
+                onChange={(e) => setTelegram(sanitizeTelegram(e.target.value))}
                 placeholder="@username"
               />
             </div>
@@ -648,7 +651,8 @@ const Orders = () => {
               <Textarea
                 id="edit-note"
                 value={note}
-                onChange={(e) => setNote(e.target.value)}
+                maxLength={500}
+                onChange={(e) => setNote(sanitizeOrderNote(e.target.value))}
                 rows={2}
                 className="resize-none"
               />
@@ -657,31 +661,30 @@ const Orders = () => {
               <Button variant="outline" onClick={() => setEditOrder(null)}>
                 {t("auth.cancel")}
               </Button>
-              <Button onClick={saveEdit} disabled={updateOrder.isPending}>
+              <Button className="bg-[#174080] hover:bg-[#143871]" onClick={saveEdit} disabled={updateOrder.isPending}>
                 {updateOrder.isPending ? t("form.saving") : t("form.save")}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
-
-      <AlertDialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("orders.deleteTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("orders.deleteBody")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("auth.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteOrder.isPending ? t("form.saving") : t("orders.delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <OrderDeliveryDetailDialog
+        open={!!detailOrder}
+        onOpenChange={(open) => {
+          if (!open) setDetailOrder(null);
+        }}
+        detail={
+          detailOrder
+            ? {
+                status: detailOrder.status,
+                carName: carLabel(detailOrder),
+                carPrice: detailOrder.total_amount,
+                orderId: detailOrder.id,
+                at: detailOrder.created_at,
+              }
+            : null
+        }
+      />
     </div>
   );
 };

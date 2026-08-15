@@ -1,4 +1,4 @@
-import type { Car, CarStatus } from "@/hooks/useCars";
+import type { Car, CarStatus, CarOrigin } from "@/hooks/useCars";
 
 export const extractBrand = (name: string): string => {
   const first = name.trim().split(/\s+/)[0] ?? "";
@@ -66,6 +66,20 @@ export const carMatchesBrand = (carName: string, brand: string): boolean => {
 export const filterCarsByBrand = (cars: Car[], brand: string | null): Car[] => {
   if (!brand) return cars;
   return cars.filter((c) => carMatchesBrand(c.name, brand));
+};
+
+export const filterCarsByOrigin = (cars: Car[], origin: CarOrigin | null): Car[] => {
+  if (!origin) return cars;
+  return cars.filter((c) => (c.origin ?? "local") === origin);
+};
+
+export const countCarsByOrigin = (cars: Car[]): Record<CarOrigin | "all", number> => {
+  const base = publicCars(cars);
+  const counts = { all: base.length, local: 0, thai: 0, import: 0 };
+  for (const car of base) {
+    counts[car.origin ?? "local"]++;
+  }
+  return counts;
 };
 
 export const STATUS_CATEGORIES: CarStatus[] = ["onroad", "ready", "luxury", "plate"];

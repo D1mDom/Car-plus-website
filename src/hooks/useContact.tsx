@@ -14,11 +14,11 @@ export interface ContactInfo {
 
 // Shown if the contact_info row can't be read (e.g. before the table is created).
 export const DEFAULT_CONTACT: ContactInfo = {
-  phone: "+855 12 345 678",
+  phone: "016 600 090",
   telegram: "@Carplus777",
   facebook: "https://facebook.com/CarPlus",
   tiktok: "https://tiktok.com/@carplus",
-  address: "ភ្នំពេញ, កម្ពុជា",
+  address: "Phnom Penh, Cambodia",
   email: "",
   map_link: "",
 };

@@ -5,6 +5,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -20,8 +21,7 @@ import Header from "@/components/Header";
 import logo from "@/assets/logo.png";
 import { CheckCircle2, Eye, EyeOff } from "lucide-react";
 
-const emailSchema = z.string().email("អាសយដ្ឋានអ៊ីមែលមិនត្រឹមត្រូវ");
-const passwordSchema = z.string().min(6, "ពាក្យសម្ងាត់ត្រូវមានយ៉ាងតិច ៦ តួអក្សរ");
+const REMEMBER_EMAIL_KEY = "carplus-remember-email";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
@@ -34,19 +34,39 @@ const Auth = () => {
   const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [successKind, setSuccessKind] = useState<"login" | "signup">("login");
+  const [rememberEmail, setRememberEmail] = useState(true);
   const { signIn, signUp, resetPassword, user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(REMEMBER_EMAIL_KEY);
+      if (saved) {
+        setEmail(saved);
+        setRememberEmail(true);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   const cleanEmail = (v: string) => v.replace(/[^a-zA-Z0-9@._%+-]/g, "");
   const cleanPassword = (v: string) => v.replace(/[^\x20-\x7E]/g, "");
-  // Allow Khmer + any language letters (not English-only)
   const cleanName = (v: string) => v.replace(/[^\p{L}\p{M}\s'.\-]/gu, "").slice(0, 120);
+
+  const emailSchema = z.string().email(t("auth.errorEmailInvalid"));
+  const passwordSchema = z.string().min(6, t("auth.errorPasswordMin"));
 
   useEffect(() => {
     if (user && !successOpen) navigate("/");
   }, [user, navigate, successOpen]);
+
+  const persistEmail = (value: string) => {
+    try {
+      if (rememberEmail) localStorage.setItem(REMEMBER_EMAIL_KEY, value);
+      else localStorage.removeItem(REMEMBER_EMAIL_KEY);
+    } catch { /* ignore */ }
+  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +75,7 @@ const Auth = () => {
       passwordSchema.parse(password);
     } catch (err) {
       if (err instanceof z.ZodError) {
-        toast({ title: "កំហុសផ្ទៀងផ្ទាត់", description: err.errors[0].message, variant: "destructive" });
+        toast({ title: t("auth.validationError"), description: err.errors[0].message, variant: "destructive" });
         return;
       }
     }
@@ -64,15 +84,16 @@ const Auth = () => {
     setLoading(false);
     if (error) {
       toast({
-        title: "ចូលមិនបានសម្រេច",
+        title: t("auth.loginFailed"),
         description:
           error.message === "Invalid login credentials"
-            ? "អ៊ីមែល ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវ"
+            ? t("auth.errorCredentials")
             : error.message,
         variant: "destructive",
       });
       return;
     }
+    persistEmail(email);
     setSuccessKind("login");
     setSuccessOpen(true);
   };
@@ -82,15 +103,15 @@ const Auth = () => {
     try {
       emailSchema.parse(email);
       passwordSchema.parse(password);
-      if (!fullName.trim()) throw new Error("ត្រូវការឈ្មោះពេញ");
-      if (password !== confirmPassword) throw new Error("ពាក្យសម្ងាត់មិនត្រូវគ្នា");
+      if (!fullName.trim()) throw new Error(t("auth.nameRequired"));
+      if (password !== confirmPassword) throw new Error(t("auth.errorPasswordMatch"));
     } catch (err) {
       if (err instanceof z.ZodError) {
-        toast({ title: "កំហុសផ្ទៀងផ្ទាត់", description: err.errors[0].message, variant: "destructive" });
+        toast({ title: t("auth.validationError"), description: err.errors[0].message, variant: "destructive" });
         return;
       }
       if (err instanceof Error) {
-        toast({ title: "កំហុសផ្ទៀងផ្ទាត់", description: err.message, variant: "destructive" });
+        toast({ title: t("auth.validationError"), description: err.message, variant: "destructive" });
         return;
       }
     }
@@ -100,15 +121,16 @@ const Auth = () => {
     if (error) {
       if (error.message.includes("already registered")) {
         toast({
-          title: "គណនីមានរួចហើយ",
-          description: "អ៊ីមែលនេះបានចុះឈ្មោះរួចហើយ។ សូមចូលជំនួសវិញ។",
+          title: t("auth.accountExistsTitle"),
+          description: t("auth.errorExists"),
           variant: "destructive",
         });
         return;
       }
-      toast({ title: "ចុះឈ្មោះមិនបានសម្រេច", description: error.message, variant: "destructive" });
+      toast({ title: t("auth.signupFailed"), description: error.message, variant: "destructive" });
       return;
     }
+    persistEmail(email);
     setConfirmPassword("");
     setSuccessKind("signup");
     setSuccessOpen(true);
@@ -120,7 +142,7 @@ const Auth = () => {
       emailSchema.parse(email);
     } catch (err) {
       if (err instanceof z.ZodError) {
-        toast({ title: "កំហុសផ្ទៀងផ្ទាត់", description: err.errors[0].message, variant: "destructive" });
+        toast({ title: t("auth.validationError"), description: err.errors[0].message, variant: "destructive" });
         return;
       }
     }
@@ -128,10 +150,13 @@ const Auth = () => {
     const { error } = await resetPassword(email);
     setLoading(false);
     if (error) {
-      toast({ title: "Reset failed", description: error.message, variant: "destructive" });
+      toast({ title: t("auth.resetFailed"), description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Check your email", description: "We sent a password reset link to " + email });
+    toast({
+      title: t("auth.resetEmailSent"),
+      description: t("auth.resetEmailSentDesc", { email }),
+    });
     setShowReset(false);
   };
 
@@ -160,9 +185,7 @@ const Auth = () => {
               <TabsContent value="signin">
                 {showReset ? (
                   <form onSubmit={handleResetRequest} className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      បញ្ចូលអ៊ីមែលរបស់អ្នក យើងនឹងផ្ញើតំណភ្ជាប់សម្រាប់កំណត់ពាក្យសម្ងាត់ឡើងវិញ។
-                    </p>
+                    <p className="text-sm text-muted-foreground">{t("auth.resetIntro")}</p>
                     <div className="space-y-2">
                       <Label htmlFor="reset-email">{t("auth.email")}</Label>
                       <Input
@@ -175,14 +198,14 @@ const Auth = () => {
                       />
                     </div>
                     <Button type="submit" className="w-full" disabled={loading}>
-                      {loading ? "កំពុងផ្ញើ..." : "ផ្ញើតំណភ្ជាប់"}
+                      {loading ? t("auth.sendingReset") : t("auth.sendResetLink")}
                     </Button>
                     <button
                       type="button"
                       onClick={() => setShowReset(false)}
                       className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
                     >
-                      ត្រឡប់ទៅការចូល
+                      {t("auth.backToSignIn")}
                     </button>
                   </form>
                 ) : (
@@ -206,7 +229,7 @@ const Auth = () => {
                           onClick={() => setShowReset(true)}
                           className="text-xs text-primary hover:underline"
                         >
-                          ភ្លេចពាក្យសម្ងាត់?
+                          {t("auth.forgotPassword")}
                         </button>
                       </div>
                       <div className="relative">
@@ -229,6 +252,16 @@ const Auth = () => {
                           {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="remember-email"
+                        checked={rememberEmail}
+                        onCheckedChange={(v) => setRememberEmail(v === true)}
+                      />
+                      <Label htmlFor="remember-email" className="cursor-pointer text-sm font-normal">
+                        {t("auth.rememberMe")}
+                      </Label>
                     </div>
                     <Button type="submit" className="w-full" disabled={loading}>
                       {loading ? t("auth.signingIn") : t("auth.signIn")}

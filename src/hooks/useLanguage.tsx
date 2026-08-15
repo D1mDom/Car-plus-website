@@ -17,12 +17,12 @@ const readStoredLang = (): Lang => {
     const v = localStorage.getItem(STORAGE_KEY);
     if (v === "en" || v === "km") return v;
   } catch { /* ignore */ }
-  return "km";
+  return "en";
 };
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [lang, setLangState] = useState<Lang>(() =>
-    typeof window !== "undefined" ? readStoredLang() : "km"
+    typeof window !== "undefined" ? readStoredLang() : "en"
   );
 
   const setLang = useCallback((next: Lang) => {
@@ -40,7 +40,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
 
   const t = useCallback((key: TranslationKey, vars?: Record<string, string | number>) => {
     const dict = translations[lang] as Record<TranslationKey, string>;
-    const fallback = translations.km as Record<TranslationKey, string>;
+    const fallback = translations.en as Record<TranslationKey, string>;
     let text = dict[key] ?? fallback[key] ?? key;
     if (vars) {
       for (const [k, v] of Object.entries(vars)) {

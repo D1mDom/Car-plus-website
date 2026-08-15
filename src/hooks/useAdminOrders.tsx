@@ -46,6 +46,7 @@ const refreshOrders = (qc: ReturnType<typeof useQueryClient>) => {
   void qc.invalidateQueries({ queryKey: ["admin-orders"] });
   void qc.invalidateQueries({ queryKey: ["my-orders"] });
   void qc.invalidateQueries({ queryKey: ["reports"] });
+  void qc.invalidateQueries({ queryKey: ["sold-car-ids"] });
 };
 
 export const useAdminOrders = () => {

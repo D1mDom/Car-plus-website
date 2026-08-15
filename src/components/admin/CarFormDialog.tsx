@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { useCreateCar, useUpdateCar, type Car, type CarStatus } from "@/hooks/useCars";
+import { useCreateCar, useUpdateCar, useCars, type Car, type CarStatus, type CarOrigin } from "@/hooks/useCars";
 import { Upload, X, Loader2, Link2, Car, ImageIcon, Settings2, FileText, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +36,7 @@ import { safeUUID, cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { onImgError } from "@/lib/imageFallback";
+import { generateNextCarCode } from "@/lib/carCodeUtils";
 import type { TranslationKey } from "@/i18n/translations";
 
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
@@ -101,6 +102,7 @@ const formSchema = z.object({
   year: z.coerce.number().min(1900).max(new Date().getFullYear() + 1),
   price: z.coerce.number().positive("Price must be greater than 0"),
   status: z.enum(["ready", "onroad", "luxury", "plate"]),
+  origin: z.enum(["local", "thai", "import"]).default("local"),
   viewers: z.coerce.number().min(0).default(0),
   images: z.array(z.string()).min(1, "At least one photo is required"),
   bodyType: z.string().min(1, "Body type is required"),
@@ -839,10 +841,11 @@ const defaultFormValues: FormValues = {
   year: new Date().getFullYear(),
   price: 0,
   status: "ready",
+  origin: "local" as CarOrigin,
   viewers: 0,
   images: [],
   bodyType: "Sedan",
-  taxStatus: "ក្រដាសពន្ធ",
+  taxStatus: "Tax paper",
   condition: "Excellent",
   fuelType: "Petrol",
   color: "White",
@@ -853,6 +856,7 @@ const defaultFormValues: FormValues = {
 const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog", onCreated }: CarFormDialogProps) => {
   const createCar = useCreateCar();
   const updateCar = useUpdateCar();
+  const { data: allCars = [] } = useCars();
   const [formResetKey, setFormResetKey] = useState(0);
   const photosRef = useRef<CarPhotosSectionHandle>(null);
   const pendingImageUrlRef = useRef("");
@@ -895,11 +899,13 @@ const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog", onCreated 
         color: car.color,
         description: car.description.join("\n"),
         isActive: car.isActive ?? true,
+        origin: car.origin ?? "local",
       });
       setFormResetKey((k) => k + 1);
     } else if (open) {
       pendingImageUrlRef.current = "";
-      form.reset(defaultFormValues);
+      const nextCode = generateNextCarCode(allCars);
+      form.reset({ ...defaultFormValues, code: nextCode });
       setFormResetKey((k) => k + 1);
     }
     // Only re-sync when opening the dialog or switching the car being edited.
@@ -909,8 +915,9 @@ const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog", onCreated 
   const onSubmit = (values: FormValues) => {
     const carData = {
       ...values,
-      image: values.images[0], // first photo is the cover
+      image: values.images[0],
       description: values.description.split("\n").filter(Boolean),
+      origin: values.origin as CarOrigin,
     };
 
     if (car) {
@@ -1022,9 +1029,21 @@ const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog", onCreated 
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("form.code")}</FormLabel>
-                      <FormControl>
-                        <Input placeholder="DCS2024_..." {...field} />
-                      </FormControl>
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input placeholder="CP2026-001" {...field} />
+                        </FormControl>
+                        {!car && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="shrink-0"
+                            onClick={() => field.onChange(generateNextCarCode(allCars))}
+                          >
+                            {t("form.generateCode")}
+                          </Button>
+                        )}
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1119,6 +1138,28 @@ const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog", onCreated 
                           </SelectContent>
                         </Select>
                         )}
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="origin"
+                  render={({ field }) => (
+                    <FormItem className={isPage ? "sm:col-span-2" : undefined}>
+                      <FormLabel>{t("form.origin")}</FormLabel>
+                      <FormControl>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="local">{t("form.origin.local")}</SelectItem>
+                            <SelectItem value="thai">{t("form.origin.thai")}</SelectItem>
+                            <SelectItem value="import">{t("form.origin.import")}</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

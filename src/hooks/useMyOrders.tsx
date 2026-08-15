@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { sanitizeOrderContact } from "@/lib/orderSecurity";
 
 export interface MyOrderItem {
   id: string;
@@ -168,18 +169,27 @@ export const useUpdateMyOrder = () => {
     mutationFn: async (input: MyOrderEditInput) => {
       if (!user) throw new Error("login-required");
 
-      const notes = buildNotes({
-        carName: input.carName,
+      const contact = sanitizeOrderContact({
+        customerName: input.customerName,
+        phone: input.phone,
         telegram: input.telegram,
         preferredTime: input.preferredTime,
         note: input.note,
+      });
+      if (!contact) throw new Error("Invalid contact details");
+
+      const notes = buildNotes({
+        carName: input.carName,
+        telegram: contact.telegram,
+        preferredTime: contact.preferredTime,
+        note: contact.note,
       });
 
       const full = await db
         .from("orders")
         .update({
-          customer_name: input.customerName.trim(),
-          phone: input.phone.trim(),
+          customer_name: contact.customerName,
+          phone: contact.phone,
           notes,
           updated_at: new Date().toISOString(),
         })
@@ -193,8 +203,8 @@ export const useUpdateMyOrder = () => {
         const legacy = await db
           .from("orders")
           .update({
-            phone: input.phone.trim(),
-            notes: `${input.customerName.trim()}\n${notes ?? ""}`.trim(),
+            phone: contact.phone,
+            notes: `${contact.customerName}\n${notes ?? ""}`.trim(),
             updated_at: new Date().toISOString(),
           })
           .eq("id", input.id)
@@ -217,6 +227,7 @@ export const useUpdateMyOrder = () => {
     onError: (e: unknown) => {
       const m = errMessage(e);
       if (m === "login-required") toast.error("Please sign in");
+      else if (m === "Invalid contact details") toast.error("Please check your name and phone number");
       else toast.error("Failed to update: " + m);
     },
   });

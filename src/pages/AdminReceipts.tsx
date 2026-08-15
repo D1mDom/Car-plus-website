@@ -31,7 +31,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FileText, Loader2, Plus, Printer, Trash2, Eye, Pencil, X } from "lucide-react";
+import { FileText, Loader2, Plus, Printer, Trash2, Eye, Pencil, X, ChevronRight, ChevronLeft, CheckCircle2 } from "lucide-react";
+import { formatPhoneDisplay, cleanPhoneInput } from "@/lib/phoneUtils";
+import { cn } from "@/lib/utils";
 
 const PAYMENTS: PaymentMethod[] = ["cash", "transfer", "card", "other"];
 
@@ -48,6 +50,7 @@ type FormState = {
   qty: string;
   tax_rate: string;
   payment_method: PaymentMethod;
+  payment_stage: "quote" | "deposit" | "balance" | "paid";
   bank_name: string;
   account_no: string;
   notes: string;
@@ -66,6 +69,7 @@ const emptyForm = (): FormState => ({
   qty: "1",
   tax_rate: "0",
   payment_method: "cash",
+  payment_stage: "quote",
   bank_name: "ABA Bank",
   account_no: "",
   notes: "",
@@ -84,6 +88,7 @@ const receiptToForm = (r: Receipt): FormState => ({
   qty: String(r.qty || 1),
   tax_rate: String(r.tax_rate || 0),
   payment_method: r.payment_method || "cash",
+  payment_stage: "paid",
   bank_name: r.bank_name || "ABA Bank",
   account_no: r.account_no || "",
   notes: r.notes || "",
@@ -104,6 +109,7 @@ const AdminReceipts = () => {
   const [preview, setPreview] = useState<Receipt | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
+  const [wizardStep, setWizardStep] = useState(0);
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
 
@@ -174,12 +180,14 @@ const AdminReceipts = () => {
 
   const openCreate = () => {
     setEditing(null);
+    setWizardStep(0);
     setForm({ ...emptyForm(), account_no: contact.phone || "" });
     setFormOpen(true);
   };
 
   const openEdit = (r: Receipt) => {
     setEditing(r);
+    setWizardStep(0);
     setForm(receiptToForm(r));
     setFormOpen(true);
     setPreview(null);
@@ -188,6 +196,34 @@ const AdminReceipts = () => {
   const closeForm = () => {
     setFormOpen(false);
     setEditing(null);
+    setWizardStep(0);
+  };
+
+  const wizardSteps = [
+    t("admin.receipts.wizard.step1"),
+    t("admin.receipts.wizard.step2"),
+    t("admin.receipts.wizard.step3"),
+    t("admin.receipts.wizard.step4"),
+  ];
+
+  const paymentStages = [
+    { value: "quote" as const, label: t("admin.receipts.paymentStep.quote") },
+    { value: "deposit" as const, label: t("admin.receipts.paymentStep.deposit") },
+    { value: "balance" as const, label: t("admin.receipts.paymentStep.balance") },
+    { value: "paid" as const, label: t("admin.receipts.paymentStep.paid") },
+  ];
+
+  const canNextStep = () => {
+    if (wizardStep === 0) return form.customer_name.trim().length >= 2;
+    if (wizardStep === 1) return form.unit_price !== "" && Number(form.unit_price) > 0;
+    return true;
+  };
+
+  const grandPreview = () => {
+    const unit = form.unit_price !== "" ? Number(form.unit_price) : 0;
+    const qty = form.qty !== "" ? Number(form.qty) : 1;
+    const tax = form.tax_rate !== "" ? Number(form.tax_rate) : 0;
+    return unit * qty * (1 + tax / 100);
   };
 
   const pickCar = (carId: string) => {
@@ -237,7 +273,10 @@ const AdminReceipts = () => {
       payment_method: form.payment_method,
       bank_name: form.bank_name.trim() || undefined,
       account_no: form.account_no.trim() || undefined,
-      notes: form.notes.trim() || undefined,
+      notes: [
+        form.payment_stage !== "quote" ? `[${form.payment_stage}]` : "",
+        form.notes.trim(),
+      ].filter(Boolean).join(" ") || undefined,
     };
 
     if (editing) {
@@ -478,152 +517,211 @@ const AdminReceipts = () => {
             <p className="text-xs text-muted-foreground">
               {t("admin.receipts.no")}: <span className="font-medium text-foreground">{editing.receipt_no}</span>
             </p>
-          ) : null}
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>{t("admin.receipts.invoiceTo")} *</Label>
-                <Input
-                  value={form.customer_name}
-                  onChange={(e) => setForm({ ...form, customer_name: e.target.value })}
-                  placeholder={t("admin.receipts.customer")}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t("admin.receipts.phone")}</Label>
-                <Input
-                  value={form.phone}
-                  onChange={(e) =>
-                    setForm({ ...form, phone: e.target.value.replace(/[^0-9+\-\s()]/g, "") })
-                  }
-                  placeholder="0xx xxx xxx"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>{t("admin.receipts.selectCar")}</Label>
-              <Select value={form.carId || undefined} onValueChange={pickCar}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t("admin.receipts.selectCar")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__custom__">{t("admin.receipts.customItem")}</SelectItem>
-                  {realCars.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name} — ${c.price.toLocaleString()}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>{t("admin.receipts.description")}</Label>
-              <Input
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder={t("admin.receipts.description")}
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label>{t("admin.receipts.year")}</Label>
-                <Input value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t("admin.receipts.make")}</Label>
-                <Input value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t("admin.receipts.model")}</Label>
-                <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label>{t("admin.receipts.price")} ($)</Label>
-                <Input
-                  type="number"
-                  value={form.unit_price}
-                  onChange={(e) => setForm({ ...form, unit_price: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t("admin.receipts.qty")}</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={form.qty}
-                  onChange={(e) => setForm({ ...form, qty: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t("admin.receipts.tax")} %</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={form.tax_rate}
-                  onChange={(e) => setForm({ ...form, tax_rate: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>{t("admin.receipts.payment")}</Label>
-                <Select
-                  value={form.payment_method}
-                  onValueChange={(v) => setForm({ ...form, payment_method: v as PaymentMethod })}
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {wizardSteps.map((label, idx) => (
+                <span
+                  key={label}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium",
+                    idx === wizardStep
+                      ? "bg-[#174080] text-white"
+                      : idx < wizardStep
+                        ? "bg-emerald-500/12 text-emerald-700"
+                        : "bg-muted text-muted-foreground",
+                  )}
                 >
+                  {idx < wizardStep ? <CheckCircle2 className="h-3 w-3" /> : null}
+                  {idx + 1}. {label}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {wizardStep === 0 && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>{t("admin.receipts.invoiceTo")} *</Label>
+                  <Input
+                    value={form.customer_name}
+                    onChange={(e) => setForm({ ...form, customer_name: e.target.value })}
+                    placeholder={t("admin.receipts.customer")}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t("admin.receipts.phone")}</Label>
+                  <Input
+                    value={form.phone}
+                    onChange={(e) =>
+                      setForm({ ...form, phone: formatPhoneDisplay(cleanPhoneInput(e.target.value)) })
+                    }
+                    placeholder="016 600 090"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {wizardStep === 1 && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>{t("admin.receipts.selectCar")}</Label>
+                <Select value={form.carId || undefined} onValueChange={pickCar}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder={t("admin.receipts.selectCar")} />
                   </SelectTrigger>
                   <SelectContent>
-                    {PAYMENTS.map((p) => (
-                      <SelectItem key={p} value={p}>
-                        {labels.paymentMethods[p]}
+                    <SelectItem value="__custom__">{t("admin.receipts.customItem")}</SelectItem>
+                    {realCars.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} — ${c.price.toLocaleString()}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>{t("admin.receipts.bankName")}</Label>
+                <Label>{t("admin.receipts.description")}</Label>
                 <Input
-                  value={form.bank_name}
-                  onChange={(e) => setForm({ ...form, bank_name: e.target.value })}
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label>{t("admin.receipts.price")} ($)</Label>
+                  <Input
+                    type="number"
+                    value={form.unit_price}
+                    onChange={(e) => setForm({ ...form, unit_price: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t("admin.receipts.qty")}</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={form.qty}
+                    onChange={(e) => setForm({ ...form, qty: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t("admin.receipts.tax")} %</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.tax_rate}
+                    onChange={(e) => setForm({ ...form, tax_rate: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {wizardStep === 2 && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>{t("admin.receipts.payment")} — step by step</Label>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {paymentStages.map((stage, idx) => (
+                    <button
+                      key={stage.value}
+                      type="button"
+                      onClick={() => setForm({ ...form, payment_stage: stage.value })}
+                      className={cn(
+                        "rounded-lg border px-3 py-2 text-left text-xs transition-colors",
+                        form.payment_stage === stage.value
+                          ? "border-[#174080] bg-[#174080]/10 text-[#174080]"
+                          : "border-border hover:border-[#174080]/30",
+                      )}
+                    >
+                      <span className="font-semibold">{idx + 1}.</span> {stage.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>{t("admin.receipts.payment")}</Label>
+                  <Select
+                    value={form.payment_method}
+                    onValueChange={(v) => setForm({ ...form, payment_method: v as PaymentMethod })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAYMENTS.map((p) => (
+                        <SelectItem key={p} value={p}>
+                          {labels.paymentMethods[p]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t("admin.receipts.bankName")}</Label>
+                  <Input
+                    value={form.bank_name}
+                    onChange={(e) => setForm({ ...form, bank_name: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t("admin.receipts.accountNo")}</Label>
+                <Input
+                  value={form.account_no}
+                  onChange={(e) => setForm({ ...form, account_no: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t("admin.receipts.notes")}</Label>
+                <Textarea
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  rows={2}
                 />
               </div>
             </div>
+          )}
 
-            <div className="space-y-1.5">
-              <Label>{t("admin.receipts.accountNo")}</Label>
-              <Input
-                value={form.account_no}
-                onChange={(e) => setForm({ ...form, account_no: e.target.value })}
-              />
+          {wizardStep === 3 && (
+            <div className="space-y-3 rounded-xl border border-border/70 bg-muted/30 p-4 text-sm">
+              <p className="text-xs text-muted-foreground">{t("admin.receipts.wizard.reviewHint")}</p>
+              <div><span className="text-muted-foreground">{t("admin.receipts.customer")}:</span> {form.customer_name}</div>
+              {form.phone ? <div><span className="text-muted-foreground">{t("admin.receipts.phone")}:</span> {form.phone}</div> : null}
+              <div><span className="text-muted-foreground">{t("admin.receipts.description")}:</span> {form.description || "—"}</div>
+              <div><span className="text-muted-foreground">{t("admin.receipts.grandTotal")}:</span> {money(grandPreview())}</div>
+              <div><span className="text-muted-foreground">{t("admin.receipts.payment")}:</span> {labels.paymentMethods[form.payment_method]} · {paymentStages.find((s) => s.value === form.payment_stage)?.label}</div>
             </div>
+          )}
 
-            <div className="space-y-1.5">
-              <Label>{t("admin.receipts.notes")}</Label>
-              <Textarea
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                rows={2}
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={closeForm}>
-                {t("form.cancel")}
+          <div className="flex justify-between gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => (wizardStep === 0 ? closeForm() : setWizardStep((s) => s - 1))}
+              className="gap-1.5"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              {wizardStep === 0 ? t("form.cancel") : t("admin.receipts.wizard.back")}
+            </Button>
+            {wizardStep < wizardSteps.length - 1 ? (
+              <Button
+                type="button"
+                onClick={() => setWizardStep((s) => s + 1)}
+                disabled={!canNextStep()}
+                className="gap-1.5"
+              >
+                {t("admin.receipts.wizard.next")}
+                <ChevronRight className="h-4 w-4" />
               </Button>
+            ) : (
               <Button onClick={submit} disabled={!form.customer_name.trim() || saving}>
                 {saving ? t("form.saving") : editing ? t("admin.receipts.update") : t("admin.receipts.save")}
               </Button>
-            </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

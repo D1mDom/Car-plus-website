@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProfilePersonalForm from "@/components/ProfilePersonalForm";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import ThemeModeToggle from "@/components/ThemeModeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile, type Profile } from "@/hooks/useProfile";
 import { useProfileTheme } from "@/hooks/useProfileTheme";
@@ -618,6 +619,12 @@ const Profile = () => {
                       {t("profile.preferencesTitle")}
                     </h2>
                     <p className="mt-1 text-sm text-muted-foreground">{t("profile.preferencesDesc")}</p>
+                  </div>
+
+                  <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/20 p-4">
+                    <p className="text-sm font-semibold text-foreground">{t("profile.appearance")}</p>
+                    <p className="text-xs text-muted-foreground">{t("profile.appearanceHint")}</p>
+                    <ThemeModeToggle />
                   </div>
 
                   <div className="space-y-3">

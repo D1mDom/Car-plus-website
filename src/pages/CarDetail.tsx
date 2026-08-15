@@ -1,5 +1,6 @@
 import { useParams, Link } from "react-router-dom";
-import { useCarById, getStatusLabel } from "@/hooks/useCars";
+import { useCarById } from "@/hooks/useCars";
+import { useLanguage } from "@/hooks/useLanguage";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
@@ -9,15 +10,13 @@ import { ArrowLeft, Phone, MessageCircle, Check, Pin, Calendar, Fuel, Palette, S
 import { useState } from "react";
 import { useContact } from "@/hooks/useContact";
 import { onImgError } from "@/lib/imageFallback";
+import type { TranslationKey } from "@/i18n/translations";
+import SoldOutBadge from "@/components/SoldOutBadge";
+import { useIsCarSold } from "@/hooks/useSoldCarIds";
 
-// Description lines are stored with a leading emoji (📌 for a heading-style
-// point, ✅ for a feature). Emojis render inconsistently across devices and we
-// already show an icon, so strip the emoji here and pick a matching lucide icon.
 const parseDescriptionItem = (raw: string) => {
   const pinned = /^\s*📌/.test(raw);
-  const text = raw
-    .replace(/^[\p{Extended_Pictographic}️‍\s]+/u, "")
-    .trim();
+  const text = raw.replace(/^[\p{Extended_Pictographic}️‍\s]+/u, "").trim();
   return { text, pinned };
 };
 
@@ -26,52 +25,78 @@ const CarDetail = () => {
   const { data: car, isLoading } = useCarById(id || "");
   const [selectedImage, setSelectedImage] = useState(0);
   const { data: contact } = useContact();
+  const { t } = useLanguage();
   const telegram = (contact?.telegram || "@Carplus777").replace(/^@/, "");
+  const shopPhone = contact?.phone || "016 600 090";
+  const sold = useIsCarSold(car?.id);
 
   if (isLoading) {
-    return (<div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>);
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   if (!car) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">រកមិនឃើញឡាន</h1>
-          <Link to="/" className="text-primary hover:underline">ត្រឡប់ទៅទំព័រដើម</Link>
+          <h1 className="mb-4 text-2xl font-bold">{t("carDetail.notFound")}</h1>
+          <Link to="/cars" className="text-primary hover:underline">{t("carDetail.backToList")}</Link>
         </div>
       </div>
     );
   }
 
   const specs = [
-    { icon: CarIcon, label: "ប្រភេទតួ", value: car.bodyType },
-    { icon: Calendar, label: "ឆ្នាំ", value: car.year.toString() },
-    { icon: Shield, label: "ស្ថានភាពពន្ធ", value: car.taxStatus },
-    { icon: Check, label: "លក្ខខណ្ឌ", value: car.condition },
-    { icon: Fuel, label: "ប្រភេទប្រេង", value: car.fuelType },
-    { icon: Palette, label: "ពណ៌", value: car.color },
+    { icon: CarIcon, label: t("carDetail.bodyType"), value: car.bodyType },
+    { icon: Calendar, label: t("carDetail.year"), value: car.year.toString() },
+    { icon: Shield, label: t("carDetail.taxStatus"), value: car.taxStatus },
+    { icon: Check, label: t("carDetail.condition"), value: car.condition },
+    { icon: Fuel, label: t("carDetail.fuelType"), value: car.fuelType },
+    { icon: Palette, label: t("carDetail.color"), value: car.color },
   ];
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="pt-24 pb-16">
+      <main className="pb-16 pt-24">
         <div className="container mx-auto px-4">
-          <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8">
+          <Link to="/cars" className="mb-8 inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
-            ត្រឡប់ទៅបញ្ជីឡាន
+            {t("carDetail.backToList")}
           </Link>
 
-          <div className="grid lg:grid-cols-2 gap-10">
+          <div className="grid gap-10 lg:grid-cols-2">
             <div className="space-y-4">
-              <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-surface">
-                <img src={(car.images ?? [])[selectedImage] || car.image} onError={onImgError} alt={car.name} className="h-full w-full object-cover" />
-                <Badge variant={car.status} className="absolute top-4 left-4">{getStatusLabel(car.status)}</Badge>
+              <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-surface">
+                <img
+                  src={(car.images ?? [])[selectedImage] || car.image}
+                  onError={onImgError}
+                  alt={car.name}
+                  className={`h-full w-full object-cover${sold ? " grayscale" : ""}`}
+                />
+                {sold ? (
+                  <>
+                    <div className="absolute inset-0 z-[8] bg-black/45" />
+                    <SoldOutBadge className="absolute left-1/2 top-1/2 z-[9] -translate-x-1/2 -translate-y-1/2 -rotate-12" />
+                  </>
+                ) : (
+                  <Badge variant={car.status} className="absolute left-4 top-4">
+                    {t(`status.${car.status}` as TranslationKey)}
+                  </Badge>
+                )}
               </div>
               <div className="grid grid-cols-3 gap-3">
                 {(car.images ?? []).map((image, index) => (
-                  <button key={index} onClick={() => setSelectedImage(index)} className={`relative aspect-[4/3] rounded-lg overflow-hidden border-2 transition-all ${selectedImage === index ? "border-primary" : "border-transparent hover:border-border"}`}>
-                    <img src={image} alt={`${car.name} រូប ${index + 1}`} onError={onImgError} className="h-full w-full object-cover" />
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => setSelectedImage(index)}
+                    className={`relative aspect-[4/3] overflow-hidden rounded-lg border-2 transition-all ${selectedImage === index ? "border-primary" : "border-transparent hover:border-border"}`}
+                  >
+                    <img src={image} alt={car.name} onError={onImgError} className="h-full w-full object-cover" />
                   </button>
                 ))}
               </div>
@@ -79,23 +104,39 @@ const CarDetail = () => {
 
             <div className="space-y-8">
               <div>
-                <p className="text-sm text-muted-foreground font-mono mb-2">{car.code}</p>
-                <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">{car.name}</h1>
+                <p className="mb-2 font-mono text-sm text-muted-foreground">
+                  {t("carDetail.unitNumber")}: {car.code}
+                </p>
+                <h1 className="mb-4 text-3xl font-bold text-foreground sm:text-4xl">{car.name}</h1>
+                {sold ? (
+                  <p className="mb-3 inline-flex rounded-full bg-red-600 px-3 py-1 text-sm font-bold uppercase tracking-wide text-white">
+                    {t("card.soldOut")}
+                  </p>
+                ) : null}
                 <p className="text-4xl font-bold text-gradient-ocean">${car.price.toLocaleString()}</p>
+                {sold ? (
+                  <p className="mt-2 text-sm text-red-700">{t("card.soldOutHint")}</p>
+                ) : null}
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <Button size="lg" className="flex-1 gap-2" asChild>
                   <a href={`https://t.me/${telegram}`} target="_blank" rel="noopener noreferrer">
                     <MessageCircle className="h-5 w-5" />
-                    ទំនាក់ទំនងតាមតេឡេក្រាម
+                    {t("carDetail.contactTelegram")}
+                  </a>
+                </Button>
+                <Button size="lg" variant="outline" className="flex-1 gap-2" asChild>
+                  <a href={`tel:${shopPhone.replace(/\s+/g, "")}`}>
+                    <Phone className="h-5 w-5" />
+                    {shopPhone}
                   </a>
                 </Button>
               </div>
 
               <Card>
                 <CardContent className="p-6">
-                  <h2 className="text-lg font-semibold mb-4 text-foreground">អ្វីដែលរួមបញ្ចូល</h2>
+                  <h2 className="mb-4 text-lg font-semibold text-foreground">{t("carDetail.includes")}</h2>
                   <ul className="space-y-3">
                     {car.description.map((raw, index) => {
                       const { text, pinned } = parseDescriptionItem(raw);
@@ -115,11 +156,13 @@ const CarDetail = () => {
 
               <Card>
                 <CardContent className="p-6">
-                  <h2 className="text-lg font-semibold mb-4 text-foreground">លក្ខណៈបច្ចេកទេស</h2>
+                  <h2 className="mb-4 text-lg font-semibold text-foreground">{t("carDetail.specs")}</h2>
                   <div className="grid grid-cols-2 gap-4">
                     {specs.map((spec) => (
                       <div key={spec.label} className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface"><spec.icon className="h-5 w-5 text-muted-foreground" /></div>
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface">
+                          <spec.icon className="h-5 w-5 text-muted-foreground" />
+                        </div>
                         <div>
                           <p className="text-xs text-muted-foreground">{spec.label}</p>
                           <p className="text-sm font-medium text-foreground">{spec.value}</p>
@@ -132,14 +175,20 @@ const CarDetail = () => {
 
               <Card>
                 <CardContent className="p-6">
-                  <h2 className="text-lg font-semibold mb-4 text-foreground">ទំនាក់ទំនងយើង</h2>
-                  <p className="text-muted-foreground mb-6">ចាប់អារម្មណ៍លើរថយន្តនេះ? ទាក់ទងមកយើងដើម្បីណាត់ជួបសាកឡាន ឬទទួលព័ត៌មានបន្ថែម។</p>
-                  <div className="flex flex-col sm:flex-row gap-3">
+                  <h2 className="mb-4 text-lg font-semibold text-foreground">{t("carDetail.contact")}</h2>
+                  <p className="mb-6 text-muted-foreground">{t("carDetail.contactBody")}</p>
+                  <div className="flex flex-col gap-3 sm:flex-row">
                     <Button variant="outline" className="flex-1 gap-2" asChild>
-                      <a href="tel:+85512345678"><Phone className="h-4 w-4" />ទូរស័ព្ទ</a>
+                      <a href={`tel:${shopPhone.replace(/\s+/g, "")}`}>
+                        <Phone className="h-4 w-4" />
+                        {t("carDetail.contactPhone")}
+                      </a>
                     </Button>
                     <Button variant="outline" className="flex-1 gap-2" asChild>
-                      <a href="https://t.me/DomCarStore" target="_blank" rel="noopener noreferrer"><MessageCircle className="h-4 w-4" />តេឡេក្រាម</a>
+                      <a href={`https://t.me/${telegram}`} target="_blank" rel="noopener noreferrer">
+                        <MessageCircle className="h-4 w-4" />
+                        {t("carDetail.contactTelegram")}
+                      </a>
                     </Button>
                   </div>
                 </CardContent>

@@ -35,6 +35,9 @@ import AdminGuard from "./components/admin/AdminGuard";
 import AdminLayout from "./components/admin/AdminLayout";
 import NotFound from "./pages/NotFound";
 import WelcomeDialog from "./components/WelcomeDialog";
+import { CustomerNotificationProvider } from "./hooks/useCustomerNotifications";
+import { SoldCarsSync } from "./hooks/useSoldCarIds";
+import CustomerDeliverySuccessDialog from "./components/CustomerDeliverySuccessDialog";
 
 const queryClient = new QueryClient();
 
@@ -47,10 +50,13 @@ const App = () => {
             <BrowserRouter>
               <AuthProvider>
                 <OrderAlertProvider>
+                <CustomerNotificationProvider>
                 <WishlistProvider>
                   <Toaster />
                   <Sonner />
                   <WelcomeDialog />
+                  <CustomerDeliverySuccessDialog />
+                  <SoldCarsSync />
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/cars" element={<Cars />} />
@@ -86,6 +92,7 @@ const App = () => {
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </WishlistProvider>
+                </CustomerNotificationProvider>
                 </OrderAlertProvider>
               </AuthProvider>
             </BrowserRouter>

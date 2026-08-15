@@ -15,8 +15,6 @@ import {
   FileText,
   Settings,
   Shield,
-  Sun,
-  Moon,
   ChevronDown,
   Globe,
   User,
@@ -24,7 +22,6 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
@@ -215,33 +212,48 @@ const AdminOrderSeenSync = () => {
 const AdminLayoutBody = () => {
   const { user, signOut } = useAuth();
   const { t } = useLanguage();
-  const { theme, setTheme, resolvedTheme } = useTheme();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const { canManageUsers } = useUserRole();
+  const { canManageUsers, isLoading: roleLoading } = useUserRole();
   const { canReadModule } = useModulePermissions();
-  const canReadOrders = canReadModule("orders");
-  const salesNav = useMemo(() => filterNavByRead(SALES_NAV, canReadModule), [canReadModule]);
-  const websiteNav = useMemo(() => filterNavByRead(WEBSITE_NAV, canReadModule), [canReadModule]);
+  const canReadOrders = !roleLoading && canReadModule("orders");
+  const salesNav = useMemo(
+    () => (roleLoading ? SALES_NAV : filterNavByRead(SALES_NAV, canReadModule)),
+    [roleLoading, canReadModule],
+  );
+  const websiteNav = useMemo(
+    () => (roleLoading ? WEBSITE_NAV : filterNavByRead(WEBSITE_NAV, canReadModule)),
+    [roleLoading, canReadModule],
+  );
   const systemNav = useMemo(
-    () => filterNavByRead(systemNavForRole(canManageUsers), canReadModule),
-    [canManageUsers, canReadModule],
+    () =>
+      roleLoading
+        ? systemNavForRole(canManageUsers)
+        : filterNavByRead(systemNavForRole(canManageUsers), canReadModule),
+    [canManageUsers, canReadModule, roleLoading],
   );
   const email = user?.email ?? "";
-  const isDark = (resolvedTheme ?? theme) === "dark";
 
   useEffect(() => setMounted(true), []);
 
   const currentModule = routeToModule(pathname);
   useEffect(() => {
+    // Role defaults to "customer" while loading — skip checks until resolved.
+    if (roleLoading) return;
     if (!currentModule || canReadModule(currentModule)) return;
+
     toast.error(t("admin.permissions.denied"));
-    navigate("/admin", { replace: true });
-  }, [currentModule, canReadModule, navigate, t]);
+
+    const allNav = [...salesNav, ...websiteNav, ...systemNav];
+    const fallback = allNav[0]?.to;
+    if (fallback && fallback !== pathname) {
+      navigate(fallback, { replace: true });
+    }
+  }, [currentModule, canReadModule, navigate, t, roleLoading, pathname, salesNav, websiteNav, systemNav]);
 
   const page = useMemo(
     () => PAGE_META.find((m) => m.match(pathname)) ?? PAGE_META[0],
@@ -403,14 +415,6 @@ const AdminLayoutBody = () => {
                       <ExternalLink className="h-4 w-4" />
                       {t("admin.viewWebsite")}
                     </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="cursor-pointer rounded-lg gap-2"
-                    onClick={() => setTheme(isDark ? "light" : "dark")}
-                  >
-                    {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                    {isDark ? t("theme.light") : t("theme.dark")}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
