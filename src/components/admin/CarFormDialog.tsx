@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, forwardRef, memo, useImperativeHandle, type ReactNode, type MutableRefObject } from "react";
+import { useEffect, useState, useRef, forwardRef, memo, useImperativeHandle, type ReactNode, type MutableRefObject, type ComponentPropsWithoutRef } from "react";
 import { useForm, useWatch, useFormContext, type Control, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -27,7 +27,10 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { useCreateCar, useUpdateCar, useCars, type Car, type CarStatus, type CarOrigin } from "@/hooks/useCars";
+import { useCreateCar, useUpdateCar, type Car, type CarStatus, type CarOrigin } from "@/hooks/useCars";
+import { unpackCarIdentity, packCarIdentity, formatCarIdentity } from "@/lib/carCodeUtils";
+import { BODY_TYPE_ORDER, normalizeBodyType } from "@/lib/carUtils";
+import { bodyTypeLabel } from "@/components/CategoryFilter";
 import { Upload, X, Loader2, Link2, Car, ImageIcon, Settings2, FileText, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,7 +39,6 @@ import { safeUUID, cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { onImgError } from "@/lib/imageFallback";
-import { generateNextCarCode } from "@/lib/carCodeUtils";
 import type { TranslationKey } from "@/i18n/translations";
 
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
@@ -95,24 +97,40 @@ const compressImage = async (
   return { blob, extension: "webp" };
 };
 
-const formSchema = z.object({
-  code: z.string().min(1, "Code is required"),
-  name: z.string().min(1, "Name is required"),
-  model: z.string().min(1, "Model is required"),
-  year: z.coerce.number().min(1900).max(new Date().getFullYear() + 1),
-  price: z.coerce.number().positive("Price must be greater than 0"),
-  status: z.enum(["ready", "onroad", "luxury", "plate"]),
-  origin: z.enum(["local", "thai", "import"]).default("local"),
-  viewers: z.coerce.number().min(0).default(0),
-  images: z.array(z.string()).min(1, "At least one photo is required"),
-  bodyType: z.string().min(1, "Body type is required"),
-  taxStatus: z.string().min(1, "Tax status is required"),
-  condition: z.string().min(1, "Condition is required"),
-  fuelType: z.string().min(1, "Fuel type is required"),
-  color: z.string().min(1, "Color is required"),
-  description: z.string(),
-  isActive: z.boolean().default(true),
-});
+const formSchema = z
+  .object({
+    code: z.string().default(""),
+    plateNumber: z.string().default(""),
+    name: z.string().min(1, "Name is required"),
+    model: z.string().min(1, "Model is required"),
+    year: z.coerce.number().min(1900).max(new Date().getFullYear() + 1),
+    price: z.coerce.number().positive("Price must be greater than 0"),
+    status: z.enum(["ready", "onroad", "luxury", "plate"]),
+    origin: z.enum(["local", "thai", "import"]).default("local"),
+    viewers: z.coerce.number().min(0).default(0),
+    images: z.array(z.string()).min(1, "At least one photo is required"),
+    bodyType: z.string().min(1, "Body type is required"),
+    taxStatus: z.string().min(1, "Tax status is required"),
+    condition: z.string().min(1, "Condition is required"),
+    fuelType: z.string().min(1, "Fuel type is required"),
+    color: z.string().min(1, "Color is required"),
+    description: z.string(),
+    isActive: z.boolean().default(true),
+  })
+  .superRefine((val, ctx) => {
+    if (!val.code.trim() && !val.plateNumber.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Enter a tax-paper code or a license plate",
+        path: ["code"],
+      });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Enter a tax-paper code or a license plate",
+        path: ["plateNumber"],
+      });
+    }
+  });
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -214,17 +232,103 @@ const YearInput = forwardRef<
 });
 YearInput.displayName = "YearInput";
 
+const SmoothTextInput = forwardRef<
+  FlushableInputHandle,
+  {
+    value: string;
+    onChange: (value: string) => void;
+    onBlur: () => void;
+    placeholder?: string;
+    className?: string;
+  } & Omit<ComponentPropsWithoutRef<"input">, "value" | "onChange" | "onBlur">
+>(({ value, onChange, onBlur, placeholder, className, ...rest }, ref) => {
+  const [text, setText] = useState(value);
+
+  useEffect(() => {
+    setText(value);
+  }, [value]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      flush: () => {
+        onChange(text);
+      },
+    }),
+    [text, onChange],
+  );
+
+  return (
+    <Input
+      {...rest}
+      autoComplete="off"
+      placeholder={placeholder}
+      className={className}
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => {
+        onChange(text);
+        onBlur();
+      }}
+    />
+  );
+});
+SmoothTextInput.displayName = "SmoothTextInput";
+
+const SmoothTextarea = forwardRef<
+  FlushableInputHandle,
+  {
+    value: string;
+    onChange: (value: string) => void;
+    onBlur: () => void;
+    placeholder?: string;
+    className?: string;
+  }
+>(({ value, onChange, onBlur, placeholder, className }, ref) => {
+  const [text, setText] = useState(value);
+
+  useEffect(() => {
+    setText(value);
+  }, [value]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      flush: () => {
+        onChange(text);
+      },
+    }),
+    [text, onChange],
+  );
+
+  return (
+    <Textarea
+      placeholder={placeholder}
+      className={className}
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => {
+        onChange(text);
+        onBlur();
+      }}
+    />
+  );
+});
+SmoothTextarea.displayName = "SmoothTextarea";
+
 function CarFormPreview({ control }: { control: Control<FormValues> }) {
   const { t } = useLanguage();
-  const [name, price, year, status, code, isActive, bodyType, fuelType, images] = useWatch({
+  const [name, price, year, status, code, plateNumber, isActive, bodyType, fuelType, images] = useWatch({
     control,
-    name: ["name", "price", "year", "status", "code", "isActive", "bodyType", "fuelType", "images"],
+    name: ["name", "price", "year", "status", "code", "plateNumber", "isActive", "bodyType", "fuelType", "images"],
   });
 
   const debouncedName = useDebouncedValue(name);
   const debouncedPrice = useDebouncedValue(price);
   const debouncedCode = useDebouncedValue(code);
+  const debouncedPlate = useDebouncedValue(plateNumber);
   const debouncedYear = useDebouncedValue(year);
+  const identityLabel = formatCarIdentity({ code: debouncedCode, plateNumber: debouncedPlate });
 
   return (
     <Card className="sticky top-24 border-border/70 shadow-sm lg:top-28">
@@ -250,8 +354,8 @@ function CarFormPreview({ control }: { control: Control<FormValues> }) {
           )}
         </div>
         <div className="space-y-2">
-          {debouncedCode ? (
-            <p className="font-mono text-[11px] text-muted-foreground">{debouncedCode}</p>
+          {identityLabel ? (
+            <p className="font-mono text-[11px] text-muted-foreground">{identityLabel}</p>
           ) : null}
           <p className="font-heading text-lg font-semibold leading-tight text-foreground">
             {debouncedName || t("admin.addCar.previewName")}
@@ -266,7 +370,7 @@ function CarFormPreview({ control }: { control: Control<FormValues> }) {
               <Badge variant="secondary">{t(`status.${status}` as TranslationKey)}</Badge>
             ) : null}
             {debouncedYear ? <Badge variant="outline">{debouncedYear}</Badge> : null}
-            {bodyType ? <Badge variant="outline">{bodyType}</Badge> : null}
+            {bodyType ? <Badge variant="outline">{bodyTypeLabel(bodyType, t)}</Badge> : null}
             {fuelType ? <Badge variant="outline">{fuelType}</Badge> : null}
             <Badge variant={isActive ? "default" : "secondary"}>
               {isActive ? t("admin.cars.visible") : t("admin.cars.hidden")}
@@ -284,7 +388,7 @@ function CarFormPreview({ control }: { control: Control<FormValues> }) {
 
 const MemoCarFormPreview = memo(CarFormPreview);
 
-const BODY_TYPES = ["Sedan", "SUV", "Hatchback", "Coupe", "Truck", "Van"] as const;
+const BODY_TYPES = BODY_TYPE_ORDER;
 const FUEL_TYPES = ["Petrol", "Diesel", "Hybrid", "Electric"] as const;
 const CONDITIONS = ["Excellent", "Very Good", "Good", "Fair"] as const;
 
@@ -392,7 +496,7 @@ const CarSpecsSection = memo(
     flushPending: () => colorFlushRef.current?.flush(),
   }));
 
-  const bodyOptions = BODY_TYPES.map((v) => ({ value: v, label: v }));
+  const bodyOptions = BODY_TYPES.map((v) => ({ value: v, label: bodyTypeLabel(v, t) }));
   const fuelOptions = FUEL_TYPES.map((v) => ({ value: v, label: v }));
   const taxOptions = [
     { value: "ក្រដាសពន្ធ", label: t("form.taxPaper") },
@@ -423,7 +527,7 @@ const CarSpecsSection = memo(
                 <SpecSelect value={field.value} onChange={field.onChange} onBlur={field.onBlur} ref={field.ref}>
                   {BODY_TYPES.map((v) => (
                     <SelectItem key={v} value={v}>
-                      {v}
+                      {bodyTypeLabel(v, t)}
                     </SelectItem>
                   ))}
                 </SpecSelect>
@@ -836,6 +940,7 @@ interface CarFormDialogProps {
 
 const defaultFormValues: FormValues = {
   code: "",
+  plateNumber: "",
   name: "",
   model: "",
   year: new Date().getFullYear(),
@@ -845,7 +950,7 @@ const defaultFormValues: FormValues = {
   viewers: 0,
   images: [],
   bodyType: "Sedan",
-  taxStatus: "Tax paper",
+  taxStatus: "ក្រដាសពន្ធ",
   condition: "Excellent",
   fuelType: "Petrol",
   color: "White",
@@ -856,13 +961,17 @@ const defaultFormValues: FormValues = {
 const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog", onCreated }: CarFormDialogProps) => {
   const createCar = useCreateCar();
   const updateCar = useUpdateCar();
-  const { data: allCars = [] } = useCars();
   const [formResetKey, setFormResetKey] = useState(0);
   const photosRef = useRef<CarPhotosSectionHandle>(null);
   const pendingImageUrlRef = useRef("");
   const specsRef = useRef<CarSpecsSectionHandle>(null);
   const priceRef = useRef<FlushableInputHandle>(null);
   const yearRef = useRef<FlushableInputHandle>(null);
+  const codeRef = useRef<FlushableInputHandle>(null);
+  const plateRef = useRef<FlushableInputHandle>(null);
+  const nameRef = useRef<FlushableInputHandle>(null);
+  const modelRef = useRef<FlushableInputHandle>(null);
+  const descriptionRef = useRef<FlushableInputHandle>(null);
   const { t } = useLanguage();
 
   const form = useForm<FormValues>({
@@ -871,6 +980,15 @@ const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog", onCreated 
     mode: "onSubmit",
     reValidateMode: "onSubmit",
   });
+
+  const applyStatus = (next: CarStatus) => {
+    form.setValue("status", next);
+    if (next === "plate") {
+      form.setValue("taxStatus", "ស្លាកលេខ");
+    } else if (next === "luxury") {
+      form.setValue("taxStatus", "ក្រដាសពន្ធ");
+    }
+  };
 
   const resetForNewCar = () => {
     pendingImageUrlRef.current = "";
@@ -883,8 +1001,10 @@ const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog", onCreated 
   useEffect(() => {
     if (car) {
       pendingImageUrlRef.current = "";
+      const identity = unpackCarIdentity(car);
       form.reset({
-        code: car.code,
+        code: identity.taxPaperCode,
+        plateNumber: identity.plateNumber,
         name: car.name,
         model: car.model,
         year: car.year,
@@ -904,8 +1024,7 @@ const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog", onCreated 
       setFormResetKey((k) => k + 1);
     } else if (open) {
       pendingImageUrlRef.current = "";
-      const nextCode = generateNextCarCode(allCars);
-      form.reset({ ...defaultFormValues, code: nextCode });
+      form.reset(defaultFormValues);
       setFormResetKey((k) => k + 1);
     }
     // Only re-sync when opening the dialog or switching the car being edited.
@@ -913,8 +1032,15 @@ const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog", onCreated 
   }, [carId, open]);
 
   const onSubmit = (values: FormValues) => {
+    const packed = packCarIdentity(values.code, values.plateNumber);
+    const plateOnly = !values.code.trim() && !!values.plateNumber.trim();
+    const taxOnly = !!values.code.trim() && !values.plateNumber.trim();
     const carData = {
       ...values,
+      code: packed.code,
+      plateNumber: packed.plateNumber,
+      bodyType: normalizeBodyType(values.bodyType) || values.bodyType,
+      taxStatus: plateOnly ? "ស្លាកលេខ" : taxOnly ? "ក្រដាសពន្ធ" : values.taxStatus,
       image: values.images[0],
       description: values.description.split("\n").filter(Boolean),
       origin: values.origin as CarOrigin,
@@ -955,6 +1081,11 @@ const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog", onCreated 
     }
     priceRef.current?.flush();
     yearRef.current?.flush();
+    codeRef.current?.flush();
+    plateRef.current?.flush();
+    nameRef.current?.flush();
+    modelRef.current?.flush();
+    descriptionRef.current?.flush();
     specsRef.current?.flushPending();
     photosRef.current?.flushPendingUrls();
     requestAnimationFrame(() => {
@@ -1006,7 +1137,10 @@ const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog", onCreated 
           size="sm"
           variant={field.value === s ? "default" : "outline"}
           className="rounded-full"
-          onClick={() => field.onChange(s)}
+          onClick={() => {
+            field.onChange(s);
+            applyStatus(s);
+          }}
         >
           {t(`status.${s}` as TranslationKey)}
         </Button>
@@ -1028,35 +1162,39 @@ const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog", onCreated 
                   name="code"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("form.code")}</FormLabel>
-                      <div className="flex gap-2">
-                        <FormControl>
-                          <Input placeholder="CP2026-001" {...field} />
-                        </FormControl>
-                        {!car && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="shrink-0"
-                            onClick={() => field.onChange(generateNextCarCode(allCars))}
-                          >
-                            {t("form.generateCode")}
-                          </Button>
-                        )}
-                      </div>
+                      <FormLabel>{t("form.codeTaxPaper")}</FormLabel>
+                      <FormControl>
+                        <SmoothTextInput
+                          key={`code-${formResetKey}`}
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          placeholder={t("form.codeTaxPaperPlaceholder")}
+                          ref={codeRef}
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">{t("form.codeTaxPaperHint")}</p>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormField
                   control={form.control}
-                  name="name"
+                  name="plateNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("form.name")}</FormLabel>
+                      <FormLabel>{t("form.codePlate")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Toyota Camry SE" {...field} />
+                        <SmoothTextInput
+                          key={`plate-${formResetKey}`}
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          placeholder={t("form.codePlatePlaceholder")}
+                          ref={plateRef}
+                        />
                       </FormControl>
+                      <p className="text-xs text-muted-foreground">{t("form.codePlateHint")}</p>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1066,12 +1204,39 @@ const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog", onCreated 
               <div className="grid sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("form.name")}</FormLabel>
+                      <FormControl>
+                        <SmoothTextInput
+                          key={`name-${formResetKey}`}
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          placeholder="Toyota Camry SE"
+                          ref={nameRef}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="model"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("form.model")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Toyota Camry" {...field} />
+                        <SmoothTextInput
+                          key={`model-${formResetKey}`}
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          placeholder="Toyota Camry"
+                          ref={modelRef}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1126,7 +1291,13 @@ const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog", onCreated 
                       <FormLabel>{t("form.status")}</FormLabel>
                       <FormControl>
                         {isPage ? statusPills(field) : (
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            applyStatus(value as CarStatus);
+                          }}
+                          value={field.value}
+                        >
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
@@ -1196,10 +1367,14 @@ const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog", onCreated 
                   <FormItem>
                     <FormLabel>{t("form.description")}</FormLabel>
                     <FormControl>
-                      <Textarea
-                        placeholder="Six-month warranty on the engine...&#10;Financing available..."
+                      <SmoothTextarea
+                        key={`description-${formResetKey}`}
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        placeholder={"Six-month warranty on the engine...\nFinancing available..."}
                         className="min-h-[100px]"
-                        {...field}
+                        ref={descriptionRef}
                       />
                     </FormControl>
                     <FormMessage />

@@ -22,6 +22,8 @@ import CarDetailDialog from "@/components/CarDetailDialog";
 import SoldOutBadge from "@/components/SoldOutBadge";
 import { onImgError } from "@/lib/imageFallback";
 import { cn } from "@/lib/utils";
+import { formatCarIdentity } from "@/lib/carCodeUtils";
+import { bodyTypeLabel } from "@/components/CategoryFilter";
 import type { TranslationKey } from "@/i18n/translations";
 
 interface CarCardProps {
@@ -36,7 +38,7 @@ const CarCard = ({ car, onEdit, featured }: CarCardProps) => {
   const [orderCar, setOrderCar] = useState<Car | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const adminMode = Boolean(onEdit);
-  const sold = useIsCarSold(car.id);
+  const sold = useIsCarSold(car.id, car.isSold);
   const telegram = (contact?.telegram || "@Carplus777").replace(/^@/, "");
 
   const images = car.images && car.images.length > 0 ? car.images : [car.image];
@@ -60,7 +62,7 @@ const CarCard = ({ car, onEdit, featured }: CarCardProps) => {
   const specs = [
     { icon: Calendar, value: car.year },
     { icon: Fuel, value: car.fuelType },
-    { icon: CarIcon, value: car.bodyType },
+    { icon: CarIcon, value: bodyTypeLabel(car.bodyType, t) },
   ];
 
   const statusKey = `status.${car.status}` as TranslationKey;
@@ -185,7 +187,7 @@ const CarCard = ({ car, onEdit, featured }: CarCardProps) => {
 
           <div className="flex flex-1 flex-col gap-2 p-5">
             <p className="inline-flex w-fit items-center rounded-full border border-border bg-background/60 px-2 py-1 font-mono text-[11px] text-muted-foreground">
-              {car.code}
+              {formatCarIdentity(car)}
             </p>
             <h3 className="line-clamp-1 font-heading text-base font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
               {car.name}

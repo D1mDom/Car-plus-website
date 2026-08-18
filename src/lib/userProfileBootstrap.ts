@@ -70,11 +70,16 @@ export async function syncAuthUserMetadata(
     next[METADATA_ROLE_KEY] = existing[METADATA_ROLE_KEY];
   }
 
-  try {
-    await supabase.auth.updateUser({ data: next });
-  } catch (e) {
-    console.warn("syncAuthUserMetadata failed:", e);
+  // Data URLs are too large for auth metadata and would fail silently.
+  if (typeof next.avatar_url === "string" && next.avatar_url.startsWith("data:")) {
+    next.avatar_url = existing.avatar_url ?? "";
   }
+  if (typeof next.cover_url === "string" && next.cover_url.startsWith("data:")) {
+    next.cover_url = existing.cover_url ?? "";
+  }
+
+  const { error } = await supabase.auth.updateUser({ data: next });
+  if (error) console.warn("syncAuthUserMetadata failed:", error.message);
 }
 
 export async function bootstrapSessionUser(user: User | null | undefined): Promise<void> {

@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Car, CarStatus } from "@/hooks/useCars";
-import { Eye, Calendar, Fuel } from "lucide-react";
+import { Eye, Calendar, Fuel, Pencil } from "lucide-react";
 import WishlistButton from "@/components/WishlistButton";
 import CarDetailDialog from "@/components/CarDetailDialog";
 import SoldOutBadge from "@/components/SoldOutBadge";
@@ -12,16 +12,20 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { useIsCarSold } from "@/hooks/useSoldCarIds";
 import { onImgError } from "@/lib/imageFallback";
 import { cn } from "@/lib/utils";
+import { formatCarIdentity } from "@/lib/carCodeUtils";
 import type { TranslationKey } from "@/i18n/translations";
 
-interface CarListItemProps { car: Car; }
+interface CarListItemProps {
+  car: Car;
+  onEdit?: (car: Car) => void;
+}
 
 const getStatusVariant = (status: CarStatus): "ready" | "onroad" | "luxury" | "plate" => status;
 
-const CarListItem = ({ car }: CarListItemProps) => {
+const CarListItem = ({ car, onEdit }: CarListItemProps) => {
   const { t } = useLanguage();
   const [detailOpen, setDetailOpen] = useState(false);
-  const sold = useIsCarSold(car.id);
+  const sold = useIsCarSold(car.id, car.isSold);
   const statusKey = `status.${car.status}` as TranslationKey;
 
   return (
@@ -58,7 +62,7 @@ const CarListItem = ({ car }: CarListItemProps) => {
             <div className="mb-2 flex items-start justify-between gap-3">
               <div>
                 <p className="inline-flex w-fit items-center rounded-full border border-border bg-background/60 px-2 py-1 font-mono text-xs text-muted-foreground">
-                  {car.code}
+                  {formatCarIdentity(car)}
                 </p>
                 <h3 className="mt-2 line-clamp-1 text-lg font-semibold text-foreground transition-colors group-hover:text-primary">
                   {car.name}
@@ -82,7 +86,18 @@ const CarListItem = ({ car }: CarListItemProps) => {
             </div>
           </div>
           <div className="mt-4 flex items-center gap-2">
-            <WishlistButton carId={car.id} variant="full" />
+            {onEdit ? (
+              <Button
+                variant="outline"
+                className="gap-2 border-border/70 bg-background/60 hover:bg-background"
+                onClick={() => onEdit(car)}
+              >
+                <Pencil className="h-4 w-4" />
+                {t("card.edit")}
+              </Button>
+            ) : (
+              <WishlistButton carId={car.id} variant="full" />
+            )}
             <Button
               asChild
               variant="outline"

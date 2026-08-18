@@ -20,6 +20,23 @@ const categories: {
   { value: "plate", key: "category.plate" },
 ];
 
+const BODY_TYPE_KEYS: Record<string, TranslationKey> = {
+  Sedan: "category.body.sedan",
+  SUV: "category.body.suv",
+  Hatchback: "category.body.hatchback",
+  Coupe: "category.body.coupe",
+  Pickup: "category.body.pickup",
+  Truck: "category.body.truck",
+  Van: "category.body.van",
+  Sports: "category.body.sports",
+  Convertible: "category.body.convertible",
+};
+
+export const bodyTypeLabel = (bodyType: string, t: (key: TranslationKey) => string) => {
+  const key = BODY_TYPE_KEYS[bodyType];
+  return key ? t(key) : bodyType;
+};
+
 const CategoryFilter = ({ activeCategory, onCategoryChange, counts }: CategoryFilterProps) => {
   const { t } = useLanguage();
 

@@ -132,59 +132,31 @@ const uploadProfileAvatarDirect = async (userId: string, blob: Blob, extension: 
 const uploadProfileCoverDirect = async (userId: string, blob: Blob, extension: string) =>
   uploadProfileImageDirect(userId, "covers", blob, extension);
 
-const isStorageRlsError = (error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error ?? "");
-  return /row-level security|rls|policy/i.test(message);
-};
+const uploadViaEdgeFunction = async (file: File, kind: "avatar" | "cover"): Promise<string> => {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error("Not signed in");
 
-const blobToDataUrl = (blob: Blob): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
-    reader.onerror = () => reject(new Error("Could not read image data"));
-    reader.readAsDataURL(blob);
+  const form = new FormData();
+  form.append("file", file);
+  form.append("kind", kind);
+
+  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-avatar`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+    },
+    body: form,
   });
 
-/** Smaller WebP for saving in profiles when storage RLS blocks upload. */
-const compressProfileInline = async (file: File, maxDim: number): Promise<Blob> => {
-  if (file.type === "image/gif") return file;
-
-  const img = await loadImage(file);
-  const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(img.width * scale));
-  canvas.height = Math.max(1, Math.round(img.height * scale));
-
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return file;
-
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, "image/webp", 0.82),
-  );
-  return blob ?? file;
-};
-
-const compressAvatarInline = (file: File) => compressProfileInline(file, 512);
-
-const compressCoverInline = (file: File) => compressProfileInline(file, 1200);
-
-/** Fallback when storage bucket RLS has not been configured yet. */
-const uploadProfileImageInline = async (file: File, maxDim: number, maxBytes: number): Promise<string> => {
-  const blob = await compressProfileInline(file, maxDim);
-  if (blob.size > maxBytes) {
-    throw new Error("Image is too large after compression. Try a smaller photo.");
+  const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+  if (!res.ok || !body.url) {
+    throw new Error(body.error || "Could not upload photo");
   }
-  const dataUrl = await blobToDataUrl(blob);
-  if (!dataUrl.startsWith("data:image/")) {
-    throw new Error("Could not prepare profile photo");
-  }
-  return dataUrl;
+  return body.url;
 };
-
-const uploadProfileAvatarInline = (file: File) => uploadProfileImageInline(file, 512, 900_000);
-
-const uploadProfileCoverInline = (file: File) => uploadProfileImageInline(file, 1200, 1_500_000);
 
 const uploadProfileImage = async (
   userId: string,
@@ -196,13 +168,18 @@ const uploadProfileImage = async (
   }
   const { blob, extension } = await compressImage(file);
   const uploadDirect = kind === "avatar" ? uploadProfileAvatarDirect : uploadProfileCoverDirect;
-  const uploadInline = kind === "avatar" ? uploadProfileAvatarInline : uploadProfileCoverInline;
+  const compressed = new File([blob], `photo.${extension}`, {
+    type: blob.type || "image/webp",
+  });
 
   try {
     return await uploadDirect(userId, blob, extension);
-  } catch (error) {
-    if (!isStorageRlsError(error)) throw error;
-    return uploadInline(file);
+  } catch (directError) {
+    try {
+      return await uploadViaEdgeFunction(compressed, kind);
+    } catch {
+      throw directError instanceof Error ? directError : new Error("Could not upload photo");
+    }
   }
 };
 

@@ -246,7 +246,7 @@ const AdminReceipts = () => {
       ...f,
       carId,
       description: car.name,
-      car_code: car.code || "",
+      car_code: car.code || car.plateNumber || "",
       year: String(car.year || ""),
       make,
       model: car.model || "",

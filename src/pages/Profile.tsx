@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProfilePersonalForm from "@/components/ProfilePersonalForm";
+import ProfileContactForm from "@/components/ProfileContactForm";
+import ProfileSecurityForm from "@/components/ProfileSecurityForm";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import ThemeModeToggle from "@/components/ThemeModeToggle";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,15 +13,6 @@ import { useProfileTheme } from "@/hooks/useProfileTheme";
 import { useLanguage } from "@/hooks/useLanguage";
 import { PROFILE_THEME_IDS, PROFILE_THEMES } from "@/lib/profileThemes";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,12 +46,11 @@ import {
   LogOut,
   CheckCircle2,
   ChevronRight,
-  Clock3,
-  KeyRound,
   Camera,
   Trash2,
   Sparkles,
   Palette,
+  Check,
 } from "lucide-react";
 import type { TranslationKey } from "@/i18n/translations";
 
@@ -92,7 +84,7 @@ const SHORTCUTS: {
 ];
 
 const Profile = () => {
-  const { user, loading: authLoading, signOut, updatePassword } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const { data: profile, isLoading, save, uploadAvatarFile, uploadCoverFile } = useProfile();
   const { themeId, theme, setTheme } = useProfileTheme();
   const { t } = useLanguage();
@@ -103,17 +95,24 @@ const Profile = () => {
   const [section, setSection] = useState<SectionId>("personal");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [coverUrl, setCoverUrl] = useState("");
-  const [telegram, setTelegram] = useState("");
-  const [preferredTime, setPreferredTime] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [savingPassword, setSavingPassword] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadingCover, setUploadingCover] = useState(false);
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
+  const [pendingCoverFile, setPendingCoverFile] = useState<File | null>(null);
+  const [pendingRemoveAvatar, setPendingRemoveAvatar] = useState(false);
+  const [pendingRemoveCover, setPendingRemoveCover] = useState(false);
+  const [savingPhotos, setSavingPhotos] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [logoutSuccessOpen, setLogoutSuccessOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const contactReady = useRef(false);
+  const photosReady = useRef(false);
+  const avatarBlobUrl = useRef<string | null>(null);
+  const coverBlobUrl = useRef<string | null>(null);
+  const photosDirtyRef = useRef(false);
+
+  photosDirtyRef.current =
+    Boolean(pendingAvatarFile) ||
+    Boolean(pendingCoverFile) ||
+    pendingRemoveAvatar ||
+    pendingRemoveCover;
 
   // Hero name comes from saved profile only (not live typing)
   const displayName =
@@ -126,13 +125,29 @@ const Profile = () => {
   const initial = displayName.charAt(0).toUpperCase();
 
   useEffect(() => {
-    contactReady.current = false;
+    photosReady.current = false;
+    if (avatarBlobUrl.current) URL.revokeObjectURL(avatarBlobUrl.current);
+    if (coverBlobUrl.current) URL.revokeObjectURL(coverBlobUrl.current);
+    avatarBlobUrl.current = null;
+    coverBlobUrl.current = null;
     setAvatarUrl("");
     setCoverUrl("");
+    setPendingAvatarFile(null);
+    setPendingCoverFile(null);
+    setPendingRemoveAvatar(false);
+    setPendingRemoveCover(false);
   }, [user?.id]);
 
   useEffect(() => {
-    if (!user?.id || isLoading || contactReady.current) return;
+    return () => {
+      if (avatarBlobUrl.current) URL.revokeObjectURL(avatarBlobUrl.current);
+      if (coverBlobUrl.current) URL.revokeObjectURL(coverBlobUrl.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id || isLoading || photosReady.current) return;
+    if (photosDirtyRef.current) return;
     const meta = user.user_metadata ?? {};
     setAvatarUrl(
       profile?.avatar_url ||
@@ -144,18 +159,21 @@ const Profile = () => {
         (typeof meta.cover_url === "string" ? meta.cover_url : "") ||
         ""
     );
-    setTelegram(
-      profile?.telegram ||
-        (typeof meta.telegram === "string" ? meta.telegram : "") ||
-        ""
-    );
-    setPreferredTime(
-      profile?.preferred_time ||
-        (typeof meta.preferred_time === "string" ? meta.preferred_time : "") ||
-        ""
-    );
-    contactReady.current = true;
+    photosReady.current = true;
   }, [user?.id, user?.user_metadata, isLoading, profile]);
+
+  const onPersonalSaved = useCallback((saved: Profile) => {
+    if (avatarBlobUrl.current) URL.revokeObjectURL(avatarBlobUrl.current);
+    if (coverBlobUrl.current) URL.revokeObjectURL(coverBlobUrl.current);
+    avatarBlobUrl.current = null;
+    coverBlobUrl.current = null;
+    setPendingAvatarFile(null);
+    setPendingCoverFile(null);
+    setPendingRemoveAvatar(false);
+    setPendingRemoveCover(false);
+    setAvatarUrl(saved.avatar_url ?? "");
+    setCoverUrl(saved.cover_url ?? "");
+  }, []);
 
   if (authLoading) {
     return (
@@ -166,137 +184,138 @@ const Profile = () => {
   }
   if (!user) return <Navigate to="/auth" replace />;
 
-  const onPersonalSaved = (saved: Profile) => {
-    setAvatarUrl(saved.avatar_url ?? avatarUrl);
-    setCoverUrl(saved.cover_url ?? coverUrl);
-    setTelegram(saved.telegram ?? telegram);
-    setPreferredTime(saved.preferred_time ?? preferredTime);
-  };
+  const savedAvatarUrl =
+    profile?.avatar_url ||
+    (typeof user.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : "") ||
+    "";
+  const savedCoverUrl =
+    profile?.cover_url ||
+    (typeof user.user_metadata?.cover_url === "string" ? user.user_metadata.cover_url : "") ||
+    "";
 
-  const profileSaveBase = () => ({
+  const photosDirty =
+    Boolean(pendingAvatarFile) ||
+    Boolean(pendingCoverFile) ||
+    pendingRemoveAvatar ||
+    pendingRemoveCover;
+
+  const profileSaveBase = (nextAvatar: string, nextCover: string) => ({
     full_name: profile?.full_name ?? "",
     phone: profile?.phone ?? "",
     address: profile?.address ?? "",
-    avatar_url: avatarUrl || null,
-    cover_url: coverUrl || null,
-    telegram: profile?.telegram ?? telegram,
-    preferred_time: profile?.preferred_time ?? preferredTime,
+    avatar_url: nextAvatar || null,
+    cover_url: nextCover || null,
+    telegram: profile?.telegram ?? "",
+    preferred_time: profile?.preferred_time ?? "",
   });
 
-  const onSaveContact = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const saved = await save.mutateAsync({
-        ...profileSaveBase(),
-        telegram,
-        preferred_time: preferredTime,
-      });
-      setTelegram(saved.telegram ?? "");
-      setPreferredTime(saved.preferred_time ?? "");
-      toast.success(t("profile.contactSaved"));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("profile.saveFail"));
-    }
-  };
-
-  const onPickAvatar = async (file: File | null) => {
+  const onPickAvatar = (file: File | null) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       toast.error(t("profile.avatarInvalid"));
       return;
     }
-    setUploading(true);
-    try {
-      const url = await uploadAvatarFile.mutateAsync(file);
-      setAvatarUrl(url);
-      await save.mutateAsync({
-        ...profileSaveBase(),
-        avatar_url: url,
-      });
-      toast.success(t("profile.avatarSaved"));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("profile.avatarFail"));
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
+    if (avatarBlobUrl.current) URL.revokeObjectURL(avatarBlobUrl.current);
+    const preview = URL.createObjectURL(file);
+    avatarBlobUrl.current = preview;
+    setPendingAvatarFile(file);
+    setPendingRemoveAvatar(false);
+    setAvatarUrl(preview);
+    if (fileRef.current) fileRef.current.value = "";
   };
 
-  const onRemoveAvatar = async () => {
-    setUploading(true);
-    try {
-      setAvatarUrl("");
-      await save.mutateAsync({
-        ...profileSaveBase(),
-        avatar_url: null,
-      });
-      toast.success(t("profile.avatarRemoved"));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("profile.saveFail"));
-    } finally {
-      setUploading(false);
-    }
+  const onRemoveAvatar = () => {
+    if (avatarBlobUrl.current) URL.revokeObjectURL(avatarBlobUrl.current);
+    avatarBlobUrl.current = null;
+    setPendingAvatarFile(null);
+    setPendingRemoveAvatar(true);
+    setAvatarUrl("");
   };
 
-  const onPickCover = async (file: File | null) => {
+  const onPickCover = (file: File | null) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       toast.error(t("profile.avatarInvalid"));
       return;
     }
-    setUploadingCover(true);
+    if (coverBlobUrl.current) URL.revokeObjectURL(coverBlobUrl.current);
+    const preview = URL.createObjectURL(file);
+    coverBlobUrl.current = preview;
+    setPendingCoverFile(file);
+    setPendingRemoveCover(false);
+    setCoverUrl(preview);
+    if (coverFileRef.current) coverFileRef.current.value = "";
+  };
+
+  const onRemoveCover = () => {
+    if (coverBlobUrl.current) URL.revokeObjectURL(coverBlobUrl.current);
+    coverBlobUrl.current = null;
+    setPendingCoverFile(null);
+    setPendingRemoveCover(true);
+    setCoverUrl("");
+  };
+
+  const onCancelPhotos = () => {
+    if (avatarBlobUrl.current) URL.revokeObjectURL(avatarBlobUrl.current);
+    if (coverBlobUrl.current) URL.revokeObjectURL(coverBlobUrl.current);
+    avatarBlobUrl.current = null;
+    coverBlobUrl.current = null;
+    setPendingAvatarFile(null);
+    setPendingCoverFile(null);
+    setPendingRemoveAvatar(false);
+    setPendingRemoveCover(false);
+    setAvatarUrl(savedAvatarUrl);
+    setCoverUrl(savedCoverUrl);
+  };
+
+  const onSavePhotos = async () => {
+    setSavingPhotos(true);
     try {
-      const url = await uploadCoverFile.mutateAsync(file);
-      setCoverUrl(url);
-      await save.mutateAsync({
-        ...profileSaveBase(),
-        cover_url: url,
-      });
-      toast.success(t("profile.coverSaved"));
+      let nextAvatar = pendingRemoveAvatar ? "" : savedAvatarUrl;
+      let nextCover = pendingRemoveCover ? "" : savedCoverUrl;
+
+      const didRemoveAvatar = pendingRemoveAvatar && !pendingAvatarFile;
+      const didRemoveCover = pendingRemoveCover && !pendingCoverFile;
+      const didUploadCover = Boolean(pendingCoverFile);
+      const didUploadAvatar = Boolean(pendingAvatarFile);
+
+      if (pendingAvatarFile) {
+        nextAvatar = await uploadAvatarFile.mutateAsync(pendingAvatarFile);
+      }
+      if (pendingCoverFile) {
+        nextCover = await uploadCoverFile.mutateAsync(pendingCoverFile);
+      }
+
+      const saved = await save.mutateAsync(profileSaveBase(nextAvatar, nextCover));
+      onPersonalSaved(saved);
+
+      if (didRemoveAvatar && !didUploadCover) toast.success(t("profile.avatarRemoved"));
+      else if (didRemoveCover && !didUploadAvatar) toast.success(t("profile.coverRemoved"));
+      else if (didUploadCover && !didUploadAvatar) toast.success(t("profile.coverSaved"));
+      else toast.success(t("profile.avatarSaved"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("profile.coverFail"));
+      toast.error(
+        err instanceof Error && err.message === "PHOTO_PERSIST_FAIL"
+          ? t("profile.photoPersistFail")
+          : err instanceof Error
+            ? err.message
+            : t("profile.avatarFail"),
+      );
     } finally {
-      setUploadingCover(false);
-      if (coverFileRef.current) coverFileRef.current.value = "";
+      setSavingPhotos(false);
     }
   };
 
-  const onRemoveCover = async () => {
-    setUploadingCover(true);
-    try {
-      setCoverUrl("");
-      await save.mutateAsync({
-        ...profileSaveBase(),
-        cover_url: null,
-      });
-      toast.success(t("profile.coverRemoved"));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("profile.saveFail"));
-    } finally {
-      setUploadingCover(false);
+  const commitPendingPhotos = async () => {
+    let nextAvatar = pendingRemoveAvatar ? "" : savedAvatarUrl;
+    let nextCover = pendingRemoveCover ? "" : savedCoverUrl;
+    if (pendingAvatarFile) {
+      nextAvatar = await uploadAvatarFile.mutateAsync(pendingAvatarFile);
     }
-  };
-
-  const onSavePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword.length < 6) {
-      toast.error(t("profile.passwordTooShort"));
-      return;
+    if (pendingCoverFile) {
+      nextCover = await uploadCoverFile.mutateAsync(pendingCoverFile);
     }
-    if (newPassword !== confirmPassword) {
-      toast.error(t("profile.passwordMismatch"));
-      return;
-    }
-    setSavingPassword(true);
-    const { error } = await updatePassword(newPassword);
-    setSavingPassword(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    setNewPassword("");
-    setConfirmPassword("");
-    toast.success(t("profile.passwordSaved"));
+    return { avatar_url: nextAvatar || null, cover_url: nextCover || null };
   };
 
   const handleLogout = async () => {
@@ -329,9 +348,10 @@ const Profile = () => {
           >
             {coverUrl ? (
               <img
+                key={coverUrl}
                 src={coverUrl}
                 alt=""
-                onError={onImgError}
+                onError={coverUrl.startsWith("blob:") ? undefined : onImgError}
                 className="absolute inset-0 h-full w-full object-cover"
               />
             ) : (
@@ -344,22 +364,18 @@ const Profile = () => {
             <div className="absolute bottom-3 right-3 flex gap-2 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
               <button
                 type="button"
-                disabled={uploadingCover}
+                disabled={savingPhotos}
                 onClick={() => coverFileRef.current?.click()}
                 className="flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-foreground shadow-md transition hover:bg-white/95 disabled:opacity-60 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
               >
-                {uploadingCover ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Camera className="h-4 w-4" />
-                )}
+                <Camera className="h-4 w-4" />
                 {t("profile.editCover")}
               </button>
               {coverUrl ? (
                 <button
                   type="button"
-                  disabled={uploadingCover}
-                  onClick={() => void onRemoveCover()}
+                  disabled={savingPhotos}
+                  onClick={onRemoveCover}
                   className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-foreground shadow-md transition hover:bg-white/95 disabled:opacity-60 dark:bg-zinc-800 dark:text-white"
                   aria-label={t("profile.coverRemove")}
                 >
@@ -372,7 +388,7 @@ const Profile = () => {
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(e) => void onPickCover(e.target.files?.[0] ?? null)}
+              onChange={(e) => onPickCover(e.target.files?.[0] ?? null)}
             />
           </div>
 
@@ -390,9 +406,10 @@ const Profile = () => {
                   >
                     {avatarUrl ? (
                       <img
+                        key={avatarUrl}
                         src={avatarUrl}
                         alt={displayName}
-                        onError={onImgError}
+                        onError={avatarUrl.startsWith("blob:") ? undefined : onImgError}
                         className="h-full w-full object-cover"
                       />
                     ) : (
@@ -401,24 +418,20 @@ const Profile = () => {
                   </div>
                   <button
                     type="button"
-                    disabled={uploading}
+                    disabled={savingPhotos}
                     onClick={() => fileRef.current?.click()}
                     className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-[#e4e6eb] text-foreground shadow-sm transition hover:bg-[#d8dadf] disabled:opacity-60 dark:bg-zinc-700 dark:hover:bg-zinc-600 sm:bottom-3 sm:right-3 sm:h-10 sm:w-10"
                     aria-label={t("profile.editPhoto")}
                     title={t("profile.editPhoto")}
                   >
-                    {uploading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Camera className="h-4 w-4 sm:h-5 sm:w-5" />
-                    )}
+                    <Camera className="h-4 w-4 sm:h-5 sm:w-5" />
                   </button>
                   <input
                     ref={fileRef}
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={(e) => void onPickAvatar(e.target.files?.[0] ?? null)}
+                    onChange={(e) => onPickAvatar(e.target.files?.[0] ?? null)}
                   />
                 </div>
                 <div className="min-w-0 pb-1 sm:pb-2">
@@ -450,14 +463,49 @@ const Profile = () => {
                   variant="outline"
                   size="sm"
                   className="hidden shrink-0 border-border/80 bg-muted/40 sm:inline-flex"
-                  disabled={uploading}
-                  onClick={() => void onRemoveAvatar()}
+                  disabled={savingPhotos}
+                  onClick={onRemoveAvatar}
                 >
                   {t("profile.avatarRemove")}
                 </Button>
               ) : null}
             </div>
           </div>
+
+          {photosDirty ? (
+            <div className="mx-3 mb-3 flex flex-col gap-3 rounded-xl border border-[#174080]/20 bg-[#174080]/5 px-4 py-3 sm:mx-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-medium text-foreground">{t("profile.photosUnsaved")}</p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={savingPhotos}
+                  onClick={onCancelPhotos}
+                >
+                  {t("profile.cancelPhotos")}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={savingPhotos}
+                  onClick={() => void onSavePhotos()}
+                >
+                  {savingPhotos ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {t("profile.saving")}
+                    </>
+                  ) : (
+                    <>
+                      <Check className="mr-2 h-4 w-4" />
+                      {t("profile.savePhotos")}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : null}
 
           {/* Profile tabs */}
           <nav className={cn("mx-3 mb-3 mt-1 flex gap-1 overflow-x-auto sm:mx-4", theme.tabWrap)}>
@@ -499,8 +547,10 @@ const Profile = () => {
                 <ProfilePersonalForm
                   email={user.email ?? ""}
                   profile={profile}
-                  avatarUrl={avatarUrl}
+                  avatarUrl={savedAvatarUrl}
+                  coverUrl={savedCoverUrl}
                   onSaved={onPersonalSaved}
+                  commitPendingPhotos={photosDirty ? commitPendingPhotos : undefined}
                 />
               </div>
             )}
@@ -513,54 +563,12 @@ const Profile = () => {
                     </h2>
                     <p className="mt-1 text-sm text-muted-foreground">{t("profile.contactDesc")}</p>
                   </div>
-                  <form onSubmit={onSaveContact} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="telegram" className="flex items-center gap-1.5">
-                        <Send className="h-3.5 w-3.5 text-muted-foreground" />
-                        {t("profile.telegram")}
-                      </Label>
-                      <Input
-                        id="telegram"
-                        value={telegram}
-                        onChange={(e) => setTelegram(e.target.value)}
-                        placeholder={t("profile.telegramPlaceholder")}
-                      />
-                      <p className="text-xs text-muted-foreground">{t("profile.telegramHint")}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-1.5">
-                        <Clock3 className="h-3.5 w-3.5 text-muted-foreground" />
-                        {t("profile.preferredTime")}
-                      </Label>
-                      <Select
-                        value={preferredTime || "any"}
-                        onValueChange={(v) => setPreferredTime(v === "any" ? "" : v)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("profile.preferredTimePlaceholder")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="any">{t("profile.time.any")}</SelectItem>
-                          <SelectItem value="morning">{t("profile.time.morning")}</SelectItem>
-                          <SelectItem value="afternoon">{t("profile.time.afternoon")}</SelectItem>
-                          <SelectItem value="evening">{t("profile.time.evening")}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">
-                      {t("profile.contactAlsoUses")}
-                    </div>
-                    <Button type="submit" disabled={save.isPending} className="w-full sm:w-auto">
-                      {save.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {t("profile.saving")}
-                        </>
-                      ) : (
-                        t("profile.saveContact")
-                      )}
-                    </Button>
-                  </form>
+                  <ProfileContactForm
+                    profile={profile}
+                    avatarUrl={savedAvatarUrl}
+                    coverUrl={savedCoverUrl}
+                    onSaved={onPersonalSaved}
+                  />
                 </div>
               )}
 
@@ -572,43 +580,7 @@ const Profile = () => {
                     </h2>
                     <p className="mt-1 text-sm text-muted-foreground">{t("profile.securityDesc")}</p>
                   </div>
-                  <form onSubmit={onSavePassword} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="newPassword" className="flex items-center gap-1.5">
-                        <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />
-                        {t("profile.newPassword")}
-                      </Label>
-                      <Input
-                        id="newPassword"
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="••••••••"
-                        autoComplete="new-password"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">{t("profile.confirmPassword")}</Label>
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="••••••••"
-                        autoComplete="new-password"
-                      />
-                    </div>
-                    <Button type="submit" disabled={savingPassword} className="w-full sm:w-auto">
-                      {savingPassword ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {t("profile.saving")}
-                        </>
-                      ) : (
-                        t("profile.changePassword")
-                      )}
-                    </Button>
-                  </form>
+                  <ProfileSecurityForm />
                 </div>
               )}
 

@@ -404,3 +404,13 @@ DROP TRIGGER IF EXISTS trg_enforce_order_item_from_car ON public.order_items;
 CREATE TRIGGER trg_enforce_order_item_from_car
   BEFORE INSERT ON public.order_items FOR EACH ROW
   EXECUTE FUNCTION public.enforce_order_item_from_car();
+
+-- ----- 20260818100000_cars_plate_number.sql -----
+-- Separate license plate from tax-paper car code.
+ALTER TABLE public.cars
+  ADD COLUMN IF NOT EXISTS plate_number TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_cars_plate_number
+  ON public.cars (plate_number);
+
+NOTIFY pgrst, 'reload schema';

@@ -8,6 +8,7 @@ import { ArrowLeft, Car, ExternalLink, CheckCircle2, ArrowRight } from "lucide-r
 import CarFormDialog from "@/components/admin/CarFormDialog";
 import type { Car as CarType } from "@/hooks/useCars";
 import { onImgError } from "@/lib/imageFallback";
+import { formatCarIdentity } from "@/lib/carCodeUtils";
 import type { TranslationKey } from "@/i18n/translations";
 
 const AdminAddCar = () => {
@@ -88,7 +89,7 @@ const AdminAddCar = () => {
                   />
                   <div className="min-w-0 flex-1 space-y-1">
                     <p className="truncate font-semibold text-foreground">{car.name}</p>
-                    <p className="font-mono text-[11px] text-muted-foreground">{car.code}</p>
+                    <p className="font-mono text-[11px] text-muted-foreground">{formatCarIdentity(car)}</p>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-bold text-primary">
                         ${car.price.toLocaleString()}

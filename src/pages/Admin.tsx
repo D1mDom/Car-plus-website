@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useCars } from "@/hooks/useCars";
+import { carMatchesCategory } from "@/lib/carUtils";
 import { Button } from "@/components/ui/button";
 import { Loader2, Sheet, FileText } from "lucide-react";
 import { toast } from "sonner";
@@ -21,8 +22,8 @@ const Admin = () => {
   const stats = useMemo(
     () => ({
       total: realCars.length,
-      ready: realCars.filter((c) => c.status === "ready").length,
-      luxury: realCars.filter((c) => c.status === "luxury").length,
+      ready: realCars.filter((c) => carMatchesCategory(c, "ready")).length,
+      luxury: realCars.filter((c) => carMatchesCategory(c, "luxury")).length,
       totalValue: realCars.reduce((sum, c) => sum + c.price, 0),
     }),
     [realCars],

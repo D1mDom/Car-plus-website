@@ -1,7 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { dedupeCars } from "@/lib/carUtils";
+import { dedupeCars, normalizeCarStatus, normalizeBodyType } from "@/lib/carUtils";
+import {
+  unpackCarIdentity,
+  packCarIdentityFallback,
+  missingSchemaColumn,
+} from "@/lib/carCodeUtils";
 
 export type CarStatus = "ready" | "onroad" | "luxury" | "plate";
 export type CarOrigin = "local" | "thai" | "import";
@@ -9,6 +14,7 @@ export type CarOrigin = "local" | "thai" | "import";
 export interface Car {
   id: string;
   code: string;
+  plateNumber?: string;
   name: string;
   model: string;
   year: number;
@@ -25,6 +31,7 @@ export interface Car {
   color: string;
   description: string[];
   isActive?: boolean;
+  isSold?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -32,6 +39,7 @@ export interface Car {
 interface DbCar {
   id: string;
   code: string;
+  plate_number?: string | null;
   name: string;
   model: string;
   year: number;
@@ -47,33 +55,116 @@ interface DbCar {
   color: string;
   description: string[];
   is_active: boolean;
+  is_sold?: boolean;
   origin?: string;
   created_at: string;
   updated_at: string;
 }
 
-const mapDbCarToCar = (dbCar: DbCar): Car => ({
-  id: dbCar.id,
-  code: dbCar.code,
-  name: dbCar.name,
-  model: dbCar.model,
-  year: dbCar.year,
-  price: Number(dbCar.price),
-  status: dbCar.status as CarStatus,
-  viewers: dbCar.viewers,
-  image: dbCar.image ?? "",
-  images: dbCar.images ?? [],
-  bodyType: dbCar.body_type,
-  taxStatus: dbCar.tax_status,
-  condition: dbCar.condition,
-  fuelType: dbCar.fuel_type,
-  color: dbCar.color,
-  description: dbCar.description ?? [],
-  isActive: dbCar.is_active,
-  origin: (dbCar.origin as CarOrigin) || "local",
-  createdAt: dbCar.created_at,
-  updatedAt: dbCar.updated_at,
+const mapDbCarToCar = (dbCar: DbCar): Car => {
+  const identity = unpackCarIdentity(dbCar);
+  return {
+    id: dbCar.id,
+    code: identity.taxPaperCode,
+    plateNumber: identity.plateNumber || undefined,
+    name: dbCar.name,
+    model: dbCar.model,
+    year: dbCar.year,
+    price: Number(dbCar.price),
+    status: normalizeCarStatus(dbCar.status),
+    viewers: dbCar.viewers,
+    image: dbCar.image ?? "",
+    images: dbCar.images ?? [],
+    bodyType: normalizeBodyType(dbCar.body_type) || dbCar.body_type,
+    taxStatus: dbCar.tax_status,
+    condition: dbCar.condition,
+    fuelType: dbCar.fuel_type,
+    color: dbCar.color,
+    description: dbCar.description ?? [],
+    isActive: dbCar.is_active,
+    isSold: Boolean(dbCar.is_sold),
+    origin: (dbCar.origin as CarOrigin) || "local",
+    createdAt: dbCar.created_at,
+    updatedAt: dbCar.updated_at,
+  };
+};
+
+type CarWrite = Omit<Car, "id" | "createdAt" | "updatedAt">;
+
+const toCarInsertPayload = (car: CarWrite) => ({
+  code: car.code,
+  name: car.name,
+  model: car.model,
+  year: car.year,
+  price: car.price,
+  status: car.status,
+  viewers: car.viewers || 0,
+  image: car.image,
+  images: car.images,
+  body_type: car.bodyType,
+  tax_status: car.taxStatus,
+  condition: car.condition,
+  fuel_type: car.fuelType,
+  color: car.color,
+  description: car.description,
+  is_active: car.isActive ?? true,
+  origin: car.origin ?? "local",
+  plate_number: car.plateNumber?.trim() ? car.plateNumber.trim() : null,
 });
+
+const withoutPlateColumn = (
+  payload: Record<string, unknown>,
+  car: Pick<Car, "code" | "plateNumber">,
+) => {
+  const plate = car.plateNumber?.trim() ?? "";
+  const tax = car.code?.trim() ?? "";
+  return {
+    ...payload,
+    code: tax && plate && tax !== plate ? packCarIdentityFallback(tax, plate) : payload.code,
+  };
+};
+
+const omitMissingColumn = (
+  payload: Record<string, unknown>,
+  column: string,
+  car?: Pick<Car, "code" | "plateNumber">,
+): Record<string, unknown> => {
+  const next = { ...payload };
+  delete next[column];
+  if (column === "plate_number" && car) return withoutPlateColumn(next, car);
+  return next;
+};
+
+const insertCarRow = async (
+  payload: Record<string, unknown>,
+  car: Pick<Car, "code" | "plateNumber">,
+) => {
+  let current = { ...payload };
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const { data, error } = await supabase.from("cars").insert(current).select().single();
+    if (!error) return data;
+    const column = missingSchemaColumn(error);
+    if (!column || !(column in current)) throw error;
+    current = omitMissingColumn(current, column, car);
+  }
+  throw new Error("Failed to add car");
+};
+
+const updateCarRow = async (
+  id: string,
+  payload: Record<string, unknown>,
+  car: Pick<Car, "code" | "plateNumber">,
+) => {
+  let current = { ...payload };
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const { data, error } = await supabase.from("cars").update(current).eq("id", id).select().single();
+    if (!error) return data;
+    const column = missingSchemaColumn(error);
+    if (!column || !(column in current)) throw error;
+    current = omitMissingColumn(current, column, car);
+  }
+  throw new Error("Failed to update car");
+};
 
 const MOCK_CARS: Car[] = [
   {
@@ -425,18 +516,7 @@ export const useCreateCar = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (car: Omit<Car, "id" | "createdAt" | "updatedAt">) => {
-      const { data, error } = await supabase
-        .from("cars")
-        .insert({
-          code: car.code, name: car.name, model: car.model, year: car.year,
-          price: car.price, status: car.status, viewers: car.viewers || 0,
-          image: car.image, images: car.images, body_type: car.bodyType,
-          tax_status: car.taxStatus, condition: car.condition, fuel_type: car.fuelType,
-          color: car.color, description: car.description, is_active: car.isActive ?? true,
-          origin: car.origin ?? "local",
-        })
-        .select().single();
-      if (error) throw error;
+      const data = await insertCarRow(toCarInsertPayload(car), car);
       return mapDbCarToCar(data as DbCar);
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["cars"] }); toast.success("Car added successfully"); },
@@ -466,8 +546,8 @@ export const useUpdateCar = () => {
       if (car.description !== undefined) updateData.description = car.description;
       if (car.isActive !== undefined) updateData.is_active = car.isActive;
       if (car.origin !== undefined) updateData.origin = car.origin;
-      const { data, error } = await supabase.from("cars").update(updateData).eq("id", id).select().single();
-      if (error) throw error;
+      if (car.plateNumber !== undefined) updateData.plate_number = car.plateNumber.trim() ? car.plateNumber.trim() : null;
+      const data = await updateCarRow(id, updateData, car);
       return mapDbCarToCar(data as DbCar);
     },
     onSuccess: (car) => {

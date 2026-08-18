@@ -12,9 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Pencil, Car, Loader2, Plus, X, ArrowRight } from "lucide-react";
 import CarFormDialog from "@/components/admin/CarFormDialog";
 import CarDetailDialog from "@/components/CarDetailDialog";
-import type { Car as CarType } from "@/hooks/useCars";
+import type { Car as CarType, CarStatus } from "@/hooks/useCars";
 import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/lib/utils";
+import { formatCarIdentity } from "@/lib/carCodeUtils";
+import { carMatchesCategory } from "@/lib/carUtils";
 
 const CAR_STATUSES = ["ready", "onroad", "luxury", "plate"] as const;
 
@@ -125,10 +127,10 @@ const AdminCarList = ({ previewLimit, syncUrlStatus = false }: AdminCarListProps
     return realCars.filter((car) => {
       if (!carMatchesPeriod(car)) return false;
       if (q) {
-        const hay = `${car.name} ${car.code ?? ""}`.toLowerCase();
+        const hay = `${car.name} ${car.code ?? ""} ${car.plateNumber ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
-      if (statusFilter !== "all" && car.status !== statusFilter) return false;
+      if (statusFilter !== "all" && !carMatchesCategory(car, statusFilter as CarStatus | "all")) return false;
       if (visibleFilter === "visible" && !car.isActive) return false;
       if (visibleFilter === "hidden" && car.isActive) return false;
       return true;
@@ -313,7 +315,7 @@ const AdminCarList = ({ previewLimit, syncUrlStatus = false }: AdminCarListProps
                     {carImage(car, "h-16 w-20 shrink-0")}
                     <div className="min-w-0 flex-1 space-y-1.5">
                       <div className="font-medium leading-tight">{car.name}</div>
-                      <div className="text-xs text-muted-foreground">{car.code}</div>
+                      <div className="text-xs text-muted-foreground">{formatCarIdentity(car)}</div>
                       <div className="flex flex-wrap items-center gap-2 text-sm">
                         <span className="font-semibold">${car.price.toLocaleString()}</span>
                         <span className="text-muted-foreground">{car.year}</span>
@@ -356,7 +358,7 @@ const AdminCarList = ({ previewLimit, syncUrlStatus = false }: AdminCarListProps
                           {carImage(car, "h-12 w-16 rounded transition-transform duration-300 hover:scale-105")}
                         </TableCell>
                         <TableCell className="font-medium">{car.name}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{car.code}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{formatCarIdentity(car)}</TableCell>
                         <TableCell>{car.year}</TableCell>
                         <TableCell>${car.price.toLocaleString()}</TableCell>
                         <TableCell>{getStatusBadge(car.status)}</TableCell>

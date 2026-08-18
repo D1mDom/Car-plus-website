@@ -67,6 +67,11 @@ serve(async (req: Request) => {
       return json({ error: "Image is too large (max 50MB)" }, 400);
     }
 
+    const kindRaw = formData.get("kind");
+    const kind = kindRaw === "cover" ? "cover" : "avatar";
+    const folder = kind === "cover" ? "covers" : "avatars";
+    const column = kind === "cover" ? "cover_url" : "avatar_url";
+
     const ext = file.type === "image/png"
       ? "png"
       : file.type === "image/gif"
@@ -75,7 +80,7 @@ serve(async (req: Request) => {
       ? "jpg"
       : "webp";
 
-    const path = `avatars/${user.id}/${crypto.randomUUID()}.${ext}`;
+    const path = `${folder}/${user.id}/${crypto.randomUUID()}.${ext}`;
     const serviceSupabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { error: uploadError } = await serviceSupabase.storage
@@ -99,7 +104,7 @@ serve(async (req: Request) => {
     if (existingProfile?.id) {
       const { error: profileError } = await serviceSupabase
         .from("profiles")
-        .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
+        .update({ [column]: publicUrl, updated_at: new Date().toISOString() })
         .eq("user_id", user.id);
 
       if (profileError) {
@@ -119,7 +124,7 @@ serve(async (req: Request) => {
         user_id: user.id,
         full_name,
         phone,
-        avatar_url: publicUrl,
+        [column]: publicUrl,
         updated_at: new Date().toISOString(),
       });
 
@@ -130,7 +135,7 @@ serve(async (req: Request) => {
 
     const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
     await serviceSupabase.auth.admin.updateUserById(user.id, {
-      user_metadata: { ...meta, avatar_url: publicUrl },
+      user_metadata: { ...meta, [column]: publicUrl },
     });
 
     return json({ url: publicUrl });

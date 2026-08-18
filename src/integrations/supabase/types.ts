@@ -50,6 +50,8 @@ export type Database = {
           is_active: boolean
           model: string
           name: string
+          origin?: string
+          plate_number?: string | null
           price: number
           status: string
           tax_status: string
@@ -71,6 +73,8 @@ export type Database = {
           is_active?: boolean
           model: string
           name: string
+          origin?: string
+          plate_number?: string | null
           price: number
           status: string
           tax_status: string
@@ -92,6 +96,8 @@ export type Database = {
           is_active?: boolean
           model?: string
           name?: string
+          origin?: string
+          plate_number?: string | null
           price?: number
           status?: string
           tax_status?: string

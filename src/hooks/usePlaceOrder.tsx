@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import type { Car } from "@/hooks/useCars";
 import { sanitizeOrderContact } from "@/lib/orderSecurity";
-import { refreshSoldCars } from "@/hooks/useSoldCarIds";
+import { refreshSoldCars, rememberSoldCar } from "@/hooks/useSoldCarIds";
 
 // Customer place-order. Supports BOTH schemas:
 // - New: orders.customer_name + order_items.car_name
@@ -203,6 +203,7 @@ export const usePlaceOrder = () => {
       await qc.invalidateQueries({ queryKey: ["admin-orders"] });
       await qc.invalidateQueries({ queryKey: ["my-orders"] });
       await qc.invalidateQueries({ queryKey: ["reports"] });
+      rememberSoldCar(String(input.car.id));
       qc.setQueryData<string[]>(["sold-car-ids"], (old) =>
         Array.from(new Set([...(old ?? []), String(input.car.id)])),
       );

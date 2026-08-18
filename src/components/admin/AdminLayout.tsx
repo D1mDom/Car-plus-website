@@ -213,7 +213,7 @@ const AdminLayoutBody = () => {
   const { user, signOut } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
@@ -255,10 +255,17 @@ const AdminLayoutBody = () => {
     }
   }, [currentModule, canReadModule, navigate, t, roleLoading, pathname, salesNav, websiteNav, systemNav]);
 
-  const page = useMemo(
-    () => PAGE_META.find((m) => m.match(pathname)) ?? PAGE_META[0],
-    [pathname]
-  );
+  const page = useMemo(() => {
+    const meta = PAGE_META.find((m) => m.match(pathname)) ?? PAGE_META[0];
+    if (!pathname.startsWith("/admin/cars") || pathname.startsWith("/admin/add-car")) return meta;
+
+    const status = new URLSearchParams(search).get("status");
+    if (status === "ready") return { ...meta, title: "admin.cars.ready" as TranslationKey };
+    if (status === "onroad") return { ...meta, title: "admin.cars.onroad" as TranslationKey };
+    if (status === "luxury") return { ...meta, title: "admin.cars.luxury" as TranslationKey };
+    if (status === "plate") return { ...meta, title: "category.plate" as TranslationKey };
+    return meta;
+  }, [pathname, search]);
 
   const handleSignOut = async () => {
     setLoggingOut(true);
@@ -433,7 +440,7 @@ const AdminLayoutBody = () => {
 
       {/* Page title strip */}
       <div className="border-b border-slate-200/80 bg-white/70 backdrop-blur-sm dark:border-border dark:bg-background/80">
-        <div key={pathname} className="mx-auto max-w-[1600px] animate-admin-header space-y-3 px-3 py-3 sm:px-4 lg:px-6">
+        <div key={`${pathname}${search}`} className="mx-auto max-w-[1600px] animate-admin-header space-y-3 px-3 py-3 sm:px-4 lg:px-6">
           {canReadOrders && !pathname.startsWith("/admin/orders") ? <AdminOrderAlertBanner /> : null}
           <div>
             <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-foreground sm:text-xl">

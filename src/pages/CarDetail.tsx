@@ -1,18 +1,21 @@
 import { useParams, Link } from "react-router-dom";
-import { useCarById } from "@/hooks/useCars";
+import { useCarById, type Car } from "@/hooks/useCars";
 import { useLanguage } from "@/hooks/useLanguage";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Phone, MessageCircle, Check, Pin, Calendar, Fuel, Palette, Shield, Car as CarIcon, Loader2 } from "lucide-react";
+import { ArrowLeft, Phone, MessageCircle, Check, Pin, Calendar, Fuel, Palette, Shield, Car as CarIcon, Loader2, ShoppingCart } from "lucide-react";
 import { useState } from "react";
 import { useContact } from "@/hooks/useContact";
 import { onImgError } from "@/lib/imageFallback";
 import type { TranslationKey } from "@/i18n/translations";
 import SoldOutBadge from "@/components/SoldOutBadge";
 import { useIsCarSold } from "@/hooks/useSoldCarIds";
+import OrderAuthPrompt from "@/components/OrderAuthPrompt";
+import { formatCarIdentity } from "@/lib/carCodeUtils";
+import { bodyTypeLabel } from "@/components/CategoryFilter";
 
 const parseDescriptionItem = (raw: string) => {
   const pinned = /^\s*📌/.test(raw);
@@ -24,11 +27,12 @@ const CarDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { data: car, isLoading } = useCarById(id || "");
   const [selectedImage, setSelectedImage] = useState(0);
+  const [orderCar, setOrderCar] = useState<Car | null>(null);
   const { data: contact } = useContact();
   const { t } = useLanguage();
   const telegram = (contact?.telegram || "@Carplus777").replace(/^@/, "");
   const shopPhone = contact?.phone || "016 600 090";
-  const sold = useIsCarSold(car?.id);
+  const sold = useIsCarSold(car?.id, car?.isSold);
 
   if (isLoading) {
     return (
@@ -50,7 +54,7 @@ const CarDetail = () => {
   }
 
   const specs = [
-    { icon: CarIcon, label: t("carDetail.bodyType"), value: car.bodyType },
+    { icon: CarIcon, label: t("carDetail.bodyType"), value: bodyTypeLabel(car.bodyType, t) },
     { icon: Calendar, label: t("carDetail.year"), value: car.year.toString() },
     { icon: Shield, label: t("carDetail.taxStatus"), value: car.taxStatus },
     { icon: Check, label: t("carDetail.condition"), value: car.condition },
@@ -105,7 +109,7 @@ const CarDetail = () => {
             <div className="space-y-8">
               <div>
                 <p className="mb-2 font-mono text-sm text-muted-foreground">
-                  {t("carDetail.unitNumber")}: {car.code}
+                  {t("carDetail.unitNumber")}: {formatCarIdentity(car)}
                 </p>
                 <h1 className="mb-4 text-3xl font-bold text-foreground sm:text-4xl">{car.name}</h1>
                 {sold ? (
@@ -177,17 +181,25 @@ const CarDetail = () => {
                 <CardContent className="p-6">
                   <h2 className="mb-4 text-lg font-semibold text-foreground">{t("carDetail.contact")}</h2>
                   <p className="mb-6 text-muted-foreground">{t("carDetail.contactBody")}</p>
+                  <p className="mb-4 flex items-center gap-2 text-base font-semibold text-foreground">
+                    <Phone className="h-4 w-4 text-primary" />
+                    <a href={`tel:${shopPhone.replace(/\s+/g, "")}`} className="hover:text-primary hover:underline">
+                      {shopPhone}
+                    </a>
+                  </p>
                   <div className="flex flex-col gap-3 sm:flex-row">
+                    <Button
+                      className="flex-1 gap-2"
+                      disabled={sold}
+                      onClick={() => setOrderCar(car)}
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                      {sold ? t("card.soldOut") : t("card.order")}
+                    </Button>
                     <Button variant="outline" className="flex-1 gap-2" asChild>
                       <a href={`tel:${shopPhone.replace(/\s+/g, "")}`}>
                         <Phone className="h-4 w-4" />
-                        {t("carDetail.contactPhone")}
-                      </a>
-                    </Button>
-                    <Button variant="outline" className="flex-1 gap-2" asChild>
-                      <a href={`https://t.me/${telegram}`} target="_blank" rel="noopener noreferrer">
-                        <MessageCircle className="h-4 w-4" />
-                        {t("carDetail.contactTelegram")}
+                        {shopPhone}
                       </a>
                     </Button>
                   </div>
@@ -198,6 +210,7 @@ const CarDetail = () => {
         </div>
       </main>
       <Footer />
+      <OrderAuthPrompt car={orderCar} onOpenChange={(open) => { if (!open) setOrderCar(null); }} />
     </div>
   );
 };

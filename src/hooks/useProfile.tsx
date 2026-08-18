@@ -40,13 +40,17 @@ const errMessage = (e: unknown) => {
   return "Unknown error";
 };
 
-const isMissingColumn = (e: unknown) => {
+const EXTRA_PROFILE_COLS = ["avatar_url", "cover_url", "telegram", "preferred_time"] as const;
+
+const missingExtraCols = (e: unknown): string[] => {
   const m = errMessage(e).toLowerCase();
-  return (
-    (m.includes("avatar_url") || m.includes("cover_url") || m.includes("telegram") || m.includes("preferred_time")) &&
-    (m.includes("column") || m.includes("schema cache") || m.includes("could not find"))
-  );
+  if (!(m.includes("column") || m.includes("schema cache") || m.includes("could not find"))) {
+    return [];
+  }
+  return EXTRA_PROFILE_COLS.filter((col) => m.includes(col));
 };
+
+const urlsMatch = (a: string | null, b: unknown) => text(a) === text(b);
 
 const normalizeTelegram = (value?: string | null) => {
   const v = (value ?? "").trim();
@@ -110,7 +114,8 @@ const persistProfile = async (
     cover_url: string | null;
     telegram: string | null;
     preferred_time: string | null;
-  }
+  },
+  previous: { avatar_url: string | null; cover_url: string | null }
 ) => {
   const updated_at = new Date().toISOString();
 
@@ -144,6 +149,21 @@ const persistProfile = async (
     return data as Record<string, unknown>;
   };
 
+  const tryWriteOmittingMissing = async (
+    payload: Record<string, unknown>,
+  ): Promise<{ row: Record<string, unknown>; written: Record<string, unknown> }> => {
+    try {
+      return { row: await tryWrite(payload), written: payload };
+    } catch (e) {
+      const missing = missingExtraCols(e);
+      if (missing.length === 0) throw e;
+      const next = { ...payload };
+      for (const col of missing) delete next[col];
+      if (Object.keys(next).length === Object.keys(payload).length) throw e;
+      return tryWriteOmittingMissing(next);
+    }
+  };
+
   const fullPayload = {
     full_name: fields.full_name,
     phone: fields.phone,
@@ -155,25 +175,22 @@ const persistProfile = async (
     updated_at,
   };
 
-  try {
-    return await tryWrite(fullPayload);
-  } catch (e) {
-    if (!isMissingColumn(e)) throw e;
-    // Older schema: only core columns
-    const basic = await tryWrite({
-      full_name: fields.full_name,
-      phone: fields.phone,
-      address: fields.address,
-      updated_at,
-    });
-    return {
-      ...basic,
-      avatar_url: fields.avatar_url,
-      cover_url: fields.cover_url,
-      telegram: fields.telegram,
-      preferred_time: fields.preferred_time,
-    };
+  const { row, written } = await tryWriteOmittingMissing(fullPayload);
+
+  const photoPersisted = (key: "avatar_url" | "cover_url", wanted: string | null) => {
+    if (key in written) return urlsMatch(wanted, row[key]);
+    // Column missing — OK only if the photo did not actually change.
+    return urlsMatch(wanted, previous[key]);
+  };
+
+  if (!photoPersisted("avatar_url", fields.avatar_url)) {
+    throw new Error("PHOTO_PERSIST_FAIL");
   }
+  if (!photoPersisted("cover_url", fields.cover_url)) {
+    throw new Error("PHOTO_PERSIST_FAIL");
+  }
+
+  return row;
 };
 
 export const useProfile = () => {
@@ -265,15 +282,22 @@ export const useProfile = () => {
           ? input.cover_url?.trim() || null
           : query.data?.cover_url ?? null;
 
-      const row = await persistProfile(user.id, {
-        full_name,
-        phone,
-        address,
-        avatar_url,
-        cover_url,
-        telegram,
-        preferred_time,
-      });
+      const row = await persistProfile(
+        user.id,
+        {
+          full_name,
+          phone,
+          address,
+          avatar_url,
+          cover_url,
+          telegram,
+          preferred_time,
+        },
+        {
+          avatar_url: query.data?.avatar_url ?? null,
+          cover_url: query.data?.cover_url ?? null,
+        }
+      );
 
       await syncAuthMeta({
         full_name,

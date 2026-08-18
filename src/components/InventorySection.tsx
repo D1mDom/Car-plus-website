@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
-import CategoryFilter from "@/components/CategoryFilter";
+import CategoryFilter, { bodyTypeLabel } from "@/components/CategoryFilter";
+import BodyTypeSearch from "@/components/BodyTypeSearch";
 import CarCard from "@/components/CarCard";
 import CarListItem from "@/components/CarListItem";
 import FilterPanel, { FilterState, defaultFilters } from "@/components/FilterPanel";
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCars, type CarStatus } from "@/hooks/useCars";
 import { useLanguage } from "@/hooks/useLanguage";
-import { filterCarsByBrand } from "@/lib/carUtils";
+import { filterCarsByBrand, carMatchesBodyType, carMatchesBodySearch, carMatchesCategory, listBodyTypes, normalizeBodyType } from "@/lib/carUtils";
 import { Search, SlidersHorizontal, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,8 @@ const InventorySection = ({
   const { data: carsData = [], isLoading } = useCars();
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [activeCategory, setActiveCategory] = useState<CarStatus | "all">(initialCategory);
+  const [activeBodyType, setActiveBodyType] = useState("all");
+  const [bodySearchQuery, setBodySearchQuery] = useState("");
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
@@ -69,32 +72,61 @@ const InventorySection = ({
   );
 
   const matchesNonCategoryFilters = (car: (typeof brandFiltered)[number]) => {
+    const q = searchQuery.trim().toLowerCase();
+    const bodyNorm = normalizeBodyType(car.bodyType);
     const matchesSearch =
-      car.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      car.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      car.code.toLowerCase().includes(searchQuery.toLowerCase());
+      !q ||
+      car.name.toLowerCase().includes(q) ||
+      car.model.toLowerCase().includes(q) ||
+      car.code.toLowerCase().includes(q) ||
+      (car.plateNumber ?? "").toLowerCase().includes(q) ||
+      (car.bodyType ?? "").toLowerCase().includes(q) ||
+      bodyNorm.toLowerCase().includes(q) ||
+      bodyTypeLabel(bodyNorm || car.bodyType, t).toLowerCase().includes(q);
     const matchesYearMin = filters.yearMin === null || car.year >= filters.yearMin;
     const matchesYearMax = filters.yearMax === null || car.year <= filters.yearMax;
     const matchesFuelType = filters.fuelType === null || car.fuelType === filters.fuelType;
     const matchesColor = filters.color === null || car.color === filters.color;
     const matchesPrice = car.price >= filters.priceMin && car.price <= filters.priceMax;
-    return matchesSearch && matchesYearMin && matchesYearMax && matchesFuelType && matchesColor && matchesPrice;
+    const matchesBodySearch = carMatchesBodySearch(car, bodySearchQuery, (type) => bodyTypeLabel(type, t));
+    return matchesSearch && matchesYearMin && matchesYearMax && matchesFuelType && matchesColor && matchesPrice && matchesBodySearch;
   };
 
   const categoryCounts = useMemo(() => {
-    const base = brandFiltered.filter(matchesNonCategoryFilters);
-    const counts = { all: base.length, onroad: 0, ready: 0, luxury: 0, plate: 0 } as const;
-    const tallies = { ...counts };
+    const base = brandFiltered.filter((car) => matchesNonCategoryFilters(car) && carMatchesBodyType(car, activeBodyType));
+    const tallies = { all: base.length, onroad: 0, ready: 0, luxury: 0, plate: 0 };
     for (const car of base) {
-      tallies[car.status]++;
+      if (carMatchesCategory(car, "onroad")) tallies.onroad++;
+      if (carMatchesCategory(car, "ready")) tallies.ready++;
+      if (carMatchesCategory(car, "luxury")) tallies.luxury++;
+      if (carMatchesCategory(car, "plate")) tallies.plate++;
     }
     return tallies;
-  }, [brandFiltered, searchQuery, filters]);
+  }, [brandFiltered, searchQuery, filters, activeBodyType, bodySearchQuery, t]);
+
+  const bodyTypeCounts = useMemo(() => {
+    const base = brandFiltered.filter((car) => {
+      const matchesCategory = carMatchesCategory(car, activeCategory);
+      return matchesNonCategoryFilters(car) && matchesCategory;
+    });
+    const counts: Record<string, number> = { all: base.length };
+    for (const car of base) {
+      const type = normalizeBodyType(car.bodyType);
+      if (!type) continue;
+      counts[type] = (counts[type] ?? 0) + 1;
+    }
+    return counts;
+  }, [brandFiltered, searchQuery, filters, activeCategory, bodySearchQuery, t]);
+
+  const bodyTypes = useMemo(
+    () => listBodyTypes(brandFiltered).filter((type) => (bodyTypeCounts[type] ?? 0) > 0 || type === activeBodyType),
+    [brandFiltered, bodyTypeCounts, activeBodyType],
+  );
 
   const filteredAndSortedCars = useMemo(() => {
     let result = brandFiltered.filter((car) => {
-      const matchesCategory = activeCategory === "all" || car.status === activeCategory;
-      return matchesNonCategoryFilters(car) && matchesCategory;
+      const matchesCategory = carMatchesCategory(car, activeCategory);
+      return matchesNonCategoryFilters(car) && matchesCategory && carMatchesBodyType(car, activeBodyType);
     });
 
     switch (sortBy) {
@@ -105,7 +137,7 @@ const InventorySection = ({
       case "newest": default: break;
     }
     return result;
-  }, [brandFiltered, searchQuery, activeCategory, filters, sortBy]);
+  }, [brandFiltered, searchQuery, activeCategory, activeBodyType, bodySearchQuery, filters, sortBy, t]);
 
   const formatPrice = (price: number) => `$${Number(price).toLocaleString()}`;
 
@@ -114,11 +146,14 @@ const InventorySection = ({
   const isFuelActive = filters.fuelType !== null;
   const isColorActive = filters.color !== null;
   const isCategoryActive = activeCategory !== "all";
+  const isBodyTypeActive = activeBodyType !== "all";
   const isSearchActive = searchQuery.trim().length > 0;
 
   const clearAll = () => {
     setSearchQuery("");
     setActiveCategory("all");
+    setActiveBodyType("all");
+    setBodySearchQuery("");
     setBrandFilter(null);
     setFilters({ ...defaultFilters, priceMin: priceRange.min, priceMax: priceRange.max });
   };
@@ -136,6 +171,20 @@ const InventorySection = ({
           key: "category" as const,
           label: t(`category.${activeCategory}` as any),
           onClear: () => setActiveCategory("all"),
+        }
+      : null,
+    isBodyTypeActive
+      ? {
+          key: "bodyType" as const,
+          label: bodyTypeLabel(activeBodyType, t),
+          onClear: () => setActiveBodyType("all"),
+        }
+      : null,
+    bodySearchQuery.trim()
+      ? {
+          key: "bodySearch" as const,
+          label: bodySearchQuery.trim(),
+          onClear: () => setBodySearchQuery(""),
         }
       : null,
     isYearActive
@@ -252,6 +301,19 @@ const InventorySection = ({
                 className="h-11 border-border/80 bg-background pl-11"
               />
             </div>
+            <BodyTypeSearch
+              value={activeBodyType}
+              onChange={(type) => {
+                setActiveBodyType(type);
+                setBodySearchQuery("");
+              }}
+              onSearchText={(text) => {
+                setActiveBodyType("all");
+                setBodySearchQuery(text);
+              }}
+              bodyTypes={bodyTypes}
+              bodyTypeCounts={bodyTypeCounts}
+            />
             <Button size="lg" variant="outline" className="h-11 shrink-0 gap-2 border-border/80 px-5" onClick={() => setFilterPanelOpen(true)}>
               <SlidersHorizontal className="h-4 w-4" />
               {t("inventory.filter")}
@@ -274,6 +336,11 @@ const InventorySection = ({
           onSortChange={setSortBy}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
+          priceMin={filters.priceMin}
+          priceMax={filters.priceMax}
+          rangeMin={priceRange.min}
+          rangeMax={priceRange.max}
+          onPriceChange={(min, max) => setFilters((f) => ({ ...f, priceMin: min, priceMax: max }))}
         />
 
         {isLoading ? (
@@ -332,6 +399,8 @@ const InventorySection = ({
                 onClick={() => {
                   setSearchQuery("");
                   setActiveCategory("all");
+                  setActiveBodyType("all");
+                  setBodySearchQuery("");
                   setBrandFilter(null);
                   setFilters({ ...defaultFilters, priceMin: priceRange.min, priceMax: priceRange.max });
                 }}

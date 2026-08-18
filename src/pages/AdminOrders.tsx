@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, type FormEvent } from "react";
 import { toast } from "sonner";
-import { useSearchParams } from "react-router-dom";
-import { useCars } from "@/hooks/useCars";
+import { useSearchParams, Link } from "react-router-dom";
+import { useCars, type Car } from "@/hooks/useCars";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useCountUp } from "@/hooks/useCountUp";
 import { useContact, DEFAULT_CONTACT } from "@/hooks/useContact";
@@ -11,6 +11,7 @@ import {
   useCreateOrder,
   ORDER_STATUSES,
   type Order,
+  type OrderItem,
 } from "@/hooks/useAdminOrders";
 import { useCreateReceipt } from "@/hooks/useReceipts";
 import { printReceipt, type ReceiptPrintLabels } from "@/components/admin/receiptPrint";
@@ -31,10 +32,12 @@ import {
   CheckCircle2,
   X,
   Bell,
+  Car,
   type LucideIcon,
 } from "lucide-react";
 import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/lib/utils";
+import { onImgError } from "@/lib/imageFallback";
 import DeliveryTimeline from "@/components/DeliveryTimeline";
 import { NEXT_DELIVERY_STATUS } from "@/lib/orderFlow";
 
@@ -370,10 +373,73 @@ const AdminOrders = () => {
     </>
   );
 
-  const itemsLabel = (o: Order) =>
-    o.order_items?.length
-      ? o.order_items.map((i) => i.car_name || i.car_id || "Car").join(", ")
-      : o.notes || "—";
+  const findCarForItem = (item: OrderItem): Car | undefined => {
+    if (item.car_id) {
+      const byId = cars.find((c) => String(c.id) === String(item.car_id));
+      if (byId) return byId;
+    }
+    const name = (item.car_name || "").trim().toLowerCase();
+    if (!name) return undefined;
+    return cars.find(
+      (c) =>
+        c.name.toLowerCase() === name ||
+        c.name.toLowerCase().includes(name) ||
+        name.includes(c.name.toLowerCase()),
+    );
+  };
+
+  const itemsCell = (o: Order) => {
+    const items = o.order_items ?? [];
+    if (!items.length) {
+      return <span className="text-sm text-muted-foreground">{o.notes || "—"}</span>;
+    }
+    return (
+      <div className="flex flex-col gap-2">
+        {items.map((item, idx) => {
+          const car = findCarForItem(item);
+          const name = item.car_name || car?.name || item.car_id || "Car";
+          const image = car?.image || car?.images?.[0];
+          const inner = (
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="h-12 w-[3.75rem] shrink-0 overflow-hidden rounded-lg border border-border/70 bg-muted">
+                {image ? (
+                  <img
+                    src={image}
+                    alt={name}
+                    onError={onImgError}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Car className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium leading-snug text-foreground">{name}</p>
+                {car ? (
+                  <p className="truncate text-xs text-muted-foreground">
+                    {[car.year, car.bodyType].filter(Boolean).join(" · ")}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          );
+          return car ? (
+            <Link
+              key={item.id || `${o.id}-${idx}`}
+              to={`/car/${car.id}`}
+              className="rounded-lg transition-opacity hover:opacity-80"
+            >
+              {inner}
+            </Link>
+          ) : (
+            <div key={item.id || `${o.id}-${idx}`}>{inner}</div>
+          );
+        })}
+      </div>
+    );
+  };
 
   const statusFlow = (o: Order) => {
     const next = NEXT_DELIVERY_STATUS[o.status];
@@ -628,7 +694,7 @@ const AdminOrders = () => {
                     <div className="text-sm text-muted-foreground">
                       {new Date(o.created_at).toLocaleDateString()}
                     </div>
-                    <div className="text-sm font-medium leading-snug">{itemsLabel(o)}</div>
+                    <div>{itemsCell(o)}</div>
                     <div className="text-lg font-semibold tabular-nums">{money(o.total_amount)}</div>
                     {statusFlow(o)}
                     <div className="flex justify-end border-t border-border/50 pt-2">{rowActions(o)}</div>
@@ -662,7 +728,7 @@ const AdminOrders = () => {
                         <TableCell className="text-sm">
                           {new Date(o.created_at).toLocaleDateString()}
                         </TableCell>
-                        <TableCell className="text-sm">{itemsLabel(o)}</TableCell>
+                        <TableCell className="max-w-[280px]">{itemsCell(o)}</TableCell>
                         <TableCell className="font-semibold">{money(o.total_amount)}</TableCell>
                         <TableCell className="align-top">{statusFlow(o)}</TableCell>
                         <TableCell className="text-right">{rowActions(o)}</TableCell>

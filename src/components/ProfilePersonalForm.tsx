@@ -12,7 +12,9 @@ type Props = {
   email: string;
   profile: Profile | null | undefined;
   avatarUrl: string;
+  coverUrl: string;
   onSaved: (next: Profile) => void;
+  commitPendingPhotos?: () => Promise<{ avatar_url: string | null; cover_url: string | null }>;
 };
 
 /**
@@ -23,7 +25,9 @@ const ProfilePersonalForm = memo(function ProfilePersonalForm({
   email,
   profile,
   avatarUrl,
+  coverUrl,
   onSaved,
+  commitPendingPhotos,
 }: Props) {
   const { t } = useLanguage();
   const { save } = useProfile();
@@ -72,11 +76,18 @@ const ProfilePersonalForm = memo(function ProfilePersonalForm({
 
     setSaving(true);
     try {
+      const photos = commitPendingPhotos
+        ? await commitPendingPhotos()
+        : {
+            avatar_url: avatarUrl || profile?.avatar_url || null,
+            cover_url: coverUrl || profile?.cover_url || null,
+          };
       const saved = await save.mutateAsync({
         full_name,
         phone,
         address,
-        avatar_url: avatarUrl || profile?.avatar_url || null,
+        avatar_url: photos.avatar_url,
+        cover_url: photos.cover_url,
         telegram: profile?.telegram ?? "",
         preferred_time: profile?.preferred_time ?? "",
       });
@@ -88,7 +99,13 @@ const ProfilePersonalForm = memo(function ProfilePersonalForm({
       onSaved(saved);
       toast.success(t("profile.saved"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("profile.saveFail"));
+      toast.error(
+        err instanceof Error && err.message === "PHOTO_PERSIST_FAIL"
+          ? t("profile.photoPersistFail")
+          : err instanceof Error
+            ? err.message
+            : t("profile.saveFail"),
+      );
     } finally {
       setSaving(false);
     }

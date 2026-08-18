@@ -1,10 +1,11 @@
 import { useMemo, type CSSProperties } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useCars } from "@/hooks/useCars";
+import { carMatchesCategory } from "@/lib/carUtils";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useCountUp } from "@/hooks/useCountUp";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Car, Sparkles, CircleDollarSign, BadgeCheck, type LucideIcon } from "lucide-react";
+import { Car, Sparkles, CircleDollarSign, Truck, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STAT_ICON_ANIM: Record<string, CSSProperties> = {
@@ -142,18 +143,18 @@ const AdminStatCards = () => {
           onGo={go}
         />
         <StatCard
-          label={t("admin.cars.ready")}
-          value={realCars.filter((c) => c.status === "ready").length}
-          icon={BadgeCheck}
+          label={t("admin.cars.onroad")}
+          value={realCars.filter((c) => carMatchesCategory(c, "onroad")).length}
+          icon={Truck}
           tone="text-emerald-600 bg-emerald-500/10"
           iconKey="check"
-          to="/admin/cars?status=ready"
-          active={isActive("/admin/cars?status=ready")}
+          to="/admin/cars?status=onroad"
+          active={isActive("/admin/cars?status=onroad")}
           onGo={go}
         />
         <StatCard
           label={t("admin.cars.luxury")}
-          value={realCars.filter((c) => c.status === "luxury").length}
+          value={realCars.filter((c) => carMatchesCategory(c, "luxury")).length}
           icon={Sparkles}
           tone="text-amber-600 bg-amber-500/10"
           iconKey="sparkle"

@@ -13,6 +13,8 @@ import { useContact } from "@/hooks/useContact";
 import { useLanguage } from "@/hooks/useLanguage";
 import { onImgError } from "@/lib/imageFallback";
 import { cn } from "@/lib/utils";
+import { formatCarIdentity } from "@/lib/carCodeUtils";
+import { bodyTypeLabel } from "@/components/CategoryFilter";
 import type { TranslationKey } from "@/i18n/translations";
 import {
   Calendar,
@@ -50,7 +52,7 @@ const CarDetailDialog = ({ car, open, onOpenChange }: CarDetailDialogProps) => {
   const { data: contact } = useContact();
   const [selectedImage, setSelectedImage] = useState(0);
   const [orderRequested, setOrderRequested] = useState(false);
-  const sold = useIsCarSold(car?.id);
+  const sold = useIsCarSold(car?.id, car?.isSold);
 
   const telegram = (contact?.telegram || "@Carplus777").replace(/^@/, "");
   const phone = contact?.phone || "+855 12 345 678";
@@ -65,7 +67,7 @@ const CarDetailDialog = ({ car, open, onOpenChange }: CarDetailDialogProps) => {
   const statusKey = `status.${car.status}` as TranslationKey;
 
   const specs = [
-    { icon: CarIcon, label: t("form.bodyType"), value: car.bodyType },
+    { icon: CarIcon, label: t("form.bodyType"), value: bodyTypeLabel(car.bodyType, t) },
     { icon: Calendar, label: t("form.year"), value: String(car.year) },
     { icon: Shield, label: t("form.taxStatus"), value: car.taxStatus },
     { icon: Check, label: t("form.condition"), value: car.condition },
@@ -129,7 +131,7 @@ const CarDetailDialog = ({ car, open, onOpenChange }: CarDetailDialogProps) => {
               {/* Details */}
               <div className="flex flex-col p-4 sm:p-6">
                 <DialogHeader className="space-y-2 text-left">
-                  <p className="font-mono text-xs text-muted-foreground">{car.code}</p>
+                  <p className="font-mono text-xs text-muted-foreground">{formatCarIdentity(car)}</p>
                   <DialogTitle className="font-heading text-xl leading-snug sm:text-2xl">
                     {car.name}
                   </DialogTitle>
