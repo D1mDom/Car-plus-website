@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { dedupeCars, normalizeCarStatus, normalizeBodyType } from "@/lib/carUtils";
+import { dedupeCars, getCarCoverImage, normalizeCarStatus, normalizeBodyType } from "@/lib/carUtils";
 import {
   unpackCarIdentity,
   packCarIdentityFallback,
@@ -61,8 +61,32 @@ interface DbCar {
   updated_at: string;
 }
 
+const normalizePhotoUrls = (raw: unknown): string[] => {
+  let list: unknown[] = [];
+  if (Array.isArray(raw)) {
+    list = raw;
+  } else if (typeof raw === "string" && raw.trim()) {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith("[")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) list = parsed;
+      } catch {
+        list = [trimmed];
+      }
+    } else {
+      list = [trimmed];
+    }
+  }
+  return list
+    .filter((url): url is string => typeof url === "string" && !!url.trim())
+    .map((url) => url.trim());
+};
+
 const mapDbCarToCar = (dbCar: DbCar): Car => {
   const identity = unpackCarIdentity(dbCar);
+  const images = normalizePhotoUrls(dbCar.images);
+  const image = getCarCoverImage({ image: dbCar.image ?? "", images });
   return {
     id: dbCar.id,
     code: identity.taxPaperCode,
@@ -73,8 +97,8 @@ const mapDbCarToCar = (dbCar: DbCar): Car => {
     price: Number(dbCar.price),
     status: normalizeCarStatus(dbCar.status),
     viewers: dbCar.viewers,
-    image: dbCar.image ?? "",
-    images: dbCar.images ?? [],
+    image,
+    images: images.length > 0 ? images : image ? [image] : [],
     bodyType: normalizeBodyType(dbCar.body_type) || dbCar.body_type,
     taxStatus: dbCar.tax_status,
     condition: dbCar.condition,

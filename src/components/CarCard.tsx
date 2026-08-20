@@ -20,7 +20,8 @@ import { useIsCarSold } from "@/hooks/useSoldCarIds";
 import OrderAuthPrompt from "@/components/OrderAuthPrompt";
 import CarDetailDialog from "@/components/CarDetailDialog";
 import SoldOutBadge from "@/components/SoldOutBadge";
-import { onImgError } from "@/lib/imageFallback";
+import { getCarGallery } from "@/lib/carUtils";
+import SafeImg from "@/components/SafeImg";
 import { cn } from "@/lib/utils";
 import { formatCarIdentity } from "@/lib/carCodeUtils";
 import { bodyTypeLabel } from "@/components/CategoryFilter";
@@ -41,7 +42,7 @@ const CarCard = ({ car, onEdit, featured }: CarCardProps) => {
   const sold = useIsCarSold(car.id, car.isSold);
   const telegram = (contact?.telegram || "@Carplus777").replace(/^@/, "");
 
-  const images = car.images && car.images.length > 0 ? car.images : [car.image];
+  const images = getCarGallery(car);
   const [active, setActive] = useState(0);
   const hasMultiple = images.length > 1;
 
@@ -79,11 +80,10 @@ const CarCard = ({ car, onEdit, featured }: CarCardProps) => {
                 {t("card.featured")}
               </span>
             )}
-            <img
-              src={images[active] || car.image}
+            <SafeImg
+              src={images[active]}
               alt={car.name}
               loading="lazy"
-              onError={onImgError}
               className={cn(
                 "h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]",
                 sold && "grayscale",

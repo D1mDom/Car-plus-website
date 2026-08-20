@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCars, type CarStatus } from "@/hooks/useCars";
 import { useLanguage } from "@/hooks/useLanguage";
-import { filterCarsByBrand, carMatchesBodyType, carMatchesBodySearch, carMatchesCategory, listBodyTypes, normalizeBodyType } from "@/lib/carUtils";
+import { filterCarsByBrand, carMatchesBrandSearch, carMatchesCategory, extractBrand, listCarBrands, normalizeBodyType } from "@/lib/carUtils";
 import { Search, SlidersHorizontal, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -31,8 +31,7 @@ const InventorySection = ({
   const { data: carsData = [], isLoading } = useCars();
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [activeCategory, setActiveCategory] = useState<CarStatus | "all">(initialCategory);
-  const [activeBodyType, setActiveBodyType] = useState("all");
-  const [bodySearchQuery, setBodySearchQuery] = useState("");
+  const [brandSearchQuery, setBrandSearchQuery] = useState("");
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
@@ -88,12 +87,12 @@ const InventorySection = ({
     const matchesFuelType = filters.fuelType === null || car.fuelType === filters.fuelType;
     const matchesColor = filters.color === null || car.color === filters.color;
     const matchesPrice = car.price >= filters.priceMin && car.price <= filters.priceMax;
-    const matchesBodySearch = carMatchesBodySearch(car, bodySearchQuery, (type) => bodyTypeLabel(type, t));
-    return matchesSearch && matchesYearMin && matchesYearMax && matchesFuelType && matchesColor && matchesPrice && matchesBodySearch;
+    const matchesBrandSearch = carMatchesBrandSearch(car, brandSearchQuery);
+    return matchesSearch && matchesYearMin && matchesYearMax && matchesFuelType && matchesColor && matchesPrice && matchesBrandSearch;
   };
 
   const categoryCounts = useMemo(() => {
-    const base = brandFiltered.filter((car) => matchesNonCategoryFilters(car) && carMatchesBodyType(car, activeBodyType));
+    const base = brandFiltered.filter((car) => matchesNonCategoryFilters(car));
     const tallies = { all: base.length, onroad: 0, ready: 0, luxury: 0, plate: 0 };
     for (const car of base) {
       if (carMatchesCategory(car, "onroad")) tallies.onroad++;
@@ -102,31 +101,52 @@ const InventorySection = ({
       if (carMatchesCategory(car, "plate")) tallies.plate++;
     }
     return tallies;
-  }, [brandFiltered, searchQuery, filters, activeBodyType, bodySearchQuery, t]);
+  }, [brandFiltered, searchQuery, filters, brandSearchQuery, t]);
 
-  const bodyTypeCounts = useMemo(() => {
-    const base = brandFiltered.filter((car) => {
+  const brandCounts = useMemo(() => {
+    const base = carsData.filter((car) => {
       const matchesCategory = carMatchesCategory(car, activeCategory);
-      return matchesNonCategoryFilters(car) && matchesCategory;
+      const q = searchQuery.trim().toLowerCase();
+      const bodyNorm = normalizeBodyType(car.bodyType);
+      const matchesSearch =
+        !q ||
+        car.name.toLowerCase().includes(q) ||
+        car.model.toLowerCase().includes(q) ||
+        car.code.toLowerCase().includes(q) ||
+        (car.plateNumber ?? "").toLowerCase().includes(q) ||
+        (car.bodyType ?? "").toLowerCase().includes(q) ||
+        bodyNorm.toLowerCase().includes(q) ||
+        bodyTypeLabel(bodyNorm || car.bodyType, t).toLowerCase().includes(q);
+      const matchesYearMin = filters.yearMin === null || car.year >= filters.yearMin;
+      const matchesYearMax = filters.yearMax === null || car.year <= filters.yearMax;
+      const matchesFuelType = filters.fuelType === null || car.fuelType === filters.fuelType;
+      const matchesColor = filters.color === null || car.color === filters.color;
+      const matchesPrice = car.price >= filters.priceMin && car.price <= filters.priceMax;
+      return matchesSearch && matchesYearMin && matchesYearMax && matchesFuelType && matchesColor && matchesPrice && matchesCategory;
     });
-    const counts: Record<string, number> = { all: base.length };
+    const lower: Record<string, number> = {};
     for (const car of base) {
-      const type = normalizeBodyType(car.bodyType);
-      if (!type) continue;
-      counts[type] = (counts[type] ?? 0) + 1;
+      const brand = extractBrand(car.name).trim();
+      if (!brand) continue;
+      const key = brand.toLowerCase();
+      lower[key] = (lower[key] ?? 0) + 1;
+    }
+    const counts: Record<string, number> = { all: base.length };
+    for (const brand of listCarBrands(carsData)) {
+      counts[brand] = lower[brand.toLowerCase()] ?? 0;
     }
     return counts;
-  }, [brandFiltered, searchQuery, filters, activeCategory, bodySearchQuery, t]);
+  }, [carsData, searchQuery, filters, activeCategory, t]);
 
-  const bodyTypes = useMemo(
-    () => listBodyTypes(brandFiltered).filter((type) => (bodyTypeCounts[type] ?? 0) > 0 || type === activeBodyType),
-    [brandFiltered, bodyTypeCounts, activeBodyType],
+  const brands = useMemo(
+    () => listCarBrands(carsData).filter((brand) => (brandCounts[brand] ?? 0) > 0 || brand === brandFilter),
+    [carsData, brandCounts, brandFilter],
   );
 
   const filteredAndSortedCars = useMemo(() => {
     let result = brandFiltered.filter((car) => {
       const matchesCategory = carMatchesCategory(car, activeCategory);
-      return matchesNonCategoryFilters(car) && matchesCategory && carMatchesBodyType(car, activeBodyType);
+      return matchesNonCategoryFilters(car) && matchesCategory;
     });
 
     switch (sortBy) {
@@ -137,7 +157,7 @@ const InventorySection = ({
       case "newest": default: break;
     }
     return result;
-  }, [brandFiltered, searchQuery, activeCategory, activeBodyType, bodySearchQuery, filters, sortBy, t]);
+  }, [brandFiltered, searchQuery, activeCategory, brandSearchQuery, brandFilter, filters, sortBy, t]);
 
   const formatPrice = (price: number) => `$${Number(price).toLocaleString()}`;
 
@@ -146,14 +166,13 @@ const InventorySection = ({
   const isFuelActive = filters.fuelType !== null;
   const isColorActive = filters.color !== null;
   const isCategoryActive = activeCategory !== "all";
-  const isBodyTypeActive = activeBodyType !== "all";
+  const isBrandActive = Boolean(brandFilter);
   const isSearchActive = searchQuery.trim().length > 0;
 
   const clearAll = () => {
     setSearchQuery("");
     setActiveCategory("all");
-    setActiveBodyType("all");
-    setBodySearchQuery("");
+    setBrandSearchQuery("");
     setBrandFilter(null);
     setFilters({ ...defaultFilters, priceMin: priceRange.min, priceMax: priceRange.max });
   };
@@ -173,18 +192,18 @@ const InventorySection = ({
           onClear: () => setActiveCategory("all"),
         }
       : null,
-    isBodyTypeActive
+    isBrandActive
       ? {
-          key: "bodyType" as const,
-          label: bodyTypeLabel(activeBodyType, t),
-          onClear: () => setActiveBodyType("all"),
+          key: "brand" as const,
+          label: brandFilter ?? "",
+          onClear: () => setBrandFilter(null),
         }
       : null,
-    bodySearchQuery.trim()
+    brandSearchQuery.trim()
       ? {
-          key: "bodySearch" as const,
-          label: bodySearchQuery.trim(),
-          onClear: () => setBodySearchQuery(""),
+          key: "brandSearch" as const,
+          label: brandSearchQuery.trim(),
+          onClear: () => setBrandSearchQuery(""),
         }
       : null,
     isYearActive
@@ -302,17 +321,17 @@ const InventorySection = ({
               />
             </div>
             <BodyTypeSearch
-              value={activeBodyType}
-              onChange={(type) => {
-                setActiveBodyType(type);
-                setBodySearchQuery("");
+              value={brandFilter ?? "all"}
+              onChange={(brand) => {
+                setBrandFilter(brand === "all" ? null : brand);
+                setBrandSearchQuery("");
               }}
               onSearchText={(text) => {
-                setActiveBodyType("all");
-                setBodySearchQuery(text);
+                setBrandFilter(null);
+                setBrandSearchQuery(text);
               }}
-              bodyTypes={bodyTypes}
-              bodyTypeCounts={bodyTypeCounts}
+              bodyTypes={brands}
+              bodyTypeCounts={brandCounts}
             />
             <Button size="lg" variant="outline" className="h-11 shrink-0 gap-2 border-border/80 px-5" onClick={() => setFilterPanelOpen(true)}>
               <SlidersHorizontal className="h-4 w-4" />
@@ -399,8 +418,7 @@ const InventorySection = ({
                 onClick={() => {
                   setSearchQuery("");
                   setActiveCategory("all");
-                  setActiveBodyType("all");
-                  setBodySearchQuery("");
+                  setBrandSearchQuery("");
                   setBrandFilter(null);
                   setFilters({ ...defaultFilters, priceMin: priceRange.min, priceMax: priceRange.max });
                 }}

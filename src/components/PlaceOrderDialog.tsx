@@ -28,7 +28,8 @@ import {
   Shield,
   User,
 } from "lucide-react";
-import { onImgError } from "@/lib/imageFallback";
+import SafeImg from "@/components/SafeImg";
+import { getCarCoverImage } from "@/lib/carUtils";
 import { cleanPhoneInput, formatPhoneDisplay, isValidPhone } from "@/lib/phoneUtils";
 import {
   sanitizeCustomerName,
@@ -124,7 +125,7 @@ const PlaceOrderDialog = ({ car, onOpenChange }: PlaceOrderDialogProps) => {
             carId: String(car.id),
             carName: car.name,
             carPrice: car.price,
-            carImage: car.image,
+            carImage: getCarCoverImage(car),
           });
         } }
     );
@@ -178,11 +179,10 @@ const PlaceOrderDialog = ({ car, onOpenChange }: PlaceOrderDialogProps) => {
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
               {car && (
                 <div className="mb-4 flex gap-3 overflow-hidden rounded-2xl border border-border/70 bg-muted/25 p-2.5">
-                  {car.image ? (
-                    <img
-                      src={car.image}
+                  {getCarCoverImage(car) ? (
+                    <SafeImg
+                      src={getCarCoverImage(car)}
                       alt={car.name}
-                      onError={onImgError}
                       className="h-[4.75rem] w-[5.75rem] shrink-0 rounded-xl object-cover"
                     />
                   ) : (

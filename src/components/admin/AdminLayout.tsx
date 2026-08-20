@@ -263,7 +263,7 @@ const AdminLayoutBody = () => {
     if (status === "ready") return { ...meta, title: "admin.cars.ready" as TranslationKey };
     if (status === "onroad") return { ...meta, title: "admin.cars.onroad" as TranslationKey };
     if (status === "luxury") return { ...meta, title: "admin.cars.luxury" as TranslationKey };
-    if (status === "plate") return { ...meta, title: "category.plate" as TranslationKey };
+    if (status === "plate") return { ...meta, title: "admin.cars.plate" as TranslationKey };
     return meta;
   }, [pathname, search]);
 

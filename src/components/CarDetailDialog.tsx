@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import type { Car } from "@/hooks/useCars";
 import { useContact } from "@/hooks/useContact";
 import { useLanguage } from "@/hooks/useLanguage";
-import { onImgError } from "@/lib/imageFallback";
+import { getCarGallery } from "@/lib/carUtils";
+import SafeImg from "@/components/SafeImg";
 import { cn } from "@/lib/utils";
 import { formatCarIdentity } from "@/lib/carCodeUtils";
 import { bodyTypeLabel } from "@/components/CategoryFilter";
@@ -63,7 +64,7 @@ const CarDetailDialog = ({ car, open, onOpenChange }: CarDetailDialogProps) => {
 
   if (!car) return null;
 
-  const images = car.images && car.images.length > 0 ? car.images : [car.image];
+  const images = getCarGallery(car);
   const statusKey = `status.${car.status}` as TranslationKey;
 
   const specs = [
@@ -84,10 +85,9 @@ const CarDetailDialog = ({ car, open, onOpenChange }: CarDetailDialogProps) => {
               {/* Gallery */}
               <div className="space-y-3 bg-muted/30 p-4 sm:p-5">
                 <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted">
-                  <img
-                    src={images[selectedImage] || car.image}
+                  <SafeImg
+                    src={images[selectedImage]}
                     alt={car.name}
-                    onError={onImgError}
                     className={cn("h-full w-full object-cover", sold && "grayscale")}
                   />
                   {sold ? (
@@ -116,10 +116,9 @@ const CarDetailDialog = ({ car, open, onOpenChange }: CarDetailDialogProps) => {
                             : "border-transparent hover:border-border"
                         )}
                       >
-                        <img
+                        <SafeImg
                           src={image}
                           alt={`${car.name} ${index + 1}`}
-                          onError={onImgError}
                           className="h-full w-full object-cover"
                         />
                       </button>

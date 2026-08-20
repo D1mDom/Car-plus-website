@@ -1,4 +1,27 @@
 import type { Car, CarStatus, CarOrigin } from "@/hooks/useCars";
+import { isFragileImageUrl, isHostedCarImageUrl } from "@/lib/fragileImageUrl";
+
+const cleanPhotoUrl = (url: unknown): string =>
+  typeof url === "string" ? url.trim() : "";
+
+/** All usable photos: gallery first, then the cover column. */
+export const getCarGallery = (car: Pick<Car, "image" | "images">): string[] => {
+  const urls = (car.images ?? []).map(cleanPhotoUrl).filter(Boolean);
+  if (urls.length > 0) return urls;
+  const cover = cleanPhotoUrl(car.image);
+  return cover ? [cover] : [];
+};
+
+/** Cover photo: prefer files we host, skip expired Facebook/Telegram links. */
+export const getCarCoverImage = (car: Pick<Car, "image" | "images">): string => {
+  const urls = getCarGallery(car);
+  return (
+    urls.find(isHostedCarImageUrl) ||
+    urls.find((url) => !isFragileImageUrl(url)) ||
+    urls[0] ||
+    ""
+  );
+};
 
 export const extractBrand = (name: string): string => {
   const first = name.trim().split(/\s+/)[0] ?? "";
@@ -233,4 +256,29 @@ export const listBodyTypes = (cars: Car[]): string[] => {
   const ordered = BODY_TYPE_ORDER.filter((type) => found.has(type));
   const extra = [...found].filter((type) => !BODY_TYPE_ORDER.includes(type as (typeof BODY_TYPE_ORDER)[number])).sort();
   return [...ordered, ...extra];
+};
+
+export const listCarBrands = (cars: Car[]): string[] => {
+  const seen = new Map<string, string>();
+  for (const car of cars) {
+    const brand = extractBrand(car.name).trim();
+    if (!brand) continue;
+    const key = brand.toLowerCase();
+    if (!seen.has(key)) seen.set(key, brand);
+  }
+  return [...seen.values()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+};
+
+export const carMatchesSelectedBrand = (car: Car, brand: string | "all" | null): boolean => {
+  if (!brand || brand === "all") return true;
+  return carMatchesBrand(car.name, brand);
+};
+
+export const carMatchesBrandSearch = (car: Car, query: string): boolean => {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  const brand = extractBrand(car.name).toLowerCase();
+  const name = car.name.toLowerCase();
+  const model = car.model.toLowerCase();
+  return brand.includes(needle) || name.includes(needle) || model.includes(needle);
 };

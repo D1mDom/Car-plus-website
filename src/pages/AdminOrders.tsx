@@ -37,7 +37,8 @@ import {
 } from "lucide-react";
 import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/lib/utils";
-import { onImgError } from "@/lib/imageFallback";
+import SafeImg from "@/components/SafeImg";
+import { getCarCoverImage } from "@/lib/carUtils";
 import DeliveryTimeline from "@/components/DeliveryTimeline";
 import { NEXT_DELIVERY_STATUS } from "@/lib/orderFlow";
 
@@ -398,15 +399,14 @@ const AdminOrders = () => {
         {items.map((item, idx) => {
           const car = findCarForItem(item);
           const name = item.car_name || car?.name || item.car_id || "Car";
-          const image = car?.image || car?.images?.[0];
+          const image = car ? getCarCoverImage(car) : "";
           const inner = (
             <div className="flex min-w-0 items-center gap-2.5">
               <div className="h-12 w-[3.75rem] shrink-0 overflow-hidden rounded-lg border border-border/70 bg-muted">
                 {image ? (
-                  <img
+                  <SafeImg
                     src={image}
                     alt={name}
-                    onError={onImgError}
                     className="h-full w-full object-cover"
                   />
                 ) : (

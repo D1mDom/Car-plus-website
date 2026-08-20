@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.upload-avatar]
 verify_jwt = false
+
+[functions.import-image-url]
+verify_jwt = false

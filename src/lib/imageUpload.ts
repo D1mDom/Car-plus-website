@@ -183,6 +183,28 @@ const uploadProfileImage = async (
   }
 };
 
+export const importRemoteImageUrl = async (sourceUrl: string): Promise<string> => {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error("Not signed in");
+
+  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-image-url`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ url: sourceUrl }),
+  });
+  const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+  if (!res.ok || !body.url) {
+    throw new Error(body.error || "Could not import image");
+  }
+  return body.url;
+};
+
 export const uploadProfileAvatar = async (userId: string, file: File): Promise<string> =>
   uploadProfileImage(userId, file, "avatar");
 

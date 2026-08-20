@@ -50,7 +50,8 @@ import {
   Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { onImgError } from "@/lib/imageFallback";
+import SafeImg from "@/components/SafeImg";
+import { getCarCoverImage } from "@/lib/carUtils";
 import { cleanPhoneInput, formatPhoneDisplay, isValidPhone } from "@/lib/phoneUtils";
 import {
   sanitizeCustomerName,
@@ -138,7 +139,7 @@ const Orders = () => {
     const item = o.order_items?.[0];
     if (!item?.car_id) return null;
     const car = findCar(item.car_id);
-    return car?.image || car?.images?.[0] || null;
+    return getCarCoverImage(car) || null;
   };
 
   const openEdit = (o: MyOrder) => {
@@ -397,18 +398,16 @@ const Orders = () => {
                         {image ? (
                           firstCarId ? (
                             <Link to={`/car/${firstCarId}`} className="absolute inset-0 block sm:relative sm:h-full sm:min-h-[12.5rem]">
-                              <img
+                              <SafeImg
                                 src={image}
                                 alt={title}
-                                onError={onImgError}
                                 className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04] sm:absolute sm:inset-0"
                               />
                             </Link>
                           ) : (
-                            <img
+                            <SafeImg
                               src={image}
                               alt={title}
-                              onError={onImgError}
                               className="absolute inset-0 h-full w-full object-cover"
                             />
                           )

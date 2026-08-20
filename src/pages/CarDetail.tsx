@@ -9,7 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Phone, MessageCircle, Check, Pin, Calendar, Fuel, Palette, Shield, Car as CarIcon, Loader2, ShoppingCart } from "lucide-react";
 import { useState } from "react";
 import { useContact } from "@/hooks/useContact";
-import { onImgError } from "@/lib/imageFallback";
+import { getCarGallery } from "@/lib/carUtils";
+import SafeImg from "@/components/SafeImg";
 import type { TranslationKey } from "@/i18n/translations";
 import SoldOutBadge from "@/components/SoldOutBadge";
 import { useIsCarSold } from "@/hooks/useSoldCarIds";
@@ -61,6 +62,7 @@ const CarDetail = () => {
     { icon: Fuel, label: t("carDetail.fuelType"), value: car.fuelType },
     { icon: Palette, label: t("carDetail.color"), value: car.color },
   ];
+  const gallery = getCarGallery(car);
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,9 +77,8 @@ const CarDetail = () => {
           <div className="grid gap-10 lg:grid-cols-2">
             <div className="space-y-4">
               <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-surface">
-                <img
-                  src={(car.images ?? [])[selectedImage] || car.image}
-                  onError={onImgError}
+                <SafeImg
+                  src={gallery[selectedImage]}
                   alt={car.name}
                   className={`h-full w-full object-cover${sold ? " grayscale" : ""}`}
                 />
@@ -93,14 +94,14 @@ const CarDetail = () => {
                 )}
               </div>
               <div className="grid grid-cols-3 gap-3">
-                {(car.images ?? []).map((image, index) => (
+                {gallery.map((image, index) => (
                   <button
                     key={index}
                     type="button"
                     onClick={() => setSelectedImage(index)}
                     className={`relative aspect-[4/3] overflow-hidden rounded-lg border-2 transition-all ${selectedImage === index ? "border-primary" : "border-transparent hover:border-border"}`}
                   >
-                    <img src={image} alt={car.name} onError={onImgError} className="h-full w-full object-cover" />
+                    <SafeImg src={image} alt={car.name} className="h-full w-full object-cover" />
                   </button>
                 ))}
               </div>

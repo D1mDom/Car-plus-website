@@ -2,13 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { CarFront, ChevronDown, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { bodyTypeLabel } from "@/components/CategoryFilter";
 import { useLanguage } from "@/hooks/useLanguage";
 import { cn } from "@/lib/utils";
 
 interface BodyTypeSearchProps {
   value: string;
-  onChange: (bodyType: string) => void;
+  onChange: (brand: string) => void;
   onSearchText: (query: string) => void;
   bodyTypes: string[];
   bodyTypeCounts?: Record<string, number>;
@@ -23,16 +22,16 @@ const BodyTypeSearch = ({ value, onChange, onSearchText, bodyTypes, bodyTypeCoun
 
   useEffect(() => {
     if (editing) return;
-    setQuery(isActive ? bodyTypeLabel(value, t) : "");
-  }, [editing, isActive, t, value]);
+    setQuery(isActive ? value : "");
+  }, [editing, isActive, value]);
 
   const options = useMemo(() => {
     const all = [
-      { value: "all", label: t("category.body.all"), count: bodyTypeCounts?.all },
-      ...bodyTypes.map((type) => ({
-        value: type,
-        label: bodyTypeLabel(type, t),
-        count: bodyTypeCounts?.[type],
+      { value: "all", label: t("category.brand.all"), count: bodyTypeCounts?.all },
+      ...bodyTypes.map((brand) => ({
+        value: brand,
+        label: brand,
+        count: bodyTypeCounts?.[brand],
       })),
     ];
     const needle = query.trim().toLowerCase();
@@ -46,7 +45,7 @@ const BodyTypeSearch = ({ value, onChange, onSearchText, bodyTypes, bodyTypeCoun
   const selectType = (next: string) => {
     onSearchText("");
     onChange(next);
-    setQuery(next === "all" ? "" : bodyTypeLabel(next, t));
+    setQuery(next === "all" ? "" : next);
     setEditing(false);
     setOpen(false);
   };
@@ -58,9 +57,9 @@ const BodyTypeSearch = ({ value, onChange, onSearchText, bodyTypes, bodyTypeCoun
           <CarFront className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
           <Input
             type="text"
-            placeholder={t("category.body.search")}
+            placeholder={t("category.brand.search")}
             value={query}
-            aria-label={t("category.body.label")}
+            aria-label={t("category.brand.label")}
             onFocus={() => {
               setEditing(true);
               setOpen(true);
@@ -118,7 +117,7 @@ const BodyTypeSearch = ({ value, onChange, onSearchText, bodyTypes, bodyTypeCoun
             <button
               type="button"
               className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-              aria-label={t("category.body.label")}
+              aria-label={t("category.brand.label")}
             >
               <ChevronDown className="h-4 w-4" />
             </button>

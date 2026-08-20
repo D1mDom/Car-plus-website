@@ -16,7 +16,8 @@ import type { Car as CarType, CarStatus } from "@/hooks/useCars";
 import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/lib/utils";
 import { formatCarIdentity } from "@/lib/carCodeUtils";
-import { carMatchesCategory } from "@/lib/carUtils";
+import { carMatchesCategory, getCarCoverImage } from "@/lib/carUtils";
+import SafeImg from "@/components/SafeImg";
 
 const CAR_STATUSES = ["ready", "onroad", "luxury", "plate"] as const;
 
@@ -163,7 +164,7 @@ const AdminCarList = ({ previewLimit, syncUrlStatus = false }: AdminCarListProps
       className={cn("cursor-pointer overflow-hidden rounded-lg border-0 bg-transparent p-0 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2", className)}
       title={t("card.preview")}
     >
-      <img src={car.image} alt={car.name} className="h-full w-full object-cover" />
+      <SafeImg src={getCarCoverImage(car)} alt={car.name} className="h-full w-full object-cover" />
     </button>
   );
 

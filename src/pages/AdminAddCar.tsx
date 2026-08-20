@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Car, ExternalLink, CheckCircle2, ArrowRight } from "lucide-react";
 import CarFormDialog from "@/components/admin/CarFormDialog";
 import type { Car as CarType } from "@/hooks/useCars";
-import { onImgError } from "@/lib/imageFallback";
+import SafeImg from "@/components/SafeImg";
+import { getCarCoverImage } from "@/lib/carUtils";
 import { formatCarIdentity } from "@/lib/carCodeUtils";
 import type { TranslationKey } from "@/i18n/translations";
 
@@ -81,10 +82,9 @@ const AdminAddCar = () => {
                   key={car.id}
                   className="flex gap-3 rounded-xl border border-border/70 bg-background p-3"
                 >
-                  <img
-                    src={car.image}
+                  <SafeImg
+                    src={getCarCoverImage(car)}
                     alt={car.name}
-                    onError={onImgError}
                     className="h-16 w-20 shrink-0 rounded-lg object-cover"
                   />
                   <div className="min-w-0 flex-1 space-y-1">

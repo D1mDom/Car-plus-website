@@ -39,6 +39,8 @@ import { safeUUID, cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { onImgError } from "@/lib/imageFallback";
+import { isFragileImageUrl, isHostedCarImageUrl } from "@/lib/fragileImageUrl";
+import { importRemoteImageUrl } from "@/lib/imageUpload";
 import type { TranslationKey } from "@/i18n/translations";
 
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
@@ -647,7 +649,7 @@ function parseImageUrls(raw: string): string[] {
 }
 
 /** Photo upload isolated so typing in other fields does not re-render this block. */
-export type CarPhotosSectionHandle = { flushPendingUrls: () => void };
+export type CarPhotosSectionHandle = { flushPendingUrls: () => Promise<void> };
 
 const CarPhotosSection = memo(
   forwardRef<
@@ -726,6 +728,53 @@ const CarPhotosSection = memo(
     );
   };
 
+  const addImportedUrls = async (parsed: string[]) => {
+    const current = getValues("images") || [];
+    const currentSet = new Set(current);
+    const fresh = parsed.filter((url) => !currentSet.has(url));
+    if (fresh.length === 0) {
+      toast.error(t("form.imageUrlDuplicate"));
+      return 0;
+    }
+
+    const hosted: string[] = [];
+    let blocked = 0;
+    setIsUploading(true);
+    try {
+      for (const url of fresh) {
+        if (isFragileImageUrl(url)) {
+          blocked++;
+          continue;
+        }
+        if (isHostedCarImageUrl(url)) {
+          hosted.push(url);
+          continue;
+        }
+        try {
+          hosted.push(await importRemoteImageUrl(url));
+        } catch {
+          hosted.push(url);
+        }
+      }
+    } finally {
+      setIsUploading(false);
+    }
+
+    if (blocked > 0) {
+      toast.error(t("form.imageUrlHotlink"));
+    }
+    if (hosted.length === 0) return 0;
+
+    const nextSet = new Set(getValues("images") || []);
+    const unique = hosted.filter((url) => !nextSet.has(url));
+    if (unique.length === 0) {
+      toast.error(t("form.imageUrlDuplicate"));
+      return 0;
+    }
+    setValue("images", [...(getValues("images") || []), ...unique], { shouldValidate: false });
+    return unique.length;
+  };
+
   const addImageFromUrl = () => {
     const raw = imageUrl.trim();
     if (!raw) {
@@ -737,34 +786,29 @@ const CarPhotosSection = memo(
       toast.error(t("form.imageUrlInvalid"));
       return;
     }
-    const current = getValues("images") || [];
-    const currentSet = new Set(current);
-    const fresh = parsed.filter((url) => !currentSet.has(url));
-    if (fresh.length === 0) {
-      toast.error(t("form.imageUrlDuplicate"));
-      return;
-    }
-    setValue("images", [...current, ...fresh], { shouldValidate: false });
-    setImageUrl("");
-    setFailedDraftUrls(new Set());
-    toast.success(
-      fresh.length === 1
-        ? t("form.imageUrlAdded")
-        : t("form.imageUrlAddedMany").replace("{count}", String(fresh.length)),
-    );
+    void (async () => {
+      const added = await addImportedUrls(parsed);
+      if (added > 0) {
+        setImageUrl("");
+        setFailedDraftUrls(new Set());
+        toast.success(
+          added === 1
+            ? t("form.imageUrlAdded")
+            : t("form.imageUrlAddedMany").replace("{count}", String(added)),
+        );
+      }
+    })();
   };
 
   useImperativeHandle(ref, () => ({
-    flushPendingUrls: () => {
+    flushPendingUrls: async () => {
       const parsed = parseImageUrls(imageUrl);
       if (parsed.length === 0) return;
-      const current = getValues("images") || [];
-      const currentSet = new Set(current);
-      const fresh = parsed.filter((url) => !currentSet.has(url));
-      if (fresh.length === 0) return;
-      setValue("images", [...current, ...fresh], { shouldValidate: false });
-      setImageUrl("");
-      setFailedDraftUrls(new Set());
+      const added = await addImportedUrls(parsed);
+      if (added > 0) {
+        setImageUrl("");
+        setFailedDraftUrls(new Set());
+      }
     },
   }));
 
@@ -799,12 +843,18 @@ const CarPhotosSection = memo(
                       alt={`${t("form.photos")} ${i + 1}`}
                       className="h-full w-full object-cover"
                       referrerPolicy="no-referrer"
+                      onError={onImgError}
                     />
                     {i === 0 && (
                       <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
                         {t("form.cover")}
                       </span>
                     )}
+                    {isFragileImageUrl(url) ? (
+                      <span className="absolute bottom-1 left-1 rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                        {t("form.imageUrlExpired")}
+                      </span>
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => removeImageAt(i)}
@@ -1074,7 +1124,7 @@ const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog", onCreated 
     toast.error(first?.message ? String(first.message) : t("form.validationFailed"));
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
@@ -1087,10 +1137,8 @@ const CarFormDialog = ({ open, onOpenChange, car, variant = "dialog", onCreated 
     modelRef.current?.flush();
     descriptionRef.current?.flush();
     specsRef.current?.flushPending();
-    photosRef.current?.flushPendingUrls();
-    requestAnimationFrame(() => {
-      void form.handleSubmit(onSubmit, onInvalid)();
-    });
+    await photosRef.current?.flushPendingUrls();
+    void form.handleSubmit(onSubmit, onInvalid)();
   };
 
   const isLoading = createCar.isPending || updateCar.isPending;

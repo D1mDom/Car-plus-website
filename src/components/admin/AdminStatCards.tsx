@@ -5,7 +5,7 @@ import { carMatchesCategory } from "@/lib/carUtils";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useCountUp } from "@/hooks/useCountUp";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Car, Sparkles, CircleDollarSign, Truck, type LucideIcon } from "lucide-react";
+import { Car, Sparkles, IdCard, Truck, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STAT_ICON_ANIM: Record<string, CSSProperties> = {
@@ -13,6 +13,7 @@ const STAT_ICON_ANIM: Record<string, CSSProperties> = {
   check: { animation: "adminStatCheckPop 1.4s ease-in-out infinite", willChange: "transform" },
   sparkle: { animation: "adminStatSparkle 1.3s ease-in-out infinite", willChange: "transform" },
   money: { animation: "adminStatCoin 1.5s ease-in-out infinite", willChange: "transform" },
+  plate: { animation: "adminStatCoin 1.5s ease-in-out infinite", willChange: "transform" },
 };
 
 function AdminStatStyles() {
@@ -116,7 +117,6 @@ const AdminStatCards = () => {
     () => (cars ?? []).filter((c) => !String(c.id).startsWith("mock-")),
     [cars]
   );
-  const totalValue = realCars.reduce((sum, c) => sum + c.price, 0);
 
   const isActive = (to: string) => {
     const [path, query = ""] = to.split("?");
@@ -163,14 +163,13 @@ const AdminStatCards = () => {
           onGo={go}
         />
         <StatCard
-          label={t("admin.cars.value")}
-          value={totalValue}
-          icon={CircleDollarSign}
+          label={t("admin.cars.plate")}
+          value={realCars.filter((c) => carMatchesCategory(c, "plate")).length}
+          icon={IdCard}
           tone="text-sky-600 bg-sky-500/10"
-          iconKey="money"
-          prefix="$"
-          to="/admin/reports"
-          active={pathname.startsWith("/admin/reports")}
+          iconKey="plate"
+          to="/admin/cars?status=plate"
+          active={isActive("/admin/cars?status=plate")}
           onGo={go}
         />
       </div>

@@ -15,10 +15,11 @@ import BodyTypeSearch from "@/components/BodyTypeSearch";
 import FilterPanel, { FilterState, defaultFilters } from "@/components/FilterPanel";
 import InventoryToolbar, { SortOption, ViewMode } from "@/components/InventoryToolbar";
 import {
-  carMatchesBodySearch,
-  carMatchesBodyType,
+  carMatchesBrand,
+  carMatchesBrandSearch,
   carMatchesCategory,
-  listBodyTypes,
+  extractBrand,
+  listCarBrands,
   normalizeBodyType,
 } from "@/lib/carUtils";
 import { cn } from "@/lib/utils";
@@ -35,8 +36,8 @@ const AdminCars = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<CarStatus | "all">("all");
   const [visibleFilter, setVisibleFilter] = useState("all");
-  const [activeBodyType, setActiveBodyType] = useState("all");
-  const [bodySearchQuery, setBodySearchQuery] = useState("");
+  const [brandFilter, setBrandFilter] = useState<string | null>(null);
+  const [brandSearchQuery, setBrandSearchQuery] = useState("");
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
@@ -81,7 +82,7 @@ const AdminCars = () => {
     );
   }, [realCars, priceRange]);
 
-  const matchesBaseFilters = (car: CarType) => {
+  const matchesWithoutBrand = (car: CarType) => {
     const q = search.trim().toLowerCase();
     const bodyNorm = normalizeBodyType(car.bodyType);
     const matchesSearch =
@@ -98,16 +99,22 @@ const AdminCars = () => {
     const matchesFuelType = filters.fuelType === null || car.fuelType === filters.fuelType;
     const matchesColor = filters.color === null || car.color === filters.color;
     const matchesPrice = car.price >= filters.priceMin && car.price <= filters.priceMax;
-    const matchesBodySearch = carMatchesBodySearch(car, bodySearchQuery, (type) => bodyTypeLabel(type, t));
     const matchesVisible =
       visibleFilter === "all" ||
       (visibleFilter === "visible" && car.isActive) ||
       (visibleFilter === "hidden" && !car.isActive);
-    return matchesSearch && matchesYearMin && matchesYearMax && matchesFuelType && matchesColor && matchesPrice && matchesBodySearch && matchesVisible;
+    return matchesSearch && matchesYearMin && matchesYearMax && matchesFuelType && matchesColor && matchesPrice && matchesVisible;
+  };
+
+  const matchesBaseFilters = (car: CarType) => {
+    const matchesBrand = brandFilter
+      ? carMatchesBrand(car.name, brandFilter)
+      : carMatchesBrandSearch(car, brandSearchQuery);
+    return matchesWithoutBrand(car) && matchesBrand;
   };
 
   const categoryCounts = useMemo(() => {
-    const base = realCars.filter((car) => matchesBaseFilters(car) && carMatchesBodyType(car, activeBodyType));
+    const base = realCars.filter((car) => matchesBaseFilters(car));
     const tallies = { all: base.length, onroad: 0, ready: 0, luxury: 0, plate: 0 };
     for (const car of base) {
       if (carMatchesCategory(car, "onroad")) tallies.onroad++;
@@ -116,31 +123,36 @@ const AdminCars = () => {
       if (carMatchesCategory(car, "plate")) tallies.plate++;
     }
     return tallies;
-  }, [realCars, search, filters, activeBodyType, bodySearchQuery, visibleFilter, t]);
+  }, [realCars, search, filters, brandFilter, brandSearchQuery, visibleFilter, t]);
 
-  const bodyTypeCounts = useMemo(() => {
+  const brandCounts = useMemo(() => {
     const base = realCars.filter((car) => {
       const matchesCategory = carMatchesCategory(car, statusFilter);
-      return matchesBaseFilters(car) && matchesCategory;
+      return matchesWithoutBrand(car) && matchesCategory;
     });
-    const counts: Record<string, number> = { all: base.length };
+    const lower: Record<string, number> = {};
     for (const car of base) {
-      const type = normalizeBodyType(car.bodyType);
-      if (!type) continue;
-      counts[type] = (counts[type] ?? 0) + 1;
+      const brand = extractBrand(car.name).trim();
+      if (!brand) continue;
+      const key = brand.toLowerCase();
+      lower[key] = (lower[key] ?? 0) + 1;
+    }
+    const counts: Record<string, number> = { all: base.length };
+    for (const brand of listCarBrands(realCars)) {
+      counts[brand] = lower[brand.toLowerCase()] ?? 0;
     }
     return counts;
-  }, [realCars, search, filters, statusFilter, bodySearchQuery, visibleFilter, t]);
+  }, [realCars, search, filters, statusFilter, visibleFilter, t]);
 
-  const bodyTypes = useMemo(
-    () => listBodyTypes(realCars).filter((type) => (bodyTypeCounts[type] ?? 0) > 0 || type === activeBodyType),
-    [realCars, bodyTypeCounts, activeBodyType],
+  const brands = useMemo(
+    () => listCarBrands(realCars).filter((brand) => (brandCounts[brand] ?? 0) > 0 || brand === brandFilter),
+    [realCars, brandCounts, brandFilter],
   );
 
   const filteredCars = useMemo(() => {
     let result = realCars.filter((car) => {
       const matchesCategory = carMatchesCategory(car, statusFilter);
-      return matchesBaseFilters(car) && matchesCategory && carMatchesBodyType(car, activeBodyType);
+      return matchesBaseFilters(car) && matchesCategory;
     });
     switch (sortBy) {
       case "price-asc": result = result.sort((a, b) => a.price - b.price); break;
@@ -150,7 +162,7 @@ const AdminCars = () => {
       default: break;
     }
     return result;
-  }, [realCars, search, statusFilter, activeBodyType, bodySearchQuery, filters, visibleFilter, sortBy, t]);
+  }, [realCars, search, statusFilter, brandFilter, brandSearchQuery, filters, visibleFilter, sortBy, t]);
 
   const isPriceDefault = filters.priceMin === priceRange.min && filters.priceMax === priceRange.max;
 
@@ -158,8 +170,8 @@ const AdminCars = () => {
     setSearch("");
     setStatusFilter("all");
     setVisibleFilter("all");
-    setActiveBodyType("all");
-    setBodySearchQuery("");
+    setBrandFilter(null);
+    setBrandSearchQuery("");
     setFilters({ ...defaultFilters, priceMin: priceRange.min, priceMax: priceRange.max });
     setSearchParams({}, { replace: true });
   };
@@ -185,11 +197,11 @@ const AdminCars = () => {
     statusFilter !== "all"
       ? { key: "status", label: t(`category.${statusFilter}` as "category.ready"), onClear: () => setStatusTab("all") }
       : null,
-    activeBodyType !== "all"
-      ? { key: "body", label: bodyTypeLabel(activeBodyType, t), onClear: () => setActiveBodyType("all") }
+    brandFilter
+      ? { key: "brand", label: brandFilter, onClear: () => setBrandFilter(null) }
       : null,
-    bodySearchQuery.trim()
-      ? { key: "bodySearch", label: bodySearchQuery.trim(), onClear: () => setBodySearchQuery("") }
+    brandSearchQuery.trim()
+      ? { key: "brandSearch", label: brandSearchQuery.trim(), onClear: () => setBrandSearchQuery("") }
       : null,
     visibleFilter !== "all"
       ? {
@@ -255,17 +267,17 @@ const AdminCars = () => {
             />
           </div>
           <BodyTypeSearch
-            value={activeBodyType}
-            onChange={(type) => {
-              setActiveBodyType(type);
-              setBodySearchQuery("");
+            value={brandFilter ?? "all"}
+            onChange={(brand) => {
+              setBrandFilter(brand === "all" ? null : brand);
+              setBrandSearchQuery("");
             }}
             onSearchText={(text) => {
-              setActiveBodyType("all");
-              setBodySearchQuery(text);
+              setBrandFilter(null);
+              setBrandSearchQuery(text);
             }}
-            bodyTypes={bodyTypes}
-            bodyTypeCounts={bodyTypeCounts}
+            bodyTypes={brands}
+            bodyTypeCounts={brandCounts}
           />
           <Button size="lg" variant="outline" className="h-11 shrink-0 gap-2 border-border/80 px-5" onClick={() => setFilterPanelOpen(true)}>
             <SlidersHorizontal className="h-4 w-4" />

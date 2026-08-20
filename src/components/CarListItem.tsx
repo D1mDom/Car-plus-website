@@ -10,7 +10,8 @@ import CarDetailDialog from "@/components/CarDetailDialog";
 import SoldOutBadge from "@/components/SoldOutBadge";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useIsCarSold } from "@/hooks/useSoldCarIds";
-import { onImgError } from "@/lib/imageFallback";
+import { getCarCoverImage } from "@/lib/carUtils";
+import SafeImg from "@/components/SafeImg";
 import { cn } from "@/lib/utils";
 import { formatCarIdentity } from "@/lib/carCodeUtils";
 import type { TranslationKey } from "@/i18n/translations";
@@ -37,10 +38,9 @@ const CarListItem = ({ car, onEdit }: CarListItemProps) => {
           className="relative h-44 w-full flex-shrink-0 overflow-hidden text-left sm:h-auto sm:w-64"
           aria-label={t("card.preview")}
         >
-          <img
-            src={car.image}
+          <SafeImg
+            src={getCarCoverImage(car)}
             alt={car.name}
-            onError={onImgError}
             className={cn(
               "h-full w-full object-cover transition-transform duration-500 group-hover:scale-110",
               sold && "grayscale",

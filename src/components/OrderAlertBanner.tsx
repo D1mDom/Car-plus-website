@@ -5,6 +5,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { Button } from "@/components/ui/button";
 import { CUSTOMER_NOTIFY_STATUSES } from "@/lib/orderFlow";
 import { cn } from "@/lib/utils";
+import SafeImg from "@/components/SafeImg";
 import type { TranslationKey } from "@/i18n/translations";
 
 const bannerTone = (status?: string) => {
@@ -41,7 +42,7 @@ const OrderAlertBanner = () => {
       )}
     >
       {alert.carImage ? (
-        <img
+        <SafeImg
           src={alert.carImage}
           alt=""
           className="hidden h-10 w-14 shrink-0 rounded-md object-cover ring-1 ring-white/25 sm:block"
