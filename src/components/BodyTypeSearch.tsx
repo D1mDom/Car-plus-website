@@ -126,8 +126,9 @@ const BodyTypeSearch = ({ value, onChange, onSearchText, bodyTypes, bodyTypeCoun
       </PopoverAnchor>
       <PopoverContent
         align="start"
-        className="w-[var(--radix-popper-anchor-width)] min-w-[16rem] p-1"
+        className="w-[var(--radix-popper-anchor-width)] min-w-[16rem] overflow-hidden p-0"
         onOpenAutoFocus={(e) => e.preventDefault()}
+        onWheel={(e) => e.stopPropagation()}
         onInteractOutside={(e) => {
           const target = e.target as HTMLElement | null;
           if (target?.closest("[data-body-type-search]")) e.preventDefault();
@@ -137,7 +138,8 @@ const BodyTypeSearch = ({ value, onChange, onSearchText, bodyTypes, bodyTypeCoun
         {options.length === 0 ? (
           <p className="px-3 py-2 text-sm text-muted-foreground">{t("inventory.empty")}</p>
         ) : (
-          options.map((option) => {
+          <div className="max-h-64 overflow-y-auto overscroll-contain p-1">
+          {options.map((option) => {
             const active = value === option.value;
             return (
               <button
@@ -158,7 +160,8 @@ const BodyTypeSearch = ({ value, onChange, onSearchText, bodyTypes, bodyTypeCoun
                 )}
               </button>
             );
-          })
+          })}
+          </div>
         )}
       </PopoverContent>
     </Popover>
