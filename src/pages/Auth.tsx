@@ -8,20 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import Header from "@/components/Header";
 import logo from "@/assets/logo.png";
 import { CheckCircle2, Eye, EyeOff } from "lucide-react";
+import DigitalAlert from "@/components/DigitalAlert";
 
-const REMEMBER_EMAIL_KEY = "carplus-remember-email";
+import { loadRememberedLogin, persistRememberedLogin } from "@/lib/rememberLogin";
+import ForgotPasswordFlow from "@/components/ForgotPasswordFlow";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
@@ -34,20 +29,16 @@ const Auth = () => {
   const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [successKind, setSuccessKind] = useState<"login" | "signup">("login");
-  const [rememberEmail, setRememberEmail] = useState(true);
-  const { signIn, signUp, resetPassword, user } = useAuth();
+  const [rememberMe, setRememberMe] = useState(true);
+  const { signIn, signUp, user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(REMEMBER_EMAIL_KEY);
-      if (saved) {
-        setEmail(saved);
-        setRememberEmail(true);
-      }
-    } catch { /* ignore */ }
+    const saved = loadRememberedLogin("website");
+    setRememberMe(saved.remember);
+    if (saved.email) setEmail(saved.email);
   }, []);
 
   const cleanEmail = (v: string) => v.replace(/[^a-zA-Z0-9@._%+-]/g, "");
@@ -58,15 +49,10 @@ const Auth = () => {
   const passwordSchema = z.string().min(6, t("auth.errorPasswordMin"));
 
   useEffect(() => {
-    if (user && !successOpen) navigate("/");
-  }, [user, navigate, successOpen]);
+    if (user && !successOpen && !showReset) navigate("/");
+  }, [user, navigate, successOpen, showReset]);
 
-  const persistEmail = (value: string) => {
-    try {
-      if (rememberEmail) localStorage.setItem(REMEMBER_EMAIL_KEY, value);
-      else localStorage.removeItem(REMEMBER_EMAIL_KEY);
-    } catch { /* ignore */ }
-  };
+  const persistEmail = (value: string) => persistRememberedLogin("website", value, rememberMe);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,30 +122,6 @@ const Auth = () => {
     setSuccessOpen(true);
   };
 
-  const handleResetRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      emailSchema.parse(email);
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        toast({ title: t("auth.validationError"), description: err.errors[0].message, variant: "destructive" });
-        return;
-      }
-    }
-    setLoading(true);
-    const { error } = await resetPassword(email);
-    setLoading(false);
-    if (error) {
-      toast({ title: t("auth.resetFailed"), description: error.message, variant: "destructive" });
-      return;
-    }
-    toast({
-      title: t("auth.resetEmailSent"),
-      description: t("auth.resetEmailSentDesc", { email }),
-    });
-    setShowReset(false);
-  };
-
   const closeSuccess = () => {
     setSuccessOpen(false);
     navigate("/");
@@ -177,37 +139,23 @@ const Auth = () => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="mb-6 grid w-full grid-cols-2">
+              <TabsList className={showReset ? "mb-6 hidden" : "mb-6 grid w-full grid-cols-2"}>
                 <TabsTrigger value="signin">{t("auth.signIn")}</TabsTrigger>
                 <TabsTrigger value="signup">{t("auth.signUp")}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin">
                 {showReset ? (
-                  <form onSubmit={handleResetRequest} className="space-y-4">
-                    <p className="text-sm text-muted-foreground">{t("auth.resetIntro")}</p>
-                    <div className="space-y-2">
-                      <Label htmlFor="reset-email">{t("auth.email")}</Label>
-                      <Input
-                        id="reset-email"
-                        type="email"
-                        placeholder="you@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(cleanEmail(e.target.value))}
-                        required
-                      />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={loading}>
-                      {loading ? t("auth.sendingReset") : t("auth.sendResetLink")}
-                    </Button>
-                    <button
-                      type="button"
-                      onClick={() => setShowReset(false)}
-                      className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      {t("auth.backToSignIn")}
-                    </button>
-                  </form>
+                  <ForgotPasswordFlow
+                    email={email}
+                    onBack={() => setShowReset(false)}
+                    onDone={(newPassword) => {
+                      persistEmail(email);
+                      setPassword(newPassword);
+                      setShowReset(false);
+                    }}
+                    idPrefix="auth-page"
+                  />
                 ) : (
                   <form onSubmit={handleSignIn} className="space-y-4">
                     <div className="space-y-2">
@@ -226,7 +174,18 @@ const Auth = () => {
                         <Label htmlFor="signin-password">{t("auth.password")}</Label>
                         <button
                           type="button"
-                          onClick={() => setShowReset(true)}
+                          onClick={() => {
+                            try {
+                              emailSchema.parse(email);
+                              setShowReset(true);
+                            } catch {
+                              toast({
+                                title: t("auth.validationError"),
+                                description: t("auth.errorEmailRequired"),
+                                variant: "destructive",
+                              });
+                            }
+                          }}
                           className="text-xs text-primary hover:underline"
                         >
                           {t("auth.forgotPassword")}
@@ -256,8 +215,8 @@ const Auth = () => {
                     <div className="flex items-center gap-2">
                       <Checkbox
                         id="remember-email"
-                        checked={rememberEmail}
-                        onCheckedChange={(v) => setRememberEmail(v === true)}
+                        checked={rememberMe}
+                        onCheckedChange={(v) => setRememberMe(v === true)}
                       />
                       <Label htmlFor="remember-email" className="cursor-pointer text-sm font-normal">
                         {t("auth.rememberMe")}
@@ -357,31 +316,17 @@ const Auth = () => {
         </Card>
       </main>
 
-      <Dialog
+      <DigitalAlert
         open={successOpen}
         onOpenChange={(o) => {
           if (!o) closeSuccess();
         }}
-      >
-        <DialogContent className="max-w-sm sm:rounded-2xl">
-          <div className="flex flex-col items-center gap-4 py-2 text-center">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
-              <CheckCircle2 className="h-7 w-7" />
-            </span>
-            <DialogHeader className="space-y-2 text-center sm:text-center">
-              <DialogTitle className="font-heading text-xl">
-                {successKind === "login" ? t("auth.loginSuccessTitle") : t("auth.signupSuccessTitle")}
-              </DialogTitle>
-              <DialogDescription>
-                {successKind === "login" ? t("auth.loginSuccessBody") : t("auth.signupSuccessBody")}
-              </DialogDescription>
-            </DialogHeader>
-            <Button className="mt-1 w-full" onClick={closeSuccess}>
-              {t("auth.ok")}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        tone="success"
+        title={successKind === "login" ? t("auth.loginSuccessTitle") : t("auth.signupSuccessTitle")}
+        description={successKind === "login" ? t("auth.loginSuccessBody") : t("auth.signupSuccessBody")}
+        icon={<CheckCircle2 className="h-5 w-5" />}
+        primary={{ label: t("auth.ok"), onClick: closeSuccess }}
+      />
     </div>
   );
 };

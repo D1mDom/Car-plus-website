@@ -2,6 +2,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Heart, Megaphone, Menu, Package, Car, Home, Info, Phone, Send } from "lucide-react";
 import CustomerNotifications from "@/components/CustomerNotifications";
 import SiteSettingsMenu from "@/components/SiteSettingsMenu";
+import AppDataMenu from "@/components/AppDataMenu";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import logo from "@/assets/logo.png";
@@ -167,6 +168,7 @@ const Header = () => {
               </Button>
 
               <CustomerNotifications />
+              <AppDataMenu scope="site" tone="site" />
               <SiteSettingsMenu />
 
               <UserMenu

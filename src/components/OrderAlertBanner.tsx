@@ -11,12 +11,12 @@ import type { TranslationKey } from "@/i18n/translations";
 const bannerTone = (status?: string) => {
   switch (status) {
     case "cancelled":
-      return "border-red-700/20 from-red-600 to-red-700";
+      return "border-red-800/20 bg-red-700";
     case "confirmed":
     case "processing":
-      return "border-[#174080]/20 from-[#174080] to-[#1a4a93]";
+      return "border-[#174080]/20 bg-[#174080]";
     default:
-      return "border-emerald-700/20 from-emerald-600 to-emerald-700";
+      return "border-emerald-800/20 bg-emerald-700";
   }
 };
 
@@ -37,7 +37,7 @@ const OrderAlertBanner = () => {
     <div
       role="status"
       className={cn(
-        "flex w-full items-center gap-3 border-b bg-gradient-to-r px-[10px] py-2.5 text-white sm:px-4",
+        "flex w-full items-center gap-3 border-b px-[10px] py-2.5 text-white sm:px-4",
         bannerTone(status)
       )}
     >

@@ -3,14 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, ChevronLeft, ChevronRight, LogIn, Search, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import AuthDialog from "@/components/AuthDialog";
+import DigitalAlert from "@/components/DigitalAlert";
 import { useAuth } from "@/hooks/useAuth";
 import { useBanners } from "@/hooks/useBanners";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -216,24 +210,15 @@ const HeroSection = () => {
         onSignupSuccess={() => setLoginSuccessOpen(true)}
       />
 
-      <Dialog open={loginSuccessOpen} onOpenChange={setLoginSuccessOpen}>
-        <DialogContent className="max-w-sm sm:rounded-2xl">
-          <div className="flex flex-col items-center gap-4 py-2 text-center">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
-              <CheckCircle2 className="h-7 w-7" />
-            </span>
-            <DialogHeader className="space-y-2 text-center sm:text-center">
-              <DialogTitle className="font-heading text-xl">
-                {t("auth.loginSuccessTitle")}
-              </DialogTitle>
-              <DialogDescription>{t("auth.loginSuccessBody")}</DialogDescription>
-            </DialogHeader>
-            <Button className="mt-1 w-full" onClick={() => setLoginSuccessOpen(false)}>
-              {t("auth.ok")}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <DigitalAlert
+        open={loginSuccessOpen}
+        onOpenChange={setLoginSuccessOpen}
+        tone="success"
+        title={t("auth.loginSuccessTitle")}
+        description={t("auth.loginSuccessBody")}
+        icon={<CheckCircle2 className="h-5 w-5" />}
+        primary={{ label: t("auth.ok"), onClick: () => setLoginSuccessOpen(false) }}
+      />
     </section>
   );
 };

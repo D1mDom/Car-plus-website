@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import { z } from "zod";
 import logo from "@/assets/logo.png";
+import ForgotPasswordFlow from "@/components/ForgotPasswordFlow";
+import { loadRememberedLogin, persistRememberedLogin } from "@/lib/rememberLogin";
 
 const emailSchema = z.string().email();
 const passwordSchema = z.string().min(6);
@@ -42,6 +45,8 @@ const AuthDialog = ({
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
+  const [showReset, setShowReset] = useState(false);
 
   const cleanEmail = (v: string) => v.replace(/[^a-zA-Z0-9@._%+-]/g, "");
   const cleanPassword = (v: string) => v.replace(/[^\x20-\x7E]/g, "");
@@ -49,7 +54,6 @@ const AuthDialog = ({
   const cleanName = (v: string) => v.replace(/[^\p{L}\p{M}\s'.\-]/gu, "").slice(0, 120);
 
   const resetForm = () => {
-    setEmail("");
     setPassword("");
     setConfirmPassword("");
     setFullName("");
@@ -57,7 +61,15 @@ const AuthDialog = ({
     setShowPw(false);
     setLoading(false);
     setTab("signin");
+    setShowReset(false);
   };
+
+  useEffect(() => {
+    if (!open) return;
+    const saved = loadRememberedLogin("website");
+    setRememberMe(saved.remember);
+    if (saved.email) setEmail(saved.email);
+  }, [open]);
 
   const handleOpenChange = (next: boolean) => {
     if (!next) resetForm();
@@ -85,7 +97,9 @@ const AuthDialog = ({
       );
       return;
     }
+    persistRememberedLogin("website", email, rememberMe);
     resetForm();
+    if (!rememberMe) setEmail("");
     onOpenChange(false);
     onLoginSuccess?.();
   };
@@ -117,7 +131,9 @@ const AuthDialog = ({
       setError(err.message);
       return;
     }
+    persistRememberedLogin("website", email, rememberMe);
     resetForm();
+    if (!rememberMe) setEmail("");
     onOpenChange(false);
     onSignupSuccess?.();
   };
@@ -132,7 +148,7 @@ const AuthDialog = ({
         </DialogHeader>
 
         <Tabs value={tab} onValueChange={(v) => { setTab(v); setError(""); }} className="w-full">
-          <TabsList className="mb-4 grid w-full grid-cols-2">
+          <TabsList className={showReset ? "mb-4 hidden" : "mb-4 grid w-full grid-cols-2"}>
             <TabsTrigger value="signin">{t("auth.signIn")}</TabsTrigger>
             <TabsTrigger value="signup">{t("auth.signUp")}</TabsTrigger>
           </TabsList>
@@ -144,6 +160,18 @@ const AuthDialog = ({
           )}
 
           <TabsContent value="signin" className="mt-0">
+            {showReset ? (
+              <ForgotPasswordFlow
+                email={email}
+                onBack={() => setShowReset(false)}
+                onDone={(newPassword) => {
+                  persistRememberedLogin("website", email, rememberMe);
+                  setPassword(newPassword);
+                  setShowReset(false);
+                }}
+                idPrefix="auth-dialog"
+              />
+            ) : (
             <form onSubmit={handleSignIn} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="auth-dialog-email">{t("auth.email")}</Label>
@@ -158,7 +186,24 @@ const AuthDialog = ({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="auth-dialog-password">{t("auth.password")}</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="auth-dialog-password">{t("auth.password")}</Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try {
+                        emailSchema.parse(email);
+                        setError("");
+                        setShowReset(true);
+                      } catch {
+                        setError(t("auth.errorEmailRequired"));
+                      }
+                    }}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    {t("auth.forgotPassword")}
+                  </button>
+                </div>
                 <div className="relative">
                   <Input
                     id="auth-dialog-password"
@@ -181,11 +226,22 @@ const AuthDialog = ({
                   </button>
                 </div>
               </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="auth-dialog-remember"
+                  checked={rememberMe}
+                  onCheckedChange={(v) => setRememberMe(v === true)}
+                />
+                <Label htmlFor="auth-dialog-remember" className="cursor-pointer text-sm font-normal">
+                  {t("auth.rememberMe")}
+                </Label>
+              </div>
               <Button type="submit" className="w-full gap-2" disabled={loading}>
                 <LogIn className="h-4 w-4" />
                 {loading ? t("auth.signingIn") : t("auth.signIn")}
               </Button>
             </form>
+            )}
           </TabsContent>
 
           <TabsContent value="signup" className="mt-0">

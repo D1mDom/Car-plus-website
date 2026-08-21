@@ -11,7 +11,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile, type Profile } from "@/hooks/useProfile";
 import { useProfileTheme } from "@/hooks/useProfileTheme";
 import { useLanguage } from "@/hooks/useLanguage";
-import { PROFILE_THEME_IDS, PROFILE_THEMES } from "@/lib/profileThemes";
+import { PROFILE_THEME_IDS, PROFILE_THEME_STORAGE, PROFILE_THEMES, type ProfileThemeId } from "@/lib/profileThemes";
+import { syncAuthUserMetadata } from "@/lib/userProfileBootstrap";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -38,7 +39,6 @@ import {
   User,
   Send,
   Shield,
-  Globe,
   Package,
   Heart,
   Car,
@@ -49,8 +49,8 @@ import {
   Camera,
   Trash2,
   Sparkles,
-  Palette,
   Check,
+  type LucideIcon,
 } from "lucide-react";
 import type { TranslationKey } from "@/i18n/translations";
 
@@ -62,11 +62,11 @@ type SectionId =
   | "shortcuts"
   | "account";
 
-const NAV: { id: SectionId; icon: typeof User; label: TranslationKey }[] = [
+const NAV: { id: SectionId; icon: LucideIcon; emoji?: string; label: TranslationKey }[] = [
   { id: "personal", icon: User, label: "profile.nav.personal" },
   { id: "contact", icon: Send, label: "profile.nav.contact" },
   { id: "security", icon: Shield, label: "profile.nav.security" },
-  { id: "preferences", icon: Globe, label: "profile.nav.preferences" },
+  { id: "preferences", icon: Sparkles, emoji: "🥰", label: "profile.nav.preferences" },
   { id: "shortcuts", icon: Package, label: "profile.nav.shortcuts" },
   { id: "account", icon: LogOut, label: "profile.nav.account" },
 ];
@@ -83,10 +83,23 @@ const SHORTCUTS: {
   { to: "/contact", icon: MessageCircle, title: "profile.shortcut.contact", desc: "profile.shortcut.contactDesc" },
 ];
 
+const THEME_EMOJIS: Record<ProfileThemeId, string> = {
+  cute: "🥰",
+  clean: "🦖",
+  ocean: "🌊",
+  sunset: "🌅",
+  matcha: "🌿",
+  lavender: "🐰",
+  honey: "🐤",
+  candy: "🍬",
+  midnight: "🗻",
+};
+
 const Profile = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const { data: profile, isLoading, save, uploadAvatarFile, uploadCoverFile } = useProfile();
-  const { themeId, theme, setTheme } = useProfileTheme();
+  const { themeId, theme, coverMode, isDirty: themeDirty, setTheme, setCustomCover, saveTheme, hydrateTheme } =
+    useProfileTheme();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -100,6 +113,7 @@ const Profile = () => {
   const [pendingRemoveAvatar, setPendingRemoveAvatar] = useState(false);
   const [pendingRemoveCover, setPendingRemoveCover] = useState(false);
   const [savingPhotos, setSavingPhotos] = useState(false);
+  const [savingPrefs, setSavingPrefs] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [logoutSuccessOpen, setLogoutSuccessOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -161,6 +175,21 @@ const Profile = () => {
     );
     photosReady.current = true;
   }, [user?.id, user?.user_metadata, isLoading, profile]);
+
+  useEffect(() => {
+    const meta = user?.user_metadata ?? {};
+    const metaTheme = meta.profile_theme;
+    if (typeof metaTheme !== "string" || !PROFILE_THEME_IDS.includes(metaTheme as ProfileThemeId)) {
+      return;
+    }
+    try {
+      if (localStorage.getItem(PROFILE_THEME_STORAGE)) return;
+    } catch {
+      /* ignore */
+    }
+    const metaMode = meta.profile_cover_mode === "custom" ? "custom" : "theme";
+    hydrateTheme(metaTheme as ProfileThemeId, metaMode);
+  }, [hydrateTheme, user?.id, user?.user_metadata]);
 
   const onPersonalSaved = useCallback((saved: Profile) => {
     if (avatarBlobUrl.current) URL.revokeObjectURL(avatarBlobUrl.current);
@@ -244,6 +273,7 @@ const Profile = () => {
     setPendingCoverFile(file);
     setPendingRemoveCover(false);
     setCoverUrl(preview);
+    setCustomCover();
     if (coverFileRef.current) coverFileRef.current.value = "";
   };
 
@@ -253,6 +283,7 @@ const Profile = () => {
     setPendingCoverFile(null);
     setPendingRemoveCover(true);
     setCoverUrl("");
+    setTheme(themeId);
   };
 
   const onCancelPhotos = () => {
@@ -288,6 +319,7 @@ const Profile = () => {
 
       const saved = await save.mutateAsync(profileSaveBase(nextAvatar, nextCover));
       onPersonalSaved(saved);
+      saveTheme(themeId, pendingRemoveCover && !pendingCoverFile ? "theme" : "custom");
 
       if (didRemoveAvatar && !didUploadCover) toast.success(t("profile.avatarRemoved"));
       else if (didRemoveCover && !didUploadAvatar) toast.success(t("profile.coverRemoved"));
@@ -318,6 +350,26 @@ const Profile = () => {
     return { avatar_url: nextAvatar || null, cover_url: nextCover || null };
   };
 
+  const onSelectTheme = (id: ProfileThemeId) => {
+    setTheme(id);
+  };
+
+  const onSavePreferences = async () => {
+    setSavingPrefs(true);
+    try {
+      saveTheme(themeId, "theme");
+      await syncAuthUserMetadata({
+        profile_theme: themeId,
+        profile_cover_mode: "theme",
+      });
+      toast.success(t("profile.theme.saved"));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("profile.saveFail"));
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
+
   const handleLogout = async () => {
     setLoggingOut(true);
     await signOut();
@@ -334,6 +386,9 @@ const Profile = () => {
       })
     : null;
 
+  const showingThemeWallpaper = Boolean(theme.wallpaper) && coverMode === "theme";
+  const coverSrc = showingThemeWallpaper ? theme.wallpaper || "" : coverUrl;
+
   return (
     <div className={cn("min-h-screen transition-colors duration-300", theme.page)}>
       <Header />
@@ -343,16 +398,19 @@ const Profile = () => {
           <div
             className={cn(
               "group relative h-[200px] overflow-hidden sm:h-[260px] md:h-[320px]",
-              !coverUrl && theme.coverDefault,
+              !coverSrc && theme.coverDefault,
             )}
           >
-            {coverUrl ? (
+            {coverSrc ? (
               <img
-                key={coverUrl}
-                src={coverUrl}
+                key={coverSrc}
+                src={coverSrc}
                 alt=""
-                onError={coverUrl.startsWith("blob:") ? undefined : onImgError}
-                className="absolute inset-0 h-full w-full object-cover"
+                onError={showingThemeWallpaper || coverUrl.startsWith("blob:") ? undefined : onImgError}
+                className={cn(
+                  "absolute inset-0 h-full w-full object-cover",
+                  showingThemeWallpaper && theme.wallpaperPosition,
+                )}
               />
             ) : (
               <div className="pointer-events-none absolute inset-0 opacity-40">
@@ -371,7 +429,7 @@ const Profile = () => {
                 <Camera className="h-4 w-4" />
                 {t("profile.editCover")}
               </button>
-              {coverUrl ? (
+              {coverUrl && !showingThemeWallpaper ? (
                 <button
                   type="button"
                   disabled={savingPhotos}
@@ -509,7 +567,7 @@ const Profile = () => {
 
           {/* Profile tabs */}
           <nav className={cn("mx-3 mb-3 mt-1 flex gap-1 overflow-x-auto sm:mx-4", theme.tabWrap)}>
-            {NAV.map(({ id, icon: Icon, label }) => (
+            {NAV.map(({ id, icon: Icon, emoji, label }) => (
               <button
                 key={id}
                 type="button"
@@ -519,7 +577,13 @@ const Profile = () => {
                   section === id ? theme.tabActive : theme.tabIdle,
                 )}
               >
-                <Icon className="h-4 w-4" />
+                {emoji ? (
+                  <span className="text-[1.05rem] leading-none" aria-hidden>
+                    {emoji}
+                  </span>
+                ) : (
+                  <Icon className="h-4 w-4" />
+                )}
                 {t(label)}
               </button>
             ))}
@@ -587,54 +651,118 @@ const Profile = () => {
               {section === "preferences" && (
                 <div className={cn("space-y-5 p-5 sm:p-6", theme.card)}>
                   <div className={cn("border-b pb-4", theme.cardHeader)}>
-                    <h2 className="font-heading text-lg font-semibold text-foreground">
-                      {t("profile.preferencesTitle")}
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">{t("profile.preferencesDesc")}</p>
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-100 to-sky-100 text-2xl shadow-sm">
+                        🥰
+                      </span>
+                      <div>
+                        <h2 className="font-heading text-lg font-semibold text-foreground">
+                          {t("profile.preferencesTitle")}
+                        </h2>
+                        <p className="mt-0.5 text-sm text-muted-foreground">{t("profile.preferencesDesc")}</p>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/20 p-4">
-                    <p className="text-sm font-semibold text-foreground">{t("profile.appearance")}</p>
-                    <p className="text-xs text-muted-foreground">{t("profile.appearanceHint")}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-lg dark:bg-amber-950/40">
+                        ☀️
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{t("profile.appearance")}</p>
+                        <p className="text-xs text-muted-foreground">{t("profile.appearanceHint")}</p>
+                      </div>
+                    </div>
                     <ThemeModeToggle />
                   </div>
 
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <Palette className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm font-semibold text-foreground">{t("profile.theme.title")}</p>
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-lg dark:bg-violet-950/40">
+                        🎨
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{t("profile.theme.title")}</p>
+                        <p className="text-xs text-muted-foreground">{t("profile.theme.hint")}</p>
+                      </div>
                     </div>
-                    <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                       {PROFILE_THEME_IDS.map((id) => {
                         const item = PROFILE_THEMES[id];
                         const selected = themeId === id;
+                        const emoji = THEME_EMOJIS[id];
                         return (
                           <button
                             key={id}
                             type="button"
-                            onClick={() => setTheme(id)}
+                            onClick={() => onSelectTheme(id)}
                             className={cn(
                               "overflow-hidden rounded-2xl border-2 text-left transition-all",
                               selected
-                                ? "border-[#174080] shadow-md ring-2 ring-[#174080]/20"
+                                ? cn("shadow-md ring-2", item.selectedRing)
                                 : "border-border/70 hover:border-[#174080]/40 hover:shadow-sm",
                             )}
                           >
-                            <div className={cn("h-16 bg-gradient-to-br", item.preview)} />
+                            <div className={cn("relative h-[4.25rem] overflow-hidden bg-gradient-to-br", item.preview)}>
+                              {item.wallpaper ? (
+                                <img
+                                  src={item.wallpaper}
+                                  alt=""
+                                  className={cn(
+                                    "absolute inset-0 h-full w-full object-cover",
+                                    item.wallpaperPosition,
+                                  )}
+                                />
+                              ) : (
+                                <div className={cn("absolute inset-0 bg-gradient-to-br", item.preview)} />
+                              )}
+                              <span className="absolute left-2.5 top-2.5 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-xl shadow-sm">
+                                {emoji}
+                              </span>
+                              {selected && (
+                                <span className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-sm">
+                                  <Check className={cn("h-3.5 w-3.5", item.iconColor)} />
+                                </span>
+                              )}
+                            </div>
                             <div className="p-3">
-                              <p className="text-sm font-semibold text-foreground">{t(item.labelKey)}</p>
+                              <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                                <span className="text-base leading-none">{emoji}</span>
+                                {t(item.labelKey)}
+                              </p>
                               <p className="mt-0.5 text-xs text-muted-foreground">{t(item.descKey)}</p>
                             </div>
                           </button>
                         );
                       })}
                     </div>
+                    <Button
+                      type="button"
+                      className="h-11 w-full gap-2 sm:w-auto"
+                      disabled={savingPrefs || !themeDirty}
+                      onClick={() => void onSavePreferences()}
+                    >
+                      {savingPrefs || save.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          {t("profile.saving")}
+                        </>
+                      ) : (
+                        t("profile.theme.save")
+                      )}
+                    </Button>
                   </div>
 
                   <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{t("profile.language")}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{t("profile.languageHint")}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-100 text-lg dark:bg-sky-950/40">
+                        🌐
+                      </span>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{t("profile.language")}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">{t("profile.languageHint")}</p>
+                      </div>
                     </div>
                     <LanguageSwitcher />
                   </div>

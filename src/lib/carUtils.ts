@@ -28,6 +28,7 @@ const BRAND_IN_NAME: [string, string][] = [
   ["mercedes-amg", "Mercedes-Benz"],
   ["rolls-royce", "Rolls-Royce"],
   ["land cruiser", "Toyota"],
+  ["landcruiser", "Toyota"],
   ["land rover", "Land Rover"],
   ["range rover", "Land Rover"],
   ["lamborghini", "Lamborghini"],
@@ -38,48 +39,112 @@ const BRAND_IN_NAME: [string, string][] = [
   ["mclaren", "McLaren"],
   ["bentley", "Bentley"],
   ["toyota", "Toyota"],
+  ["toyata", "Toyota"],
+  ["toyoata", "Toyota"],
   ["lexus", "Lexus"],
   ["luxes", "Lexus"],
+  ["lexux", "Lexus"],
+  ["lexes", "Lexus"],
+  ["laxus", "Lexus"],
   ["brabus", "Mercedes-Benz"],
   ["tesla", "Tesla"],
+  ["avartar", "Avartar"],
+  ["avatar", "Avartar"],
+  ["avatr", "Avartar"],
 ];
 
 const MODEL_TO_BRAND: Record<string, string> = {
   prius: "Toyota",
   pruis: "Toyota",
+  prime: "Toyota",
+  plugin: "Toyota",
   camry: "Toyota",
   alphard: "Toyota",
+  vellfire: "Toyota",
   fortuner: "Toyota",
   highlander: "Toyota",
   raize: "Toyota",
   revo: "Toyota",
+  hilux: "Toyota",
+  vios: "Toyota",
+  yaris: "Toyota",
+  corolla: "Toyota",
+  innova: "Toyota",
+  harrier: "Toyota",
+  rav4: "Toyota",
+  chr: "Toyota",
+  "c-hr": "Toyota",
+  supra: "Toyota",
+  tacoma: "Toyota",
+  tundra: "Toyota",
+  prado: "Toyota",
+  avalon: "Toyota",
+  sienna: "Toyota",
+  "4runner": "Toyota",
+  hiace: "Toyota",
+  wish: "Toyota",
+  rush: "Toyota",
+  crown: "Toyota",
   toyotaprius: "Toyota",
   nx: "Lexus",
   nx200t: "Lexus",
+  nx200: "Lexus",
+  nx300h: "Lexus",
   nx350: "Lexus",
   ct: "Lexus",
   ct200h: "Lexus",
   gs: "Lexus",
+  gs300: "Lexus",
   hs: "Lexus",
+  hs250h: "Lexus",
   rx: "Lexus",
+  rx330: "Lexus",
+  rx350: "Lexus",
   rx400h: "Lexus",
+  rx450h: "Lexus",
+  es: "Lexus",
+  es300h: "Lexus",
+  es350: "Lexus",
+  is: "Lexus",
+  is250: "Lexus",
+  is300: "Lexus",
+  ls: "Lexus",
+  ls500: "Lexus",
+  gx: "Lexus",
+  gx460: "Lexus",
+  lx: "Lexus",
+  lx570: "Lexus",
+  ux: "Lexus",
+  rc: "Lexus",
+  lc: "Lexus",
+  lm: "Lexus",
   lm350h: "Lexus",
   cla45: "Mercedes-Benz",
   mg7: "MG",
 };
 
-export const extractBrand = (name: string): string => {
-  const folded = foldBrandText(name);
+const BRAND_PRIORITY = ["Toyota", "Lexus", "Avartar", "Honda", "Mercedes-Benz", "BMW", "Ford", "Nissan"];
+
+export const extractBrand = (name: string, model = ""): string => {
+  const folded = foldBrandText(`${name} ${model}`);
   if (!folded) return "";
   const lower = folded.toLowerCase();
   for (const [needle, label] of BRAND_IN_NAME) {
     if (lower.includes(needle)) return label;
   }
-  const first = folded.split(/\s+/)[0] ?? "";
+  const tokens = folded.split(/\s+/).filter(Boolean);
+  for (const token of tokens) {
+    const key = brandKey(token);
+    if (MODEL_TO_BRAND[key]) return MODEL_TO_BRAND[key];
+  }
+  const compact = brandKey(folded);
+  for (const [modelKey, brand] of Object.entries(MODEL_TO_BRAND)) {
+    if (modelKey.length >= 4 && compact.includes(modelKey)) return brand;
+  }
+  const first = tokens[0] ?? "";
   const key = brandKey(first);
-  if (MODEL_TO_BRAND[key]) return MODEL_TO_BRAND[key];
   if (key.startsWith("mercedes") || key === "amg") return "Mercedes-Benz";
-  if (key === "avatr" || key === "avatar") return "Avatr";
+  if (key === "avatr" || key === "avatar" || key === "avartar") return "Avartar";
   if (key === "rolls" || key.startsWith("rolls")) return "Rolls-Royce";
   if (key === "bmw") return "BMW";
   if (key === "gac") return "GAC";
@@ -179,13 +244,14 @@ export const getLatestCars = (
     .slice(0, limit);
 };
 
-export const carMatchesBrand = (carName: string, brand: string): boolean => {
+export const carMatchesBrand = (carName: string, brand: string, model = ""): boolean => {
   const wanted = brandKey(brand);
   if (!wanted) return false;
-  if (brandKey(extractBrand(carName)) === wanted) return true;
-  const foldedName = foldBrandText(carName).toLowerCase();
+  if (brandKey(extractBrand(carName, model)) === wanted) return true;
+  const foldedName = foldBrandText(`${carName} ${model}`).toLowerCase();
   if (foldedName === wanted) return true;
   if (foldedName.startsWith(`${wanted} `)) return true;
+  if (foldedName.includes(` ${wanted} `) || foldedName.endsWith(` ${wanted}`)) return true;
   if (foldedName.startsWith(wanted) && foldedName.length > wanted.length) {
     const next = foldedName[wanted.length];
     if (!/[a-z]/.test(next)) return true;
@@ -195,7 +261,7 @@ export const carMatchesBrand = (carName: string, brand: string): boolean => {
 
 export const filterCarsByBrand = (cars: Car[], brand: string | null): Car[] => {
   if (!brand) return cars;
-  return cars.filter((c) => carMatchesBrand(c.name, brand));
+  return cars.filter((c) => carMatchesBrand(c.name, brand, c.model));
 };
 
 export const filterCarsByOrigin = (cars: Car[], origin: CarOrigin | null): Car[] => {
@@ -368,24 +434,33 @@ export const listBodyTypes = (cars: Car[]): string[] => {
 export const listCarBrands = (cars: Car[]): string[] => {
   const seen = new Map<string, string>();
   for (const car of cars) {
-    const brand = extractBrand(car.name);
+    const brand = extractBrand(car.name, car.model);
     if (!brand) continue;
     const key = brandKey(brand);
     if (!key || seen.has(key)) continue;
     seen.set(key, brand);
   }
-  return [...seen.values()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  return [...seen.values()].sort((a, b) => {
+    const ai = BRAND_PRIORITY.indexOf(a);
+    const bi = BRAND_PRIORITY.indexOf(b);
+    if (ai !== -1 || bi !== -1) {
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    }
+    return a.localeCompare(b, undefined, { sensitivity: "base" });
+  });
 };
 
 export const carMatchesSelectedBrand = (car: Car, brand: string | "all" | null): boolean => {
   if (!brand || brand === "all") return true;
-  return carMatchesBrand(car.name, brand);
+  return carMatchesBrand(car.name, brand, car.model);
 };
 
 export const carMatchesBrandSearch = (car: Car, query: string): boolean => {
   const needle = foldBrandText(query).toLowerCase();
   if (!needle) return true;
-  const brand = extractBrand(car.name).toLowerCase();
+  const brand = extractBrand(car.name, car.model).toLowerCase();
   const name = foldBrandText(car.name).toLowerCase();
   const model = foldBrandText(car.model).toLowerCase();
   return brand.includes(needle) || name.includes(needle) || model.includes(needle);

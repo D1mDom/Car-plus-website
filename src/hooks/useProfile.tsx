@@ -50,7 +50,15 @@ const missingExtraCols = (e: unknown): string[] => {
   return EXTRA_PROFILE_COLS.filter((col) => m.includes(col));
 };
 
-const urlsMatch = (a: string | null, b: unknown) => text(a) === text(b);
+const normalizePhotoUrl = (value: unknown): string => {
+  const raw = text(value);
+  if (!raw) return "";
+  const noHash = raw.split("#")[0];
+  const noQuery = noHash.split("?")[0];
+  return noQuery.replace(/\/+$/, "");
+};
+
+const urlsMatch = (a: string | null, b: unknown) => normalizePhotoUrl(a) === normalizePhotoUrl(b);
 
 const normalizeTelegram = (value?: string | null) => {
   const v = (value ?? "").trim();
@@ -178,9 +186,12 @@ const persistProfile = async (
   const { row, written } = await tryWriteOmittingMissing(fullPayload);
 
   const photoPersisted = (key: "avatar_url" | "cover_url", wanted: string | null) => {
+    // Photo was not changed — never block the rest of the profile save.
+    if (urlsMatch(wanted, previous[key])) return true;
     if (key in written) return urlsMatch(wanted, row[key]);
-    // Column missing — OK only if the photo did not actually change.
-    return urlsMatch(wanted, previous[key]);
+    // Older databases may not have this column.
+    if (!wanted) return true;
+    return false;
   };
 
   if (!photoPersisted("avatar_url", fields.avatar_url)) {

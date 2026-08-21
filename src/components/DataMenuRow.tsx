@@ -24,9 +24,9 @@ const DataMenuRow = ({ icon: Icon, title, description, tone, busy, onClick }: Da
       hover: "hover:bg-emerald-50/80 focus:bg-emerald-50/80",
     },
     red: {
-      icon: "bg-[#174080]/12 text-[#174080]",
-      title: "text-[#174080]",
-      hover: "hover:bg-[#174080]/8 focus:bg-[#174080]/8",
+      icon: "bg-red-50 text-red-600",
+      title: "text-red-600",
+      hover: "hover:bg-red-50/80 focus:bg-red-50/80",
     },
   }[tone];
 

@@ -5,16 +5,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 import type { Car } from "@/hooks/useCars";
 import PlaceOrderDialog from "@/components/PlaceOrderDialog";
 import AuthDialog from "@/components/AuthDialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import DigitalAlert from "@/components/DigitalAlert";
 
 interface OrderAuthPromptProps {
   car: Car | null;
@@ -70,37 +61,23 @@ const OrderAuthPrompt = ({ car, onOpenChange }: OrderAuthPromptProps) => {
 
   return (
     <>
-      <AlertDialog
+      <DigitalAlert
         open={permissionOpen}
         onOpenChange={(open) => {
           if (!open) closeAll();
         }}
-      >
-        <AlertDialogContent className="sm:max-w-md sm:rounded-2xl">
-          <AlertDialogHeader>
-            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-[#174080]/10 text-[#174080]">
-              <Shield className="h-6 w-6" />
-            </div>
-            <AlertDialogTitle className="text-center">{t("order.permission.title")}</AlertDialogTitle>
-            <AlertDialogDescription className="text-center leading-relaxed">
-              {t("order.permission.desc")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                openAuth();
-              }}
-              className="w-full gap-2"
-            >
-              <LogIn className="h-4 w-4" />
-              {t("order.permission.signIn")}
-            </AlertDialogAction>
-            <AlertDialogCancel className="mt-0 w-full">{t("auth.cancel")}</AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        tone="brand"
+        eyebrow={t("alert.loginRequired")}
+        title={t("order.permission.title")}
+        description={t("order.permission.desc")}
+        icon={<Shield className="h-5 w-5" />}
+        primary={{
+          label: t("order.permission.signIn"),
+          icon: <LogIn className="h-4 w-4" />,
+          onClick: openAuth,
+        }}
+        dismissLabel={t("auth.cancel")}
+      />
 
       <AuthDialog
         open={authOpen}

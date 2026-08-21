@@ -126,7 +126,7 @@ const InventorySection = ({
     });
     const lower: Record<string, number> = {};
     for (const car of base) {
-      const brand = extractBrand(car.name).trim();
+      const brand = extractBrand(car.name, car.model).trim();
       if (!brand) continue;
       const key = brand.toLowerCase();
       lower[key] = (lower[key] ?? 0) + 1;

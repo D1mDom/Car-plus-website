@@ -108,7 +108,7 @@ const AdminCars = () => {
 
   const matchesBaseFilters = (car: CarType) => {
     const matchesBrand = brandFilter
-      ? carMatchesBrand(car.name, brandFilter)
+      ? carMatchesBrand(car.name, brandFilter, car.model)
       : carMatchesBrandSearch(car, brandSearchQuery);
     return matchesWithoutBrand(car) && matchesBrand;
   };
@@ -132,7 +132,7 @@ const AdminCars = () => {
     });
     const lower: Record<string, number> = {};
     for (const car of base) {
-      const brand = extractBrand(car.name).trim();
+      const brand = extractBrand(car.name, car.model).trim();
       if (!brand) continue;
       const key = brand.toLowerCase();
       lower[key] = (lower[key] ?? 0) + 1;

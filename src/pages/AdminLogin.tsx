@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { ArrowLeft, Eye, EyeOff, Loader2, Lock, Mail, Shield, Sun, Moon } from "lucide-react";
@@ -16,6 +17,8 @@ import { supabase } from "@/integrations/supabase/client";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
 import { hasDashboardAccess } from "@/lib/dashboardAccess";
+import { loadRememberedLogin, persistRememberedLogin } from "@/lib/rememberLogin";
+import ForgotPasswordFlow from "@/components/ForgotPasswordFlow";
 
 const emailSchema = z.string().email("Invalid email");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -50,6 +53,8 @@ const AdminLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [showReset, setShowReset] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { signIn, signOut, user, loading: authLoading } = useAuth();
@@ -62,14 +67,21 @@ const AdminLogin = () => {
 
   useEffect(() => setMounted(true), []);
 
+  useEffect(() => {
+    const saved = loadRememberedLogin("admin");
+    setRememberMe(saved.remember);
+    if (saved.email) setEmail(saved.email);
+  }, []);
+
   const cleanEmail = (v: string) => v.replace(/[^a-zA-Z0-9@._%+-]/g, "");
   const cleanPassword = (v: string) => v.replace(/[^\x20-\x7E]/g, "");
 
   useEffect(() => {
+    if (showReset) return;
     if (!authLoading && !adminLoading && user && isAdmin) {
       navigate("/admin", { replace: true });
     }
-  }, [user, isAdmin, authLoading, adminLoading, navigate]);
+  }, [user, isAdmin, authLoading, adminLoading, navigate, showReset]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,6 +133,7 @@ const AdminLogin = () => {
     }
 
     toast({ title: "Welcome!", description: "Signed in to dashboard" });
+    persistRememberedLogin("admin", email, rememberMe);
     navigate("/admin", { replace: true });
   };
 
@@ -167,9 +180,21 @@ const AdminLogin = () => {
           <p className="mt-1.5 text-sm text-white/55">{t("admin.login.subtitle")}</p>
         </div>
 
+        <div className="rounded-2xl border border-white/15 bg-card/95 p-6 shadow-2xl shadow-black/30 backdrop-blur-md sm:p-8">
+        {showReset ? (
+          <ForgotPasswordFlow
+            email={email}
+            onBack={() => setShowReset(false)}
+            onDone={(newPassword) => {
+              persistRememberedLogin("admin", email, rememberMe);
+              setPassword(newPassword);
+              setShowReset(false);
+            }}
+            idPrefix="admin-login"
+          />
+        ) : (
         <form
           onSubmit={handleSignIn}
-          className="rounded-2xl border border-white/15 bg-card/95 p-6 shadow-2xl shadow-black/30 backdrop-blur-md sm:p-8"
         >
           <div className="space-y-5">
             <div className="space-y-2">
@@ -192,9 +217,29 @@ const AdminLogin = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="admin-password" className="text-sm font-medium text-foreground">
-                {t("admin.login.password")}
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="admin-password" className="text-sm font-medium text-foreground">
+                  {t("admin.login.password")}
+                </Label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      emailSchema.parse(email);
+                      setShowReset(true);
+                    } catch {
+                      toast({
+                        title: t("auth.validationError"),
+                        description: t("auth.errorEmailRequired"),
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  className="text-xs text-[#174080] hover:underline"
+                >
+                  {t("auth.forgotPassword")}
+                </button>
+              </div>
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -218,6 +263,17 @@ const AdminLogin = () => {
               </div>
             </div>
 
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="admin-remember"
+                checked={rememberMe}
+                onCheckedChange={(v) => setRememberMe(v === true)}
+              />
+              <Label htmlFor="admin-remember" className="cursor-pointer text-sm font-normal text-foreground">
+                {t("auth.rememberMe")}
+              </Label>
+            </div>
+
             <Button
               type="submit"
               disabled={loading}
@@ -237,6 +293,8 @@ const AdminLogin = () => {
             </Button>
           </div>
         </form>
+        )}
+        </div>
 
         <p className="mt-7 text-center">
           <Link

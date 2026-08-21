@@ -22,14 +22,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import AuthDialog from "@/components/AuthDialog";
+import DigitalAlert from "@/components/DigitalAlert";
 import { onImgError } from "@/lib/imageFallback";
 import { User, LogOut, Package, Heart, UserCircle, CheckCircle2 } from "lucide-react";
 
@@ -65,22 +59,15 @@ const UserMenu = ({
     title: string,
     body: string
   ) => (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm sm:rounded-2xl">
-        <div className="flex flex-col items-center gap-4 py-2 text-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
-            <CheckCircle2 className="h-7 w-7" />
-          </span>
-          <DialogHeader className="space-y-2 text-center sm:text-center">
-            <DialogTitle className="font-heading text-xl">{title}</DialogTitle>
-            <DialogDescription>{body}</DialogDescription>
-          </DialogHeader>
-          <Button className="mt-1 w-full" onClick={() => onOpenChange(false)}>
-            {t("auth.ok")}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <DigitalAlert
+      open={open}
+      onOpenChange={onOpenChange}
+      tone="success"
+      title={title}
+      description={body}
+      icon={<CheckCircle2 className="h-5 w-5" />}
+      primary={{ label: t("auth.ok"), onClick: () => onOpenChange(false) }}
+    />
   );
 
   const avatarUrl =

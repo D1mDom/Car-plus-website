@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
-import { useBrands } from "@/hooks/useBrands";
+import { useMemo } from "react";
+import { useBrands, type Brand } from "@/hooks/useBrands";
 import { useLanguage } from "@/hooks/useLanguage";
 import BrandLogo from "@/components/BrandLogo";
+import { getBrandLogoUrl } from "@/lib/brandLogos";
 import { cn } from "@/lib/utils";
 
 const CARD_GRADIENTS = [
@@ -15,11 +17,29 @@ const CARD_GRADIENTS = [
   "from-[#2DB5A0] to-[#1A8F7A]",
 ];
 
+const HOME_BRANDS = ["Toyota", "Lexus"] as const;
+
 const PopularBrandsSection = () => {
   const { data: brands = [], isLoading } = useBrands();
   const { t } = useLanguage();
 
-  if (isLoading || brands.length === 0) return null;
+  const displayBrands = useMemo(() => {
+    const list: Brand[] = [...brands];
+    for (const name of [...HOME_BRANDS].reverse()) {
+      const exists = list.some((b) => b.name.trim().toLowerCase() === name.toLowerCase());
+      if (exists) continue;
+      list.unshift({
+        id: `home-${name.toLowerCase()}`,
+        name,
+        logo: getBrandLogoUrl(name) ?? "",
+        sort_order: 0,
+        is_active: true,
+      });
+    }
+    return list;
+  }, [brands]);
+
+  if (isLoading || displayBrands.length === 0) return null;
 
   return (
     <section className="py-10 sm:py-14">
@@ -34,7 +54,7 @@ const PopularBrandsSection = () => {
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {brands.map((brand, index) => (
+          {displayBrands.map((brand, index) => (
             <Link
               key={brand.id}
               to={`/cars?brand=${encodeURIComponent(brand.name)}`}

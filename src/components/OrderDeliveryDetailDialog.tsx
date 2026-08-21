@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/hooks/useLanguage";
-import { cn } from "@/lib/utils";
+import { digitalAlertContentClass } from "@/components/DigitalAlert";
 import type { TranslationKey } from "@/i18n/translations";
 
 export type DeliveryDetailInfo = {
@@ -68,7 +68,7 @@ export const OrderDeliveryDetailDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto sm:rounded-2xl">
+      <DialogContent className={cn(digitalAlertContentClass, "max-h-[90vh] max-w-md overflow-y-auto p-5")}>
         <div className="flex flex-col items-center gap-3 py-1 text-center">
           <span
             className={cn(

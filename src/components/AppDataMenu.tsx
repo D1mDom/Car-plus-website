@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import DataMenuRow from "@/components/DataMenuRow";
+import { SHOW_WELCOME_EVENT } from "@/components/WelcomeDialog";
 import { useLanguage } from "@/hooks/useLanguage";
 import { clearAppCache } from "@/lib/clearAppCache";
 import { cn } from "@/lib/utils";
@@ -57,7 +58,7 @@ function InlineDataRow({
   const tones = {
     brand: { icon: "bg-[#174080]/12 text-[#174080]", title: "text-[#174080]" },
     green: { icon: "bg-emerald-50 text-emerald-600", title: "text-emerald-700" },
-    red: { icon: "bg-[#174080]/12 text-[#174080]", title: "text-[#174080]" },
+    red: { icon: "bg-red-50 text-red-600", title: "text-red-600" },
   }[tone];
 
   return (
@@ -105,12 +106,15 @@ const AppDataMenu = ({
       toast.success(t("admin.data.refreshDone"));
       setMenuOpen(false);
       onAction?.();
+      if (scope === "site") {
+        window.dispatchEvent(new Event(SHOW_WELCOME_EVENT));
+      }
     } catch {
       toast.error(t("admin.data.error"));
     } finally {
       setDataAction(null);
     }
-  }, [dataAction, onAction, queryClient, t]);
+  }, [dataAction, onAction, queryClient, scope, t]);
 
   const handleWarmCache = useCallback(async () => {
     if (dataAction) return;
